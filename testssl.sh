@@ -17189,7 +17189,7 @@ run_renego() {
                sec_client_renego=1
           else
                # second try in the foreground as we are sure now it won't hang
-               echo R | $OPENSSL s_client $(s_client_options "$proto $legacycmd $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE
+	       (echo R; sleep 1) | $OPENSSL s_client $(s_client_options "$proto $legacycmd $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE
                sec_client_renego=$?
                # 0 means client is renegotiating & doesn't return an error --> vuln!
                # 1 means client tried to renegotiating but the server side errored then. You still see RENEGOTIATING in the output
