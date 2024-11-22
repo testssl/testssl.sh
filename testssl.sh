@@ -467,7 +467,13 @@ declare TLS_CIPHER_AUTH=()
 declare TLS_CIPHER_ENC=()
 declare TLS_CIPHER_EXPORT=()
 declare TLS_CIPHER_OSSL_SUPPORTED=()
-declare TLS13_OSSL_CIPHERS="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SHA256_SHA256:TLS_SHA384_SHA384"
+declare TLS13_OSSL_CIPHERS="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SHA256_SHA256:TLS_SHA384_SHA384:TLS_SM4_GCM_SM3:TLS_SM4_CCM_SM3"
+
+# Regular expression that matches all TLS 1.3 ciphers (see RFC 8446, RFC 8998,
+# RFC 9150, RFC 9367, and draft-irtf-cfrg-aegis-aead-08).
+# Note that strip_inconsistent_ciphers() also needs to be updated whenever a new
+# TLS 1.3-only cipher suite is added.
+declare TLS13_CIPHERS_REGEX="13,0[1-7]|00,[cC][67]|[cC]0,[bB][45]|[cC]1,0[3-6]"
 
 
 ########### Some predefinitions: date, sed (we always use tests for binaries and NOT try to determine
@@ -1033,8 +1039,10 @@ strip_inconsistent_ciphers() {
      local cipherlist="$2"
 
      if [[ $proto -lt 4 ]]; then
-          cipherlist="${cipherlist//, 13,0[0-9a-fA-F]/}"
+          cipherlist="${cipherlist//, 13,0[1-7]/}"
+          cipherlist="${cipherlist//, 00,[cC][67]/}"
           cipherlist="${cipherlist//, [cC]0,[bB][45]/}"
+          cipherlist="${cipherlist//, [cC]1,0[3-6]/}"
      fi
      if [[ $proto -lt 3 ]]; then
           cipherlist="${cipherlist//, 00,3[b-fB-F]/}"
@@ -4176,7 +4184,7 @@ run_cipher_match(){
                               ! "${ciphers_found2[i]}" && ciphers_to_test+=", ${hexcode2[i]}"
                          done
                          [[ -z "$ciphers_to_test" ]] && break
-                         [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && [[ ! "$ciphers_to_test" =~ ,\ [cC]0,[bB][45] ]] && break
+                         [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && break
                          ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                          [[ -z "$ciphers_to_test" ]] && break
                          if "$SHOW_SIGALGO"; then
@@ -4451,7 +4459,7 @@ run_allciphers() {
                          ! "${ciphers_found2[i]}" && ciphers_to_test+=", ${hexcode2[i]}"
                     done
                     [[ -z "$ciphers_to_test" ]] && break
-                    [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && [[ ! "$ciphers_to_test" =~ ,\ [cC]0,[bB][45] ]] && break
+                    [[ "$proto" == 04 ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && break
                     ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                     [[ -z "$ciphers_to_test" ]] && break
                     if "$SHOW_SIGALGO"; then
@@ -6405,7 +6413,7 @@ sub_cipherlists() {
                for proto in 04 03 02 01 00; do
                     # If $cipherlist doesn't contain any TLSv1.3 ciphers, then there is
                     # no reason to try a TLSv1.3 ClientHello.
-                    [[ "$proto" == 04 ]] && [[ ! "$6" =~ 13,0 ]] && [[ ! "$6" =~ [cC]0,[bB][45] ]] && continue
+                    [[ "$proto" == 04 ]] && [[ ! "$6" =~ $TLS13_CIPHERS_REGEX ]] && continue
                     [[ $(has_server_protocol "$proto") -eq 1 ]] && continue
                     cipherlist="$(strip_inconsistent_ciphers "$proto" ", $6")"
                     cipherlist="${cipherlist:2}"
@@ -6602,9 +6610,9 @@ run_cipherlists() {
      good_ciphers="00,9C, 00,9D, 00,A0, 00,A1, 00,A4, 00,A5, 00,A8, 00,A9, 00,AC, 00,AD, C0,2D, C0,2E, C0,31, C0,32, C0,50, C0,51, C0,54, C0,55, C0,58, C0,59, C0,5E, C0,5F, C0,62, C0,63, C0,6A, C0,6B, C0,6E, C0,6F, C0,7A, C0,7B, C0,7E, C0,7F, C0,82, C0,83, C0,88, C0,89, C0,8C, C0,8D, C0,8E, C0,8F, C0,92, C0,93, C0,9C, C0,9D, C0,A0, C0,A1, C0,A4, C0,A5, C0,A8, C0,A9, CC,AB, CC,AE, 00,FF"
 
      ossl_strong_ciphers='AESGCM:CHACHA20:CamelliaGCM:AESCCM:ARIAGCM:!kPSK:!kRSAPSK:!kRSA:!kDH:!kECDH:!aNULL'
-     ossl_strong_ciphersuites="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256"
+     ossl_strong_ciphersuites="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SM4_GCM_SM3:TLS_SM4_CCM_SM3"
      # grep AEAD etc/cipher-mapping.txt | grep -E 'TLS_ECDHE|TLS_DHE|TLS_PSK_DHE|TLSv1.3'
-     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,FF"
+     strong_ciphers="00,9E, 00,9F, 00,A2, 00,A3, 00,AA, 00,AB, 00,C6, 00,C7, 13,01, 13,02, 13,03, 13,04, 13,05, 16,B7, 16,B8, 16,B9, 16,BA, C0,2B, C0,2C, C0,2F, C0,30, C0,52, C0,53, C0,56, C0,57, C0,5C, C0,5D, C0,60, C0,61, C0,6C, C0,6D, C0,7C, C0,7D, C0,80, C0,81, C0,86, C0,87, C0,8A, C0,8B, C0,90, C0,91, C0,9E, C0,9F, C0,A2, C0,A3, C0,A6, C0,A7, C0,AA, C0,AB, C0,AC, C0,AD, C0,AE, C0,AF, CC,13, CC,14, CC,15, CC,A8, CC,A9, CC,AA, CC,AC, CC,AD, 00,FF"
 
      # argv[1]: non-TLSv1.3 cipher list to test in OpenSSL syntax
      # argv[2]: TLSv1.3 cipher list to test in OpenSSL syntax
@@ -6745,6 +6753,7 @@ pr_ecdh_curve_quality() {
           "brainpoolP512r1"*) bits=512  ;;
           "X25519") bits=253  ;;
           "X448") bits=448  ;;
+          "curveSM2") bits=256  ;;
      esac
      pr_ecdh_quality "$bits" "$curve"
 }
@@ -6772,6 +6781,7 @@ pr_kem_param_set_quality() {
           "X25519MLKEM768") bits=192 ;;
           "SecP384r1MLKEM1024") bits=256 ;;
           "X25519Kyber768Draft00") bits=128 ;;
+          "curveSM2MLKEM768") bits=192 ;;
      esac
      pr_kem_quality "$bits" "$kem"
 }
@@ -6932,6 +6942,7 @@ read_dhtype_from_file() {
      [[ "$kx" == "Kx=X25519MLKEM768" ]] && kx="Kx=ECDH/MLKEM"
      [[ "$kx" == "Kx=SecP384r1MLKEM1024" ]] && kx="Kx=ECDH/MLKEM"
      [[ "$kx" == "Kx=X25519Kyber768Draft00" ]] && kx="Kx=ECDH/Kyber"
+     [[ "$kx" == "Kx=curveSM2MLKEM768" ]] && kx="Kx=ECDH/MLKEM"
      tm_out "$kx"
      return 0
 }
@@ -6942,6 +6953,7 @@ read_sigalg_from_file() {
 
      sig_alg="$(strip_leading_space "$($OPENSSL x509 -noout -text -in "$1" 2>/dev/null | awk -F':' '/Signature Algorithm/ { print $2; exit; }')")"
      case "$sig_alg" in
+          1.2.156.10197.1.501) tm_out "SM2-with-SM3" ;;
           1.3.101.112|ED25519) tm_out "Ed25519" ;;
           1.3.101.113|ED448)   tm_out "Ed448" ;;
           2.16.840.1.101.3.4.3.17) tm_out "ML-DSA-44" ;;
@@ -7205,8 +7217,8 @@ run_server_preference() {
      local list_fwd="DHE-RSA-SEED-SHA:SEED-SHA:DES-CBC3-SHA:RC4-MD5:DES-CBC-SHA:RC4-SHA:AES128-SHA:AES128-SHA256:AES256-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:ECDH-RSA-DES-CBC3-SHA:ECDH-RSA-AES128-SHA:ECDH-RSA-AES256-SHA:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:AES256-SHA256:ECDHE-RSA-DES-CBC3-SHA:ECDHE-RSA-AES128-SHA256:AES256-GCM-SHA384:AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-SHA256:ADH-AES256-GCM-SHA384:AECDH-AES128-SHA:ECDHE-RSA-RC4-SHA:ECDHE-ECDSA-AES128-SHA"
      local list_reverse="ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-RC4-SHA:AECDH-AES128-SHA:ADH-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-GCM-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-DES-CBC3-SHA:AES256-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDH-RSA-AES256-SHA:ECDH-RSA-AES128-SHA:ECDH-RSA-DES-CBC3-SHA:DHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:ECDHE-RSA-AES128-SHA:AES256-SHA:AES128-SHA256:AES128-SHA:RC4-SHA:DES-CBC-SHA:RC4-MD5:DES-CBC3-SHA:SEED-SHA:DHE-RSA-SEED-SHA"
      tls_list_fwd="c0,2c, c0,30, 00,9f, cc,a9, cc,a8, cc,aa, c0,2b, c0,2f, 00,9e, c0,24, c0,28, 00,6b, c0,23, c0,27, 00,67, c0,0a, 00,04, 00,05, 00,09, 00,0a, 00,9a, 00,96,
-                   c0,14, 00,39, c0,09, c0,13, 00,33, 00,9d, 00,9c, 13,01, 13,02, 13,03, 13,04, 13,05, 00,3d, 00,3c, 00,35, 00,2f, 00,ff"
-     tls_list_rev="00,2f, 00,35, 00,3c, 00,3d, 13,05, 13,04, 13,03, 13,02, 13,01, 00,9c, 00,9d, 00,33, c0,13, c0,09, 00,39, c0,14, 00,96, 00,9a, 00,0a, 00,09, 00,05, 00,04,
+                   c0,14, 00,39, c0,09, c0,13, 00,33, 00,9d, 00,9c, 00,C6, 00,C7, 13,01, 13,02, 13,03, 13,04, 13,05, 00,3d, 00,3c, 00,35, 00,2f, 00,ff"
+     tls_list_rev="00,2f, 00,35, 00,3c, 00,3d, 13,05, 13,04, 13,03, 13,02, 13,01, 00,C7, 00,C6, 00,9c, 00,9d, 00,33, c0,13, c0,09, 00,39, c0,14, 00,96, 00,9a, 00,0a, 00,09, 00,05, 00,04,
                    c0,0a, 00,67, c0,27, c0,23, 00,6b, c0,28, c0,24, 00,9e, c0,2f, c0,2b, cc,aa, cc,a8, cc,a9, 00,9f, c0,30, c0,2c, 00,ff"
      local has_cipher_order=false has_tls13_cipher_order=false
      local addcmd="" addcmd2=""
@@ -7236,7 +7248,7 @@ run_server_preference() {
           tls_sockets "04" \
                       "c0,2c, c0,30, 00,9f, cc,a9, cc,a8, cc,aa, c0,2b, c0,2f, 00,9a, 00,96,
                        00,9e, c0,24, c0,28, 00,6b, c0,23, c0,27, 00,67, c0,0a,
-                       c0,14, 00,39, c0,09, c0,13, 00,33, 00,9d, 00,9c, 13,02,
+                       c0,14, 00,39, c0,09, c0,13, 00,33, 00,9d, 00,9c, 00,c6, 00,c7, 13,02,
                        13,03, 13,01, 13,04, 13,05, c0,b4, c0,b5, 00,3d, 00,3c, 00,35, 00,2f, 00,ff" \
                       "ephemeralkey"
           sclient_success=$?
@@ -7279,12 +7291,12 @@ run_server_preference() {
 
      # Some servers don't have a TLS 1.3 cipher order, see #1163
      if [[ "$default_proto" == TLSv1.3 ]]; then
-          tls_sockets "04" "c0,b5, c0,b4, 13,05, 13,04, 13,03, 13,02, 13,01, 00,ff"
+          tls_sockets "04" "c0,b5, c0,b4, 13,05, 13,04, 13,03, 13,02, 13,01, 00,c7, 00,c6, 00,ff"
           [[ $? -ne 0 ]] && ret=1 && prln_fixme "something weird happened around line $((LINENO - 1))"
           cp "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt" $TMPFILE
           tls13_cipher1=$(get_cipher $TMPFILE)
           debugme tm_out "TLS 1.3: --> $tls13_cipher1\n"
-          tls_sockets "04" "13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5, 00,ff"
+          tls_sockets "04" "00,c6, 00,c7, 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5, 00,ff"
           [[ $? -ne 0 ]] && ret=1 && prln_fixme "something weird happened around line $((LINENO - 1))"
           cp "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt" $TMPFILE
           tls13_cipher2=$(get_cipher $TMPFILE)
@@ -8487,13 +8499,11 @@ get_server_certificate() {
      CERTIFICATE_LIST_ORDERING_PROBLEM=false
      if [[ "$1" =~ tls1_3 ]]; then
           [[ $(has_server_protocol "tls1_3") -eq 1 ]] && return 1
-          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ ! "$1" =~ tls1_3_EdDSA ]] && [[ ! "$1" =~ tls1_3_MLDSA ]]; then
+          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ "$1" =~ tls1_3_RSA || "$1" =~ tls1_3_ECDSA ]]; then
                if [[ "$1" =~ tls1_3_RSA ]]; then
                     $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs PSS+SHA256:PSS+SHA384:PSS+SHA512:rsa_pss_pss_sha256:rsa_pss_pss_sha384:rsa_pss_pss_sha512") </dev/null 2>$ERRFILE >$TMPFILE
-               elif [[ "$1" =~ tls1_3_ECDSA ]]; then
-                    $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs ECDSA+SHA256:ECDSA+SHA384:ECDSA+SHA512") </dev/null 2>$ERRFILE >$TMPFILE
                else
-                    return 1
+                    $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs ECDSA+SHA256:ECDSA+SHA384:ECDSA+SHA512") </dev/null 2>$ERRFILE >$TMPFILE
                fi
                sclient_connect_successful $? $TMPFILE || return 1
                DETECTED_TLS_VERSION="0304"
@@ -8512,6 +8522,8 @@ get_server_certificate() {
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,06,00,04,08,07,08,08"
                elif [[ "$1" =~ tls1_3_MLDSA ]]; then
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,08,00,06,09,04,09,05,09,06"
+               elif [[ "$1" =~ tls1_3_SM2 ]]; then
+                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,04,00,02,07,08"
                else
                     return 1
                fi
@@ -9195,11 +9207,13 @@ certificate_transparency() {
 
      if [[ $number_of_certificates -gt 1 ]] && ! "$SSL_NATIVE"; then
           if [[ "$tls_version" == 0304 ]]; then
-               ciphers=", 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5"
+               ciphers=", 00,c6, 00,c7, 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5"
                if [[ "$cipher" == tls1_3_RSA ]]; then
                     extra_extns=", 00,0d,00,10,00,0e,08,04,08,05,08,06,04,01,05,01,06,01,02,01"
                elif [[ "$cipher" == tls1_3_ECDSA ]]; then
                     extra_extns=", 00,0d,00,0a,00,08,04,03,05,03,06,03,02,03"
+               elif [[ "$cipher" == tls1_3_SM2 ]]; then
+                    extra_extns=", 00,0d,00,04,00,02,07,08"
                else
                     return 1
                fi
@@ -9383,6 +9397,7 @@ certificate_info() {
      cert_sig_algo="$(awk -F':' '/Signature Algorithm/ { print $2; if (++Match >= 1) exit; }' <<< "$cert_txt")"
      cert_sig_algo="${cert_sig_algo// /}"
      case "$cert_sig_algo" in
+          1.2.156.10197.1.501) cert_sig_algo="SM2-with-SM3" ;;
           1.3.101.112|ED25519) cert_sig_algo="Ed25519" ;;
           1.3.101.113|ED448)   cert_sig_algo="Ed448" ;;
           2.16.840.1.101.3.4.3.17) cert_sig_algo="ML-DSA-44" ;;
@@ -9520,6 +9535,10 @@ certificate_info() {
           Ed25519|Ed448|ML-DSA*|SLH-DSA*)
                prln_svrty_good "$cert_sig_algo"
                fileout "${jsonID}${json_postfix}" "OK" "$cert_sig_algo"
+               ;;
+          SM2-with-SM3)
+               outln "SM2 with SM3"
+               fileout "${jsonID}${json_postfix}" "INFO" "SM2 with SM3"
                ;;
           *)
                out "$cert_sig_algo ("
@@ -10422,7 +10441,7 @@ run_server_defaults() {
      local match_found
      local sessticket_lifetime_hint="" sessticket_proto="" lifetime unit
      local -i i n
-     local -i certs_found=0
+     local -i certs_found=0 nr_cert_types
      local -i ret=0
      local -a previous_hostcert previous_hostcert_txt previous_hostcert_type
      local -a previous_hostcert_issuer previous_intermediates previous_ordering_problem keysize tested_cipher
@@ -10454,33 +10473,35 @@ run_server_defaults() {
      ciphers_to_test[9]="tls1_3_ECDSA"
      ciphers_to_test[10]="tls1_3_EdDSA"
      ciphers_to_test[11]="tls1_3_MLDSA"
+     ciphers_to_test[12]="tls1_3_SM2"
      certificate_type[1]="" ; certificate_type[2]=""
      certificate_type[3]=""; certificate_type[4]=""
      certificate_type[5]="" ; certificate_type[6]=""
      certificate_type[7]="" ; certificate_type[8]="RSASig"
      certificate_type[9]="ECDSA" ; certificate_type[10]="EdDSA"
-     certificate_type[11]="MLDSA"
+     certificate_type[11]="MLDSA" ; certificate_type[12]="SM2"
+     nr_cert_types=12
 
      if "$SERVER_SIZE_LIMIT_BUG"; then
           ciphers_to_test[3]="aDSS:aDH:aECDH"
           ciphers_to_test[6]="aECDSA:aGOST"
      fi
 
-     for (( n=1; n <= 18 ; n++ )); do
+     for (( n=1; n <= $((nr_cert_types+7)) ; n++ )); do
           # Some servers use a different certificate if the ClientHello
           # specifies TLSv1.1 and doesn't include a server name extension.
           # So, for each public key type for which a certificate was found,
           # try again, but only with TLSv1.1 and without SNI.
           if [[ $n -ne 1 ]] && [[ "$OPTIMAL_PROTO" == -ssl2 ]]; then
                ciphers_to_test[n]=""
-          elif [[ $n -ge 12 ]]; then
+          elif [[ $n -gt $nr_cert_types ]]; then
                ciphers_to_test[n]=""
-               [[ ${success[n-11]} -eq 0 ]] && [[ $(has_server_protocol "tls1_1") -ne 1 ]] && \
-                    ciphers_to_test[n]="${ciphers_to_test[n-11]}" && certificate_type[n]="${certificate_type[n-11]}"
+               [[ ${success[n-nr_cert_types]} -eq 0 ]] && [[ $(has_server_protocol "tls1_1") -ne 1 ]] && \
+                    ciphers_to_test[n]="${ciphers_to_test[n-nr_cert_types]}" && certificate_type[n]="${certificate_type[n-nr_cert_types]}"
           fi
 
           if [[ -n "${ciphers_to_test[n]}" ]]; then
-               if [[ $n -ge 12 ]]; then
+               if [[ $n -gt $nr_cert_types ]]; then
                     sni="$SNI"
                     SNI=""
                     get_server_certificate "${ciphers_to_test[n]}" "tls1_1"
@@ -10491,7 +10512,7 @@ run_server_defaults() {
                     success[n]=$?
                fi
                if [[ ${success[n]} -eq 0 ]] && [[ -s "$HOSTCERT" ]]; then
-                    [[ $n -ge 12 ]] && [[ ! -e $HOSTCERT.nosni ]] && cp $HOSTCERT $HOSTCERT.nosni
+                    [[ $n -gt $nr_cert_types ]] && [[ ! -e $HOSTCERT.nosni ]] && cp $HOSTCERT $HOSTCERT.nosni
                     cp "$TEMPDIR/$NODEIP.get_server_certificate.txt" $TMPFILE
                     >$ERRFILE
                     if [[ -z "$sessticket_lifetime_hint" ]]; then
@@ -10573,7 +10594,7 @@ run_server_defaults() {
                          fi
                          i=$((i + 1))
                     done
-                    if ! "$match_found" && [[ $n -ge 12 ]] && [[ $certs_found -ne 0 ]]; then
+                    if ! "$match_found" && [[ $n -gt $nr_cert_types ]] && [[ $certs_found -ne 0 ]]; then
                          # A new certificate was found using TLSv1.1 without SNI.
                          # Check to see if the new certificate should be displayed.
                          # It should be displayed if it is either a match for the
@@ -10630,7 +10651,7 @@ run_server_defaults() {
                          [[ -n "${previous_intermediates[certs_found]}" ]] && [[ -r $TEMPDIR/hostcert_issuer.pem ]] && \
                               previous_hostcert_issuer[certs_found]=$(cat $TEMPDIR/hostcert_issuer.pem)
                          previous_ordering_problem[certs_found]=$CERTIFICATE_LIST_ORDERING_PROBLEM
-                         [[ $n -ge 12 ]] && sni_used[certs_found]="" || sni_used[certs_found]="$SNI"
+                         [[ $n -gt $nr_cert_types ]] && sni_used[certs_found]="" || sni_used[certs_found]="$SNI"
                          tls_version[certs_found]="$DETECTED_TLS_VERSION"
                          previous_hostcert_type[certs_found]=" ${certificate_type[n]}"
                          if [[ $DEBUG -ge 1 ]]; then
@@ -10898,7 +10919,7 @@ run_server_defaults() {
                sni="$SNI" ; SNI=""
                mv $HOSTCERT $HOSTCERT.save
                # Send same list of cipher suites as OpenSSL 1.1.1 sends (but with
-               # all 5 TLSv1.3 ciphers offered.
+               # all 5 TLSv1.3 ciphers from RFC 8446 offered.
                tls_sockets "04" \
                            "c0,2c, c0,30, 00,9f, cc,a9, cc,a8, cc,aa, c0,2b, c0,2f,
                             00,9e, c0,24, c0,28, 00,6b, c0,23, c0,27, 00,67, c0,0a,
@@ -10978,18 +10999,18 @@ run_fs() {
      local fs_cipher_list="DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES128-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-DSS-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA:DHE-DSS-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA:DHE-DSS-SEED-SHA:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CHACHA20-POLY1305-OLD:DHE-RSA-CHACHA20-POLY1305:DHE-RSA-SEED-SHA:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305-OLD:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-RSA-CHACHA20-POLY1305-OLD:ECDHE-RSA-CHACHA20-POLY1305"
      local fs_hex_cipher_list="" ciphers_to_test tls13_ciphers_to_test
      local ecdhe_cipher_list="" tls13_cipher_list="" ecdhe_cipher_list_hex="" ffdhe_cipher_list_hex=""
-     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21" "02,00" "02,01" "02,02" "11,eb" "11,ec" "11,ed" "63,99")
-     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "X25519Kyber768Draft00")
-     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "X25519Kyber768Draft00")
-     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512 128 192 256 192 192 256 128)
+     local curves_hex=("00,01" "00,02" "00,03" "00,04" "00,05" "00,06" "00,07" "00,08" "00,09" "00,0a" "00,0b" "00,0c" "00,0d" "00,0e" "00,0f" "00,10" "00,11" "00,12" "00,13" "00,14" "00,15" "00,16" "00,17" "00,18" "00,19" "00,1a" "00,1b" "00,1c" "00,1d" "00,1e" "00,1f" "00,20" "00,21" "00,29" "02,00" "02,01" "02,02" "11,eb" "11,ec" "11,ed" "11,ee" "63,99")
+     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
+     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "curveSM2" "MLKEM512" "MLKEM768" "MLKEM1024" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "curveSM2MLKEM768" "X25519Kyber768Draft00")
+     local -ai curves_bits=(163 162 163 193 193 232 233 238 281 282 407 409 570 570 161 161 161 192 192 225 224 256 256 384 521 256 384 512 253 448 256 384 512 256 128 192 256 192 192 256 192 128)
      # Many curves have been deprecated, and RFC 8446, Appendix B.3.1.4, states
      # that these curves MUST NOT be offered in a TLS 1.3 ClientHello.
-     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
+     local -a curves_deprecated=("true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "true" "false" "false" "false" "true" "true" "true" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local -a ffdhe_groups_hex=("01,00" "01,01" "01,02" "01,03" "01,04")
      local -a ffdhe_groups_output=("ffdhe2048" "ffdhe3072" "ffdhe4096" "ffdhe6144" "ffdhe8192")
      local -a supported_curve
      local -a sigalgs_hex=("01,01" "01,02" "01,03" "02,01" "02,02" "02,03" "03,01" "03,02" "03,03" "04,01" "04,02" "04,03" "04,20" "05,01" "05,02" "05,03" "05,20" "06,01" "06,02" "06,03" "06,20" "07,08" "08,04" "08,05" "08,06" "08,07" "08,08" "08,09" "08,0a" "08,0b" "08,1a" "08,1b" "08,1c" "09,04" "09,05" "09,06")
-     local -a sigalgs_strings=("RSA+MD5" "DSA+MD5" "ECDSA+MD5" "RSA+SHA1" "DSA+SHA1" "ECDSA+SHA1" "RSA+SHA224" "DSA+SHA224" "ECDSA+SHA224" "RSA+SHA256" "DSA+SHA256" "ECDSA+SHA256" "RSA+SHA256" "RSA+SHA384" "DSA+SHA384" "ECDSA+SHA384" "RSA+SHA384" "RSA+SHA512" "DSA+SHA512" "ECDSA+SHA512" "RSA+SHA512" "SM2+SM3" "RSA-PSS-RSAE+SHA256" "RSA-PSS-RSAE+SHA384" "RSA-PSS-RSAE+SHA512" "Ed25519" "Ed448" "RSA-PSS-PSS+SHA256" "RSA-PSS-PSS+SHA384" "RSA-PSS-PSS+SHA512" "ECDSA-BRAINPOOL+SHA256" "ECDSA-BRAINPOOL+SHA384" "ECDSA-BRAINPOOL+SHA512" "ML-DSA-44" "ML-DSA-65" "ML-DSA-87")
+     local -a sigalgs_strings=("RSA+MD5" "DSA+MD5" "ECDSA+MD5" "RSA+SHA1" "DSA+SHA1" "ECDSA+SHA1" "RSA+SHA224" "DSA+SHA224" "ECDSA+SHA224" "RSA+SHA256" "DSA+SHA256" "ECDSA+SHA256" "RSA+SHA256" "RSA+SHA384" "DSA+SHA384" "ECDSA+SHA384" "RSA+SHA384" "RSA+SHA512" "DSA+SHA512" "ECDSA+SHA512" "RSA+SHA512" "sm2sig_sm3" "RSA-PSS-RSAE+SHA256" "RSA-PSS-RSAE+SHA384" "RSA-PSS-RSAE+SHA512" "Ed25519" "Ed448" "RSA-PSS-PSS+SHA256" "RSA-PSS-PSS+SHA384" "RSA-PSS-PSS+SHA512" "ECDSA-BRAINPOOL+SHA256" "ECDSA-BRAINPOOL+SHA384" "ECDSA-BRAINPOOL+SHA512" "ML-DSA-44" "ML-DSA-65" "ML-DSA-87")
      local -a tls13_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local -a tls12_supported_sigalgs=("false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false" "false")
      local rsa_cipher="" ecdsa_cipher="" dss_cipher=""
@@ -11023,7 +11044,7 @@ run_fs() {
           for (( i=0; i < TLS_NR_CIPHERS; i++ )); do
                fs_cipher="${TLS_CIPHER_RFC_NAME[i]}"
                hexc="${TLS_CIPHER_HEXCODE[i]}"
-               if [[ "$fs_cipher" == "TLS_DHE_"* || "$fs_cipher" == "TLS_ECDHE_"* || "${hexc:2:2}" == "13" ]] && \
+               if [[ "$fs_cipher" == "TLS_DHE_"* || "$fs_cipher" == "TLS_ECDHE_"* || "${hexc:2:2}" == "13" || "$hexc" == 0x00\,0x[cC][67] ]] && \
                   [[ ! "$fs_cipher" =~ NULL ]] && [[ ! "$fs_cipher" =~ DES ]] && [[ ! "$fs_cipher" =~ RC4 ]] && \
                   [[ ! "$fs_cipher" =~ PSK ]] && { "$using_sockets" || "${TLS_CIPHER_OSSL_SUPPORTED[i]}"; }; then
                     fs_hex_cipher_list+=", ${hexc:2:2},${hexc:7:2}"
@@ -11055,7 +11076,7 @@ run_fs() {
                sigalg[nr_supported_ciphers]=""
                ossl_supported[nr_supported_ciphers]=true
                nr_supported_ciphers+=1
-          done < <(actually_supported_osslciphers "$fs_cipher_list" "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256" "-V")
+          done < <(actually_supported_osslciphers "$fs_cipher_list" "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SM4_GCM_SM3:TLS_SM4_CCM_SM3" "-V")
      fi
 
      if "$using_sockets"; then
@@ -11070,7 +11091,7 @@ run_fs() {
           fi
      else
           debugme echo $nr_supported_ciphers
-          debugme echo $(actually_supported_osslciphers $fs_cipher_list "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256")
+          debugme echo $(actually_supported_osslciphers $fs_cipher_list "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SM4_GCM_SM3:TLS_SM4_CCM_SM3")
           if [[ "$nr_supported_ciphers" -le "$CLIENT_MIN_FS" ]]; then
                outln
                prln_local_problem "You only have $nr_supported_ciphers FS ciphers on the client side "
@@ -11091,7 +11112,7 @@ run_fs() {
                curves_list2="${curves_list2// /:}"
           fi
           curves_list1="${curves_list1// /:}"
-          $OPENSSL s_client $(s_client_options "-cipher $fs_cipher_list -ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256 $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
+          $OPENSSL s_client $(s_client_options "-cipher $fs_cipher_list -ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_CCM_SHA256:TLS_AES_128_CCM_8_SHA256:TLS_SM4_GCM_SM3:TLS_SM4_CCM_SM3 $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
           sclient_connect_successful $? $TMPFILE
           sclient_success=$?
           [[ $sclient_success -eq 0 ]] && [[ $(grep -ac "BEGIN CERTIFICATE" $TMPFILE) -eq 0 ]] && sclient_success=1
@@ -11201,7 +11222,7 @@ run_fs() {
                               ! "${ciphers_found[i]}" && ciphers_to_test+=", ${hexcode[i]}"
                          done
                          [[ -z "$ciphers_to_test" ]] && break
-                         [[ "$proto" == "04" ]] && [[ ! "$ciphers_to_test" =~ ,\ 13,[0-9a-f][0-9a-f] ]] && [[ ! "$ciphers_to_test" =~ ,\ [cC]0,[bB][45] ]] && break
+                         [[ "$proto" == "04" ]] && [[ ! "$ciphers_to_test" =~ ,\ ($TLS13_CIPHERS_REGEX) ]] && break
                          ciphers_to_test="$(strip_inconsistent_ciphers "$proto" "$ciphers_to_test")"
                          [[ -z "$ciphers_to_test" ]] && break
                          if "$WIDE" && "$SHOW_SIGALGO"; then
@@ -13002,7 +13023,7 @@ hkdf-expand() {
      local ti tim1 # T(i) and T(i-1)
 
      case "$hash_fn" in
-          "-sha256") hash_len=32 ;;
+          "-sha256"|"-sm3") hash_len=32 ;;
           "-sha384") hash_len=48 ;;
           *) return 7
      esac
@@ -13068,7 +13089,7 @@ derive-secret() {
      local -i hash_len retcode
 
      case "$hash_fn" in
-          "-sha256") hash_len=32 ;;
+          "-sha256"|"-sm3") hash_len=32 ;;
           "-sha384") hash_len=48 ;;
           *) return 7
      esac
@@ -13109,15 +13130,12 @@ create-initial-transcript() {
      if [[ -n "$hrr" ]] && [[ "${serverhello:8:4}" == 7F12 ]]; then
           msg_transcript="$clienthello1$hrr$clienthello2$serverhello"
      elif [[ -n "$hrr" ]]; then
-          if [[ "$cipher" == *SHA256 ]]; then
-               hash_fn="-sha256"
-               hash_len=32
-          elif [[ "$cipher" == *SHA384 ]]; then
-               hash_fn="-sha384"
-               hash_len=48
-          else
-               return 1
-          fi
+          case "$cipher" in
+               *SHA256) hash_fn="-sha256"; hash_len=32 ;;
+               *SHA384) hash_fn="-sha384"; hash_len=48 ;;
+               *SM3) hash_fn="-sm3"; hash_len=32 ;;
+               *) return 1 ;;
+          esac
           hash_clienthello1="$(hex2binary "$clienthello1" | $OPENSSL dgst "$hash_fn" 2>/dev/null)"
           hash_clienthello1="${hash_clienthello1#*= }"
           msg_transcript="FE0000$(printf "%02x" $((${#hash_clienthello1}/2)))$hash_clienthello1$hrr$clienthello2$serverhello"
@@ -13141,13 +13159,12 @@ derive-handshake-secret() {
 
      "$HAS_PKUTIL" || return 1
 
-     if [[ "$cipher" == *SHA256 ]]; then
-          hash_fn="-sha256"
-     elif [[ "$cipher" == *SHA384 ]]; then
-          hash_fn="-sha384"
-     else
-          return 1
-     fi
+     case "$cipher" in
+          *SHA256) hash_fn="-sha256" ;;
+          *SHA384) hash_fn="-sha384" ;;
+          *SM3) hash_fn="-sm3" ;;
+          *) return 1 ;;
+     esac
 
      if [[ ! "$tmpfile" =~ BEGIN\ HYBRID\ PRIV\ KEY ]]; then
           # For (EC)DH groups the server's key share is a public key.
@@ -13236,6 +13253,17 @@ derive-handshake-secret() {
                           derived_secret="1591dac5cbbf0330a4a84de9c753330e92d01f0a88214b4464972fd668049e93e52f2b16fad922fdc0584478428f282b"
                      fi
                      ;;
+          "-sm3") early_secret="a4f50a29c327e9acc4ddd4dbe32b75a6a1d77e4bbe823e3d71fdcc1a5fa52757"
+                     if [[ "${TLS_SERVER_HELLO:8:2}" == 7F ]] && [[ 0x${TLS_SERVER_HELLO:10:2} -lt 0x14 ]]; then
+                          # "6465726976656420736563726574" = "derived secret"
+                          # derived_secret="$(derive-secret "$hash_fn" "$early_secret" "6465726976656420736563726574" "")"
+                          derived_secret="e3a3bff7b0dd68bbc5323191304bc0e27c8ae0c19d10ce22649b59fe3b531edb"
+                     else
+                          # "64657269766564" = "derived"
+                          # derived_secret="$(derive-secret "$hash_fn" "$early_secret" "64657269766564" "")"
+                          derived_secret="8bf1d43b3cb61da421895be55c07b3c1f49d7af9f9c728240cee1fc8039252f4"
+                     fi
+                     ;;
      esac
 
      # The approach defined in https://datatracker.ietf.org/doc/html/draft-ietf-tls-hybrid-design
@@ -13276,18 +13304,15 @@ derive-handshake-traffic-keys() {
      local -i hash_len key_len iv_len
      local handshake_traffic_secret label key iv finished="0000"
 
-     if [[ "$cipher" == *SHA256 ]]; then
-          hash_fn="-sha256"
-          hash_len=32
-     elif [[ "$cipher" == *SHA384 ]]; then
-          hash_fn="-sha384"
-          hash_len=48
-     else
-          return 1
-     fi
+     case "$cipher" in
+          *SHA256) hash_fn="-sha256"; hash_len=32 ;;
+          *SHA384) hash_fn="-sha384"; hash_len=48 ;;
+          *SM3) hash_fn="-sm3"; hash_len=32 ;;
+          *) return 1 ;;
+     esac
      iv_len=12
      case "$cipher" in
-          *AES_128*) key_len=16 ;;
+          *AES_128*|*SM4*) key_len=16 ;;
           *AES_256*|*CHACHA20_POLY1305*) key_len=32 ;;
           TLS_SHA256_SHA256) key_len=32; iv_len=32 ;;
           TLS_SHA384_SHA384) key_len=48; iv_len=48 ;;
@@ -13341,6 +13366,9 @@ derive-master-secret() {
      elif [[ "$cipher" == *SHA384 ]]; then
           hash_fn="-sha384"
           zeros="000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+     elif [[ "$cipher" == *SM3 ]]; then
+          hash_fn="-sm3"
+          zeros="0000000000000000000000000000000000000000000000000000000000000000"
      else
           return 1
      fi
@@ -13370,16 +13398,15 @@ derive-application-traffic-keys() {
      local -i key_len iv_len
      local application_traffic_secret_0 label key iv
 
-     if [[ "$cipher" == *SHA256 ]]; then
-          hash_fn="-sha256"
-     elif [[ "$cipher" == *SHA384 ]]; then
-          hash_fn="-sha384"
-     else
-          return 1
-     fi
+     case "$cipher" in
+          *SHA256) hash_fn="-sha256" ;;
+          *SHA384) hash_fn="-sha384" ;;
+          *SM3) hash_fn="-sm3" ;;
+          *) return 1 ;;
+     esac
      iv_len=12
      case "$cipher" in
-          *AES_128*) key_len=16 ;;
+          *AES_128*|*SM4*) key_len=16 ;;
           *AES_256*|*CHACHA20_POLY1305*) key_len=32 ;;
           TLS_SHA256_SHA256) key_len=32; iv_len=32 ;;
           TLS_SHA384_SHA384) key_len=48; iv_len=48 ;;
@@ -13938,6 +13965,7 @@ ccm-decrypt() {
      case "$cipher" in
           *AES_128*) cipher="-aes-128-ecb" ;;
           *AES_256*) cipher="-aes-256-ecb" ;;
+          *SM4*) cipher="-sm4-ecb" ;;
           *) return 7
      esac
 
@@ -14006,7 +14034,7 @@ ccm-decrypt() {
 ccm-encrypt() {
      local cipher="$1" key="$2" nonce="$3" plaintext="$4" aad="$5"
      local -i tag_len
-     local ossl_cipher="-aes-128-ecb"
+     local ossl_cipher
      local ciphertext="" tag encrypted_tag
      local -i i i1 i2 i3 i4
      local -i plaintext_len n mod_check
@@ -14015,8 +14043,9 @@ ccm-encrypt() {
      [[ ${#nonce} -ne 24 ]] && return 7
 
      case "$cipher" in
-          TLS_AES_128_CCM_SHA256) tag_len=32 ;;
-          TLS_AES_128_CCM_8_SHA256) tag_len=16 ;;
+          TLS_AES_128_CCM_SHA256) tag_len=32; ossl_cipher="-aes-128-ecb" ;;
+          TLS_AES_128_CCM_8_SHA256) tag_len=16; ossl_cipher="-aes-128-ecb" ;;
+          TLS_SM4_CCM_SM3) tag_len=32; ossl_cipher="-sm4-ecb" ;;
           *) return 7
      esac
 
@@ -14305,6 +14334,7 @@ gcm-decrypt() {
      case "$cipher" in
           *AES_128*) cipher="-aes-128-ecb" ;;
           *AES_256*) cipher="-aes-256-ecb" ;;
+          *SM4*) cipher="-sm4-ecb" ;;
           *) return 7
      esac
 
@@ -14338,6 +14368,7 @@ gcm-encrypt() {
      case "$1" in
           *AES_128*) cipher="-aes-128-ecb" ;;
           *AES_256*) cipher="-aes-256-ecb" ;;
+          *SM4*) cipher="-sm4-ecb" ;;
           *) return 7
      esac
      [[ ${#3} -ne 24 ]] && return 7
@@ -14675,6 +14706,9 @@ check_tls_serverhellodone() {
                     elif [[ "$cipher" == *SHA384 ]]; then
                          hash_fn="-sha384"
                          [[ $msg_len -eq 96 ]] || return 2
+                    elif [[ "$cipher" == *SM3 ]]; then
+                         hash_fn="-sm3"
+                         [[ $msg_len -eq 64 ]] || return 2
                     else
                          return 2
                     fi
@@ -15207,6 +15241,7 @@ parse_tls_serverhello() {
                                          "0019") echo -n "secp521r1" >> $TMPFILE ;;
                                          "001D") echo -n "X25519" >> $TMPFILE ;;
                                          "001E") echo -n "X448" >> $TMPFILE ;;
+                                         "0029") echo -n "curveSM2" >> $TMPFILE ;;
                                          "0100") echo -n "ffdhe2048" >> $TMPFILE ;;
                                          "0101") echo -n "ffdhe3072" >> $TMPFILE ;;
                                          "0102") echo -n "ffdhe4096" >> $TMPFILE ;;
@@ -15218,6 +15253,7 @@ parse_tls_serverhello() {
                                          "11EB") echo -n "SecP256r1MLKEM768" >> $TMPFILE ;;
                                          "11EC") echo -n "X25519MLKEM768" >> $TMPFILE ;;
                                          "11ED") echo -n "SecP384r1MLKEM1024" >> $TMPFILE ;;
+                                         "11EE") echo -n "curveSM2MLKEM768" >> $TMPFILE ;;
                                          "6399") echo -n "X25519Kyber768Draft00" >> $TMPFILE ;;
                                               *) echo -n "unknown (${tls_serverhello_ascii:offset:4})" >> $TMPFILE ;;
                                     esac
@@ -15309,6 +15345,7 @@ parse_tls_serverhello() {
                                     31) dh_bits=256 ; named_curve_str="brainpoolP256r1tls13" ; named_curve_oid="06092B2403030208010107" ;;
                                     32) dh_bits=384 ; named_curve_str="brainpoolP384r1tls13" ; named_curve_oid="06092B240303020801010B" ;;
                                     33) dh_bits=512 ; named_curve_str="brainpoolP512r1tls13" ; named_curve_oid="06092B240303020801010D" ;;
+                                    41) dh_bits=256 ; named_curve_str="curveSM2" ; named_curve_oid="06082a811ccf5501822d" ;;
                                     256) dh_bits=2048 ; named_curve_str="ffdhe2048" ;;
                                     257) dh_bits=3072 ; named_curve_str="ffdhe3072" ;;
                                     258) dh_bits=4096 ; named_curve_str="ffdhe4096" ;;
@@ -15320,6 +15357,7 @@ parse_tls_serverhello() {
                                     4587) dh_bits=192 ; named_curve_str="SecP256r1MLKEM768" ;;
                                     4588) dh_bits=192 ; named_curve_str="X25519MLKEM768" ;;
                                     4589) dh_bits=256 ; named_curve_str="SecP384r1MLKEM1024" ;;
+                                    4590) dh_bits=192 ; named_curve_str="curveSM2MLKEM768" ;;
                                     25497) dh_bits=128 ; named_curve_str="X25519Kyber768Draft00" ;;
                                     *) named_curve_str="" ; named_curve_oid="" ;;
                                esac
@@ -15423,6 +15461,26 @@ parse_tls_serverhello() {
                                          else
                                               key_bitstring="--BEGIN HYBRID CIPHERTEXT--${key_bitstring}"
                                               key_bitstring+="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:$((offset+194)):3136}-----END CIPHERTEXT------"
+                                              key_bitstring+="--END HYBRID CIPHERTEXT--"
+                                         fi
+                                    fi
+                               elif [[ $named_curve -eq 4590 ]]; then
+                                    # The server's key share is the concatenation of a curveSM2 public key and a ML-KEM-768 ciphertext
+                                    if [[ $msg_len -ne 2306 ]]; then
+                                         debugme tmln_warning "Malformed key share extension."
+                                         [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
+                                         return 1
+                                    fi
+                                    if [[ ! "$OSSL_SUPPORTED_CURVES" =~ MLKEM ]]; then
+                                         debugme prln_warning "Your $OPENSSL doesn't support ML-KEM"
+                                    else
+                                         key_bitstring="3059301306072a8648ce3d020106082a811ccf5501822d034200${tls_serverhello_ascii:offset:130}"
+                                         key_bitstring="$(hex2binary "$key_bitstring" | $OPENSSL pkey -pubin -inform DER 2>$ERRFILE)"
+                                         if [[ -z "$key_bitstring" ]]; then
+                                              debugme prln_warning "Your $OPENSSL doesn't support curveSM2"
+                                         else
+                                              key_bitstring="--BEGIN HYBRID CIPHERTEXT--${key_bitstring}"
+                                              key_bitstring+="-----BEGIN CIPHERTEXT------${tls_serverhello_ascii:$((offset+130)):2176}-----END CIPHERTEXT------"
                                               key_bitstring+="--END HYBRID CIPHERTEXT--"
                                          fi
                                     fi
@@ -16055,6 +16113,10 @@ parse_tls_serverhello() {
           [[ $DEBUG -ge 3 ]] && echo -e "     Peer signing digest:    $peering_signing_digest"
           echo "Peer signature type: $peer_signature_type" >> $TMPFILE
           [[ $DEBUG -ge 3 ]] && echo -e "     Peer signature type:    $peer_signature_type\n"
+     elif [[ 0x$peering_signing_digest -eq 7 ]] && [[ 0x$peer_signature_type -eq 8 ]]; then
+          peer_signature_type="sm2sig_sm3"
+          echo "Peer signature type: $peer_signature_type" >> $TMPFILE
+          [[ $DEBUG -ge 3 ]] && echo -e "     Peer signature type:    $peer_signature_type\n"
      elif [[ 0x$peering_signing_digest -eq 9 ]] && \
           [[ 0x$peer_signature_type -ge 4 ]] && [[ 0x$peer_signature_type -le 6 ]]; then
           case $peer_signature_type in
@@ -16396,10 +16458,10 @@ prepare_tls_clienthello() {
           else
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 8446
-               00, 28, 00, 26,            # lengths
+               00, 2a, 00, 28,            # lengths
                04,03, 05,03, 06,03, 08,04, 08,05, 08,06, 04,01, 05,01,
                06,01, 08,09, 08,0a, 08,0b, 08,07, 08,08, 02,01, 02,03,
-               09,04, 09,05, 09,06"
+               07,08, 09,04, 09,05, 09,06"
           fi
 
           extension_heartbeat="
@@ -16430,10 +16492,10 @@ prepare_tls_clienthello() {
                     # regardless of whether testssl.sh can decrypt the response.
                     extension_supported_groups="
                     00,0a,                      # Type: Supported Groups, see RFC 8446
-                    00,24, 00,22,               # lengths
+                    00,28, 00,26,               # lengths
                     00,1d, 00,17, 00,1e, 00,18, 00,19, 00,1f, 00,20, 00,21,
                     01,00, 01,01, 02,00, 02,01, 02,02, 11,eb, 11,ec, 11,ed,
-                    63,99"
+                    63,99, 00,29, 11,ee"
                elif [[ "$process_full" == all+ ]]; then
                     # Since the response needs to be decrypted, only include groups that can be
                     # decrypted using $OPENSSL. Place X25519 and X448 early in the list, if they
@@ -16467,8 +16529,8 @@ prepare_tls_clienthello() {
                          extension_supported_groups+=", 00,1d"
                     fi
                     ! "$HAS_X448" && extension_supported_groups+=", 00,1e"
-                    extension_supported_groups+=", 02,00, 02,01, 02,02, 11,eb, 11,ec, 11,ed, 63,99"
-                    extension_supported_groups="00,0a, 00,24, 00,22$extension_supported_groups"
+                    extension_supported_groups+=", 02,00, 02,01, 02,02, 11,eb, 11,ec, 11,ed, 63,99, 00,29, 11,ee"
+                    extension_supported_groups="00,0a, 00,28, 00,26$extension_supported_groups"
                fi
 
                code2network "$extension_supported_groups"
@@ -16987,7 +17049,7 @@ tls_sockets() {
           tls_hello_ascii="${tls_hello_ascii%%140303000101}"
 
           # Check if the response is a HelloRetryRequest.
-          original_clienthello="160301$(printf "%04x" "${#clienthello1}")$clienthello1"
+          original_clienthello="160301$(printf "%04x" "$((${#clienthello1}/2))")$clienthello1"
           resend_if_hello_retry_request "$original_clienthello" "$tls_hello_ascii"
           ret=$?
           if [[ $ret -eq 2 ]]; then
@@ -17140,6 +17202,8 @@ tls_sockets() {
                read -r key iv finished_key <<< "$handshake_traffic_keys"
                if [[ "$cipher" == *SHA256 ]]; then
                     finished_msg="14000020$(hmac-transcript "-sha256" "$finished_key" "$msg_transcript")"
+               elif [[ "$cipher" == *SM3 ]]; then
+                    finished_msg="14000020$(hmac-transcript "-sm3" "$finished_key" "$msg_transcript")"
                else
                     finished_msg="14000030$(hmac-transcript "-sha384" "$finished_key" "$msg_transcript")"
                fi
@@ -21055,7 +21119,7 @@ find_openssl_binary() {
      local ossl_line1="" yr=""
      # FIXME: At the moment curves_ossl does not include any post-quantum key-exchange
      # groups (e.g., MLKEM512, MLKEM768, MLKEM1024, SecP256r1MLKEM768, X25519MLKEM768,
-     # SecP384r1MLKEM1024). They do not need to be included since they are only
+     # SecP384r1MLKEM1024, curveSM2MLKEM768). They do not need to be included since they are only
      # supported by OpenSSL 3.5.0 (and above), and "$OPENSSL list -tls-groups" is used
      # instead of curves_ossl to populate $OSSL_SUPPORTED_CURVES. If newer versions of
      # LibreSSL include support for groups that are not in curves_ossl, then they
