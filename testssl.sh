@@ -10908,7 +10908,7 @@ run_fs() {
                               fi
                          done
                          [[ -z "$curves_to_test" ]] && break
-                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
+                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI -tlsextdebug") &>$TMPFILE </dev/null
                          sclient_connect_successful $? $TMPFILE || break
                          temp=$(awk -F': ' '/^Server Temp Key/ { print $2 }' "$TMPFILE")
                          curve_found="${temp%%,*}"
@@ -10927,6 +10927,9 @@ run_fs() {
                          done
                          [[ $i -eq $high ]] && break
                          supported_curve[i]=true
+                         if [[  ! "$TLS_EXTENSIONS" == *supported_groups* ]]; then
+                              extract_new_tls_extensions "$TMPFILE"
+                         fi
                     done
                     # Versions of TLS prior to 1.3 close the connection if the client does not support the curve
                     # used in the certificate. The easiest solution is to move the curves to the end of the list.
@@ -11028,6 +11031,32 @@ run_fs() {
                          [[ $i -eq $nr_curves ]] && break
                          supported_curve[i]=true
                     done
+               fi
+               # In TLS version 1.3 the supported_groups extension is sent by the server in the EncryptedExtensions message.
+               # The extension is optionally sent if the client's supported groups are in a different order than the server's.
+               # Since we need to decrypt the EncryptedExtensions message to determine if the extension is sent, another connection
+               # is needed. Only two connections are needed in the worst case scenario.
+               if [[ "$proto" == 04 ]]; then
+                    # In the first try we move the secp256r1 curve to the end of the list to trigger the mismatch in the order.
+                    curves_to_test=", 00,18, 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01, 00,17"
+                    if "$HAS_X25519"; then
+                         curves_to_test+=", 00,1d, 00,1e"
+                    fi
+                    len1=$(printf "%02x" "$((2*${#curves_to_test}/7))")
+                    len2=$(printf "%02x" "$((2*${#curves_to_test}/7+2))")
+                    tls_sockets "$proto" "${ecdhe_cipher_list_hex:2}, 00,ff" "all+" "00, 0a, 00, $len2, 00, $len1, ${curves_to_test:2}"
+                    [[ $? -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
+                    # If the supported_groups extension is not sent, we try again by moving the secp384r1 curve to the end of the list.
+                    # After this we can assume that the extension is not sent.
+                    if [[  ! "$TLS_EXTENSIONS" == *supported_groups* ]]; then
+                         curves_to_test=", 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01, 00,17, 00,18"
+                         if "$HAS_X25519"; then
+                              curves_to_test+=", 00,1d, 00,1e"
+                         fi
+                         len1=$(printf "%02x" "$((2*${#curves_to_test}/7))")
+                         len2=$(printf "%02x" "$((2*${#curves_to_test}/7+2))")
+                         [[ $? -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
+                    fi
                fi
           done
      fi
