@@ -197,7 +197,7 @@ TESTSSL_INSTALL_DIR="${TESTSSL_INSTALL_DIR:-""}"  # If you run testssl.sh and it
 CA_BUNDLES_PATH="${CA_BUNDLES_PATH:-""}"          # You can have your CA stores some place else
 EXPERIMENTAL=${EXPERIMENTAL:-false}     # a development hook which allows us to disable code
 PROXY_WAIT=${PROXY_WAIT:-20}            # waiting at max 20 seconds for socket reply through proxy
-DNS_VIA_PROXY=${DNS_VIA_PROXY:-false}   # do DNS lookups via proxy. --ip=proxy reverses this
+DNS_VIA_PROXY=${DNS_VIA_PROXY:-true}    # do DNS lookups via proxy. --ip=* reverses this
 IGN_OCSP_PROXY=${IGN_OCSP_PROXY:-false} # Also when --proxy is supplied it is ignored when testing for revocation via OCSP via --phone-out
 HEADER_MAXSLEEP=${HEADER_MAXSLEEP:-5}   # we wait this long before killing the process to retrieve a service banner / http header
 MAX_SOCKET_FAIL=${MAX_SOCKET_FAIL:-2}   # If this many failures for TCP socket connects are reached we terminate
@@ -22982,10 +22982,10 @@ datebanner() {
      local scan_time_f=""
      local node_banner=""
 
-     if [[ -n "$PROXY" ]] && "$DNS_VIA_PROXY"; then
-            node_banner="$NODE:$PORT"
+     if [[ -n "PROXY" ]] && $DNS_VIA_PROXY;then
+          node_banner="$NODE:$PORT"
      else
-            node_banner="$NODEIP:$PORT ($NODE)"
+          node_banner="$NODEIP:$PORT ($NODE)"
      fi
 
      if [[ "$1" =~ Done ]] ; then
@@ -24950,30 +24950,24 @@ lets_roll() {
      [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs and IP46ADDR is set now
      prepare_logging
 
-     if [[ -n "$PROXY" ]] && $DNS_VIA_PROXY; then
-          NODEIP="$NODE"
-          lets_roll "${STARTTLS_PROTOCOL}"
-          RET=$?
-     else
-          determine_ip_addresses
-          if [[ $(count_words "$IPADDRs") -gt 1 ]]; then    # we have more than one ipv4 address to check
-               MULTIPLE_CHECKS=true
-               pr_bold "Testing all IPv4 addresses (port $PORT): "; outln "$IPADDRs"
-               for ip in $IPADDRs; do
-                    draw_line "-" $((TERM_WIDTH * 2 / 3))
-                    outln
-                    NODEIP="$ip"
-                    lets_roll "${STARTTLS_PROTOCOL}"
-                    RET=$((RET + $?))                       # RET value per IP address
-               done
+     determine_ip_addresses
+     if [[ $(count_words "$IPADDRs") -gt 1 ]]; then    # we have more than one ipv4 address to check
+          MULTIPLE_CHECKS=true
+          pr_bold "Testing all IPv4 addresses (port $PORT): "; outln "$IPADDRs"
+          for ip in $IPADDRs; do
                draw_line "-" $((TERM_WIDTH * 2 / 3))
                outln
-               pr_bold "Done testing now all IP addresses (on port $PORT): "; outln "$IPADDRs"
-          else                                              # Just 1x ip4v to check, applies also if CMDLINE_IP was supplied
-               NODEIP="$IPADDRs"
+               NODEIP="$ip"
                lets_roll "${STARTTLS_PROTOCOL}"
-               RET=$?
-          fi
+               RET=$((RET + $?))                       # RET value per IP address
+          done
+          draw_line "-" $((TERM_WIDTH * 2 / 3))
+          outln
+          pr_bold "Done testing now all IP addresses (on port $PORT): "; outln "$IPADDRs"
+     else                                              # Just 1x ip4v to check, applies also if CMDLINE_IP was supplied
+          NODEIP="$IPADDRs"
+          lets_roll "${STARTTLS_PROTOCOL}"
+          RET=$?
      fi
 
 exit $RET
