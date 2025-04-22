@@ -22235,9 +22235,9 @@ check_proxy() {
           else
                # We check now preferred whether there was an IPv4 proxy via DNS specified
                # If it fails it could be an IPv6 only proxy via DNS or we just can't reach the proxy
-               PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
+               PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //' | head -n1)"
                if [[ -z "$PROXYIP" ]]; then
-                    PROXYIP="$(get_aaaa_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
+                    PROXYIP="$(get_aaaa_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //' | head -n1)"
                     if [[ -n "$PROXYIP" ]]; then
                          if [[ ${OSSL_VER_MAJOR$}${OSSL_VER_MINOR} -lt 11 ]]; then
                               fatal_cmd_line "OpenSSL version >= 1.1.0 required for IPv6 proxy support" $ERR_OSSLBIN
