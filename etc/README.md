@@ -14,7 +14,7 @@ The certificate trust stores were retrieved from
   --> "Keychain Access" (2 click). In that window --> "Keychains" --> "System Root"
   --> "Category" --> "All Items"
   Select all CA certificates except for "Developer ID Certification Authority", omit expired ones,  "File" --> "Export Items"
-    2. __Internet:__ Clone https://github.com/apple-oss-distributions/security_certificates.git, cd to ``security_certificates/certificates/roots``, ``for f in *.*; do echo $f >/dev/stderr; openssl x509 -in $f -inform DER -outform PEM ;done >/tmp/Apple.pem``
+    2. __Internet:__ Clone https://github.com/apple-oss-distributions/security_certificates.git , cd to ``security_certificates/certificates/roots``, ``for f in *.*; do echo $f >/dev/stderr; openssl x509 -in $f -inform DER -outform PEM ;done >/tmp/Apple.pem``
 
 Google Chromium uses basically the trust stores above, see https://www.chromium.org/Home/chromium-security/root-ca-policy.
 

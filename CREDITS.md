@@ -4,7 +4,7 @@ Full contribution, see git log.
 * Dirk Wetter (creator, maintainer and main contributor)
   - Everything what's not mentioned below and is included in testssl.sh's git log
     minus what I probably forgot to mention
-  (too much other things to do at the moment and to list it would be a tough job)
+  (too much other things to do at the moment and to list it would be too time consuming)
 
 * David Cooper (main contributor)
   - Major extensions to socket support for all protocols
@@ -36,9 +36,9 @@ Full contribution, see git log.
   - Check for ffdhe and ML-KEM groups
   - TLS 1.2 and TLS 1.3 sig algs added
   - Show server supported signature algorithms
-  - Show supported certification authorities sent by the server when client auth is requested
+  - Show supported certification authorities sent by the server when client auth is requested and whether certificate-based client authentication is not requested, optional, or required.
   - Provide a better verdict wrt to server order: Now per protocol and ciphers are weighted for each protocol
- -  Provide compatibility to every LibreSSL/OpenSSL versions
+ -  Provide compatibility to every LibreSSL/OpenSSL versions, including OpenSSL 3.5.0
   - Lots of fixes and improvements
 
 ##### Further credits (in alphabetical order)
@@ -68,6 +68,9 @@ Full contribution, see git log.
 * Christian Dresen
    - Dockerfile
 
+* enxio
+   - support for TN3270/telnet STARTTLS
+
 * csett86
    - some MacOSX and Java client handshake data
 
@@ -80,6 +83,10 @@ Full contribution, see git log.
   - HTTP2/ALPN
   - bugfixes
   - former ARM binary support
+
+* Jauder Ho
+  - GH Action to build new container images upon push
+  - dependabot actions
 
 * Maciej Grela
   - colorless handling
@@ -127,6 +134,9 @@ Full contribution, see git log.
 * Oleksandr Nosenko
   - non-flat JSON support (--json-pretty)
   - in file output (CSV, JSON flat, JSON non-flat) support of a minimum severity level
+
+* Brett Randall
+  - Improved (experimental) Extended Validation (EV) certificate identification.
 
 * Jonathan Roach
   - TLS_FALLBACK_SCSV checks

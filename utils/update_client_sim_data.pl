@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+### This is futile as the data haven't changed for an eternity
+
 use strict;
 use Data::Dumper;
 use JSON;
@@ -15,8 +17,8 @@ $ossl =~ s/\R//g; 					# remove LFs
 die "Unable to open $ossl" unless -f $ossl;
 my $ossl = "$ossl" . " ciphers -V 'ALL:COMPLEMENTOFALL:\@STRENGTH'";
 
-# we get all data from here
-my $json = `curl 'https://api.dev.ssllabs.com/api/v3/getClients'`;
+# we got all data from here : 'https://api.dev.ssllabs.com/api/v3/getClients'. New URL is below but the output hasn't changed either
+my $json = `curl 'https://api.ssllabs.com/api/v3/getClients'`;
 
 foreach my $line ( split /\n/, `$ossl`) {
 	my @fields = split /\s+/, $line;
