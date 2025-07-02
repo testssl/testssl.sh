@@ -12139,16 +12139,20 @@ send_close_notify() {
      fi
 }
 
-# Format string properly for socket
-# ARG1: any commented sequence of two bytes hex, separated by commas. It can contain comments, new lines, tabs and white spaces
-# NW_STR holds the global with the string prepared for printf, like '\x16\x03\x03\'
+# Format string properly for socket in ARG1 as it can be found here
+# ARG1:   sequence of 2 bytes hex, separated by commas. Can contain comments, new lines, tabs + white spaces
+# NW_STR: holds afterwards the global with the string prepared for printf, like '\x16\x03\x03\'
+#
 code2network() {
-     NW_STR=$(sed -e 's/,/\\\x/g' <<< "$1" | sed -e 's/# .*$//g' -e 's/ //g' -e '/^$/d' | tr -d '\n' | tr -d '\t')
+     NW_STR="$(sed -e 's/,/\\\x/g' -e 's/# .*$//g' -e 's/ //g' -e '/^$/d' <<< "$1")"
+     NW_STR="${NW_STR//$'\n'/}"
+     NW_STR="${NW_STR//$'\t'/}"
 }
 
 # sockets inspired by https://blog.chris007.de/using-bash-for-network-socket-operation/
 # ARG1: hexbytes separated by commas, with a leading comma
 # ARG2: seconds to sleep
+#
 socksend_clienthello() {
      local data=""
 
@@ -12167,6 +12171,7 @@ socksend_clienthello() {
 
 # ARG1: hexbytes -- preceded by x -- separated by commas, with a leading comma
 # ARG2: seconds to sleep
+#
 socksend() {
      local data line
 
