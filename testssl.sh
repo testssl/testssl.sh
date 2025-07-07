@@ -7803,7 +7803,8 @@ extract_new_tls_extensions() {
      tls_extensions=$(grep -a 'TLS server extension ' "$1" | \
           sed -e 's/TLS server extension //g' -e 's/\" (id=/\/#/g' \
               -e 's/,.*$/,/g' -e 's/),$/\"/g' \
-              -e 's/elliptic curves\/#10/supported_groups\/#10/g')
+              -e 's/elliptic curves\/#10/supported_groups\/#10/g' \
+              -e 's/unknown\/#50/signature algorithms cert\/#50/g')
      tls_extensions=$(echo $tls_extensions)       # into one line
 
      if [[ -n "$tls_extensions" ]]; then
@@ -10359,30 +10360,27 @@ run_server_defaults() {
                     i+=1
                done <<< "$CLIENT_AUTH_CA_LIST"
                fi
-          if [[ "$CLIENT_AUTH_SIGALGS_LIST_13" = "$CLIENT_AUTH_SIGALGS_LIST_12" ]]; then
+          if [[ "$CLIENT_AUTH_SIGALGS_LIST_13" == "$CLIENT_AUTH_SIGALGS_LIST_12" ]]; then
                pr_bold " Offered Signature Algorithms "
                out_row_aligned "$CLIENT_AUTH_SIGALGS_LIST_13"
           else
                if [[ $CLIENT_AUTH_SIGALGS_LIST_13 != empty ]]; then
                     pr_bold " Offered Signature Algorithms (TLS 1.3) "
-                    out_row_aligned "$CLIENT_AUTH_SIGALGS_LIST_13"
+                    outln "$(out_row_aligned_max_width "$CLIENT_AUTH_SIGALGS_LIST_13" "                              " $TERM_WIDTH)"
                fi
                if [[ $CLIENT_AUTH_SIGALGS_LIST_12 != empty ]]; then
                     pr_bold " Offered Signature Algorithms (TLS 1.2) "
-                    out_row_aligned "$CLIENT_AUTH_SIGALGS_LIST_12"
+                    outln "$(out_row_aligned_max_width "$CLIENT_AUTH_SIGALGS_LIST_12" "                              " $TERM_WIDTH)"
                fi
           fi
-          jsonID="clientAuth_Signature_Algorithms_TLS13"
-          fileout "$jsonID" "INFO" "$CLIENT_AUTH_SIGALGS_LIST_13"
-          jsonID="clientAuth_Signature_Algorithms_TLS12"
-          fileout "$jsonID" "INFO" "$CLIENT_AUTH_SIGALGS_LIST_12"
+          fileout "clientAuth_Signature_Algorithms_TLS13" "INFO" "$CLIENT_AUTH_SIGALGS_LIST_13"
+          fileout "clientAuth_Signature_Algorithms_TLS12" "INFO" "$CLIENT_AUTH_SIGALGS_LIST_12"
 
           if [[ "$CLIENT_AUTH_SIGALGS_CERT_LIST_13" != empty ]]; then
                pr_bold " Offered Signature Algorithms for Certificates "
-               out_row_aligned "$CLIENT_AUTH_SIGALGS_CERT_LIST_13"
+               outln "$(out_row_aligned_max_width "$CLIENT_AUTH_SIGALGS_LIST_13" "                              " $TERM_WIDTH)"
           fi
-          jsonID="clientAuth_Signature_Algorithms_Cert_TLS13"
-          fileout "$jsonID" "INFO" "$CLIENT_AUTH_SIGALGS_CERT_LIST_13"
+          fileout "clientAuth_Signature_Algorithms_Cert_TLS13" "INFO" "$CLIENT_AUTH_SIGALGS_CERT_LIST_13"
      fi
 
 
@@ -14588,6 +14586,7 @@ parse_tls_serverhello() {
                     002F) tls_extensions+="TLS server extension \"certificate authorities\" (id=47), len=$extension_len\n" ;;
                     0030) tls_extensions+="TLS server extension \"oid filters\" (id=48), len=$extension_len\n" ;;
                     0031) tls_extensions+="TLS server extension \"post handshake auth\" (id=49), len=$extension_len\n" ;;
+                    0032) tls_extensions+="TLS server extension \"signature algorithms cert\" (id=50), len=$extension_len\n" ;;
                     3374) tls_extensions+="TLS server extension \"next protocol\" (id=13172), len=$extension_len\n"
                           if [[ "$process_full" =~ all ]]; then
                                local -i protocol_len
@@ -14839,7 +14838,7 @@ parse_tls_serverhello() {
           done
      fi
      # Now parse the CertificateRequest message.
-     if [[ $tls_certificate_request_ascii_len -ne 0 ]] && [[ "$process_full" =~ all ]]; then
+     if [[ $tls_certificate_request_ascii_len -ne 0 ]] then
           # The CertificateRequest message is only present in TLS 1.3 and TLS 1.2, it has a 2 char identifier and a 6 char length.
           if [[ $tls_certificate_request_ascii_len -lt 8 ]]; then
                debugme echo "Malformed CertificateRequest Handshake message in ServerHello."
@@ -14848,7 +14847,7 @@ parse_tls_serverhello() {
           fi
           # The extract_calist can be used to extract the extensions' data from the CertificateRequest message.
           # The second parameter is the TLS version, if it is provided extract_calist does not try to get it.
-          extract_calist "$tls_certificate_request_ascii" "${DETECTED_TLS_VERSION:2:2}" 
+          extract_calist "$tls_certificate_request_ascii" "${DETECTED_TLS_VERSION}" 
           # Can not find a way to check if it is optional or required
           [[ "$CLIENT_AUTH" = none ]] && CLIENT_AUTH="optional"
      fi
@@ -21680,10 +21679,10 @@ print_dn() {
      return 0
 }
 
-# Given the OpenSSL output of a response from a TLS server (with the -msg option)
+# Given the OpenSSL output of a response from a TLS server (with the -msg option), or the tls_socket output,
 # in which the response includes a CertificateRequest message, update the CLIENT_AUTH_CA_LIST, 
 # CLIENT_AUTH_SIGALGS_LIST and CLIENT_AUTH_SIGALGS_CERT_LIST variables with data from the message.
-# The second_parameter is optional and should contain the two low bytes of the TLS version.
+# The second_parameter is optional and should contain the full two bytes of the TLS version.
 # If the second parameter is provided the first parameter should contain the certreq in the following format:
 # - hex format
 # - no spaces or new lines characters
@@ -21721,18 +21720,21 @@ extract_calist() {
           certreq="${certreq:8}"
      else
           certreq="$response"
-     fi 
+     fi
      # Extract the extensions' information
-     if "$is_tls13" || [[ 0x"$tls_version" = "0x04" ]]; then
+     if "$is_tls13" || [[ 0x"$tls_version" == "0x0304" ]]; then
           # struct {
           #     opaque certificate_request_context<0..2^8-1>;
           #     Extension extensions<2..2^16-1>;
           # } CertificateRequest;
-          # Context len
+          
+          # Length of the certificate_request_context is given in the first two bytes. 
           len=2*$(hex2dec "${certreq:0:2}")
+          # We can ignore the certificate_request_context as it is not used.
           certreq="${certreq:$((len+2))}"
           len=2*$(hex2dec "${certreq:0:4}")
           certreq="${certreq:4}"
+          extensions_text=""
           while true; do
                [[ -z "$certreq" ]] && break
                type=$(hex2dec "${certreq:0:4}")
@@ -21746,19 +21748,25 @@ extract_calist() {
                     # Since the structure of this extension only has one element in it, we can take everything
                     # after the two bytes which contain the length of the element.
                     sigalgs="${sigalgs:4:el_len}"
+                    extensions_text+="TLS server extension \"signature algorithms\" (id=13), len=$len\n"
                elif [[ $type -eq 47 ]]; then
                     # This is the certificate_authorities extension
                     calist="${certreq:8:len}"
                     el_len=2*$(hex2dec "${calist:0:4}")
                     calist="${calist:4:el_len}"
+                    extensions_text+="TLS server extension \"certificate authorities\" (id=47), len=$len\n"
                elif [[ $type -eq 50 ]]; then
                     # This is the signature_algorithms_cert extension
                     sigalgs_cert="${certreq:8:len}"
                     el_len=2*$(hex2dec "${sigalgs_cert:0:4}")
                     sigalgs_cert="${sigalgs_cert:4:el_len}"
+                    extensions_text+="TLS server extension \"signature algorithms cert\" (id=50), len=$len\n"
                fi
                certreq="${certreq:$((len+8))}"
           done
+          printf "$extensions_text" > "$TEMPDIR/tls_extensions.txt"
+          extract_new_tls_extensions "$TEMPDIR/tls_extensions.txt"
+          pr_blue "TLS server extensions: $TLS_EXTENSIONS\n"
           sigalgs_string="$(sigalgs_converter "$sigalgs")"
           CLIENT_AUTH_SIGALGS_LIST_13="${sigalgs_string}"
           [[ -z "$sigalgs_string" ]] && CLIENT_AUTH_SIGALGS_LIST_13="empty"
@@ -22231,13 +22239,6 @@ determine_optimal_proto() {
      fi
      actual_proto="$(get_protocol $TMPFILE)"
      tmpfile_handle ${FUNCNAME[0]}.txt
-     # if the actual_proto is TLSv1.2 and TLSv1.3 is available it probably means that the
-     # current openssl version does not support TLSv1.3 so tls_sockets must be used to 
-     # obtain information about the certificate request
-     if [[ $actual_proto == TLSv1.2 ]] && [[ "$(has_server_protocol "tls1_3")" -eq 0 ]] && [[ "$CLIENT_AUTH" != none ]]; then
-          # this call performs the handshake and retrieves the signature_algorithms_cert information
-          tls_sockets "04" "$TLS13_CIPHER" "all+" "" "" false
-     fi
      return 0
 }
 
