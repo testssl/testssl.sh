@@ -20,6 +20,8 @@ my $uri="google.com";
 my $diff="";
 my $distro_openssl="/usr/bin/openssl";
 my @args="";
+# that can be done better but I am a perl n00b ;-)
+my $os=`perl -e 'print "$^O";'`;
 
 die "Unable to open $prg" unless -f $prg;
 die "Unable to open $distro_openssl" unless -f $distro_openssl;
@@ -29,13 +31,22 @@ unlink $csvfile;
 unlink $csvfile2;
 
 #1 run
-printf "\n%s\n", "Diff test IPv4 with supplied openssl against \"$uri\"";
-@args="$prg $check2run $csvfile $uri >/dev/null";
+
+if ( $os eq "linux" ){
+     printf "\n%s\n", "Test with supplied openssl against \"$uri\" and save it";
+     @args="$prg $check2run $csvfile $uri >/dev/null";
+} elsif ( $os eq "darwin" ){
+     # macos silicon doesn't have ~/bin/openssl.Darwin.arm64 binary so we use the
+     # homebrew version which was moved to /opt/homebrew/bin/openssl.NOPE in
+     # .github/workflows/unit_tests_macos.yml
+     printf "\n%s\n", "Test with homebrew's openssl 3.5.x against \"$uri\" and save it";
+     @args="$prg $check2run $csvfile --openssl /opt/homebrew/bin/openssl.NOPE $uri >/dev/null";
+}
 system("@args") == 0
      or die ("FAILED: \"@args\"");
 
 # 2
-printf "\n%s\n", "Diff test IPv4 with $distro_openssl against \"$uri\"";
+printf "\n%s\n", "Test with $distro_openssl against \"$uri\" and save it";
 @args="$prg $check2run $csvfile2 --openssl=$distro_openssl $uri >/dev/null";
 system("@args") == 0
      or die ("FAILED: \"@args\" ");
