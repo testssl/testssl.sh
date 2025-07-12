@@ -1870,7 +1870,7 @@ http_get() {
 # The proxy environment variable is used automatically.
 # Currently it is being used by check_pwnedkeys(), only
 #
-http_get_header() {
+http_head() {
      local proto
      local node="" query=""
      local request_header="$2"
@@ -1917,14 +1917,14 @@ http_get_header() {
      fi
 }
 
-# does a simple http head via printf with no proxy, only used by do_opossum
+# does a simple http head via printf with no proxy, only used by do_opossum()
 #    arg1: URL
 #    arg2: extra http header
 #
 # return codes:
 #    0: all fine
-#    1: got stuck within HEADER_MAXSLEEP
-#    3: got stuck within HEADER_MAXSLEEP and PROXY was defined
+#    1: server dind't respond within HEADER_MAXSLEEP
+#    3: server dind't respond within HEADER_MAXSLEEP and PROXY was defined
 #
 http_header_printf() {
      local request_header="$2"
@@ -2021,7 +2021,7 @@ check_pwnedkeys() {
      fi
      fingerprint="$($OPENSSL pkey -pubin -outform DER <<< "$pubkey" 2>/dev/null | $OPENSSL dgst -sha256 -hex 2>/dev/null)"
      fingerprint="${fingerprint#*= }"
-     response="$(http_get_header "https://v1.pwnedkeys.com/$fingerprint")"
+     response="$(http_head "https://v1.pwnedkeys.com/$fingerprint")"
      # Handle curl's/wget's connectivity exit codes
      case $? in
           4|5|7)     return 7 ;;
