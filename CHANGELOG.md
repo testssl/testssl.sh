@@ -5,6 +5,7 @@
 
 * QUIC protocol check
 * bump SSLlabs rating guide to 2009r
+* Check for Opossum vulnerability
 
 ### Features implemented / improvements in 3.2
 
