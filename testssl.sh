@@ -1826,7 +1826,7 @@ http_get() {
           # Worst option: slower and hiccups with chunked transfers. Workaround for the
           # latter is using HTTP/1.0. We do not support https here, yet.
           # First the URL will be split
-          IFS=/ read -r proto z node query <<< "$1"
+          IFS=/ read -r proto foo node query <<< "$1"
           proto=${proto%:}
           if [[ "$proto" != http ]]; then
                pr_warning "protocol $proto not supported yet"
