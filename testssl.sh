@@ -9979,7 +9979,7 @@ certificate_info() {
           check_pwnedkeys "$HOSTCERT" "$cert_key_algo" "$cert_keysize"
           case "$?" in
                0) outln "not checked"; fileout "pwnedkeys${json_postfix}" "INFO" "not checked" ;;
-               1) outln "not in database"; fileout "pwnedkeys${json_postfix}" "INFO" "not in database" ;;
+               1) pr_svrty_good "not in database"; fileout "pwnedkeys${json_postfix}" "OK" "not in database" ;;
                2) pr_svrty_critical "NOT ok --"; outln " key appears in database"; fileout "pwnedkeys${json_postfix}" "CRITICAL" "private key is known" ;;
                7) prln_warning "error querying https://v1.pwnedkeys.com"; fileout "pwnedkeys${json_postfix}" "WARN" "connection error" ;;
           esac
