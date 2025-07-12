@@ -1917,7 +1917,7 @@ http_head() {
      fi
 }
 
-# does a simple http head via printf with no proxy, only used by do_opossum()
+# does a simple http head via printf with no proxy, only used by run_opossum()
 #    arg1: URL
 #    arg2: extra http header
 #
@@ -17683,10 +17683,11 @@ run_ticketbleed() {
 run_opossum() {
      local cve='CVE-2025-49812'
      local jsonID="opossum"
-     local cwe="CWE-74"
+     local cwe="CWE-287"
      local -i ret=0
      local uri=$URI
      local service="$SERVICE"
+     local response=""
 
      [[ -n "$STARTTLS" ]] && return 0
      [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for Opossum vulnerability " && outln
@@ -17707,10 +17708,10 @@ run_opossum() {
                     1|3) ret=7 ;;       # got stuck
                esac
                if [[ $response =~ Upgrade:\ TLS ]]; then
-                    prln_svrty_critical "VULNERABLE (NOT ok)"
+                    prln_svrty_high "VULNERABLE (NOT ok)"
                     fileout "$jsonID" "CRITICAL" "VULNERABLE" "$cve" "$cwe" "$hint"
                else
-                    prln_svrty_best "not vulnerable (OK)"
+                    prln_svrty_good "not vulnerable (OK)"
                     fileout "$jsonID" "OK" "not vulnerable $append" "$cve" "$cwe"
                fi
           ;;
