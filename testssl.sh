@@ -1786,10 +1786,10 @@ filter_input() {
      sed -e 's/#.*$//' -e '/^$/d' <<< "$1" | tr -d '\n' | tr -d '\t' | tr -d '\r'
 }
 
-# Dl's any URL (arg1) via HTTP 1.1 GET from port 80, arg2: file to store http body.
+# Dl any URL (arg1) via HTTP 1.1 GET from port 80 or 443 (curl/wget). arg2: file to store http body.
 # Proxy is not honored yet (see cmd line switches) -- except when using curl or wget.
-# There the environment variable is used automatically
-# Currently it is being used by check_revocation_crl() only.
+# The PROXY environment variable is used when specified
+# Currently this is being used by check_revocation_crl() only.
 #
 http_get() {
      local proto="" foo=""
@@ -1862,13 +1862,13 @@ http_get() {
      fi
 }
 
-# Outputs the HTTP headers via HTTP 1.1 HEAD command bia HTTPS and a valid certificate
+# Outputs the HTTP headers via HTTP 1.1 HEAD command via HTTPS and a valid certificate
 #    arg1 is the URL
 #    arg2 is optional and could be a request header. curl/wget don't send empty headers otherwise
 #
 # Only works if curl or wget is available.
 # The proxy environment variable is used automatically.
-# Currently it is being used by check_pwnedkeys(), only
+# Currently it is being used by check_pwnedkeys() only
 #
 http_head() {
      local proto
@@ -12264,6 +12264,7 @@ code2network() {
 # sockets inspired by https://blog.chris007.de/using-bash-for-network-socket-operation/
 # ARG1: hexbytes separated by commas, with a leading comma
 # ARG2: seconds to sleep
+#
 socksend_clienthello() {
      local data=""
 
@@ -12282,6 +12283,7 @@ socksend_clienthello() {
 
 # ARG1: hexbytes -- preceded by x -- separated by commas, with a leading comma
 # ARG2: seconds to sleep
+#
 socksend() {
      local data line
 
