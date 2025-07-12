@@ -90,7 +90,7 @@
 "heartbleed","testssl.sh/81.169.166.184","443","OK","not vulnerable, no heartbeat extension","CVE-2014-0160","CWE-119"
 "CCS","testssl.sh/81.169.166.184","443","OK","not vulnerable","CVE-2014-0224","CWE-310"
 "ticketbleed","testssl.sh/81.169.166.184","443","OK","no session ticket extension","CVE-2016-9244","CWE-200"
-"opossum","testssl.sh/81.169.166.184","443","OK","not vulnerable","CVE-2025-49812","CWE-74"
+"opossum","testssl.sh/81.169.166.184","443","OK","not vulnerable","CVE-2025-49812","CWE-287"
 "ROBOT","testssl.sh/81.169.166.184","443","OK","not vulnerable","CVE-2017-17382 CVE-2017-17427 CVE-2017-17428 CVE-2017-13098 CVE-2017-1000385 CVE-2017-13099 CVE-2016-6883 CVE-2012-5081 CVE-2017-6168","CWE-203"
 "secure_renego","testssl.sh/81.169.166.184","443","OK","supported","","CWE-310"
 "secure_client_renego","testssl.sh/81.169.166.184","443","OK","not vulnerable","CVE-2011-1473","CWE-310"
