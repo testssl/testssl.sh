@@ -1862,8 +1862,9 @@ http_get() {
      fi
 }
 
-# Outputs the headers when downloading any URL (arg1) via HTTP 1.1 GET from port 80.
-# arg2 is optional and could be a http_header
+# Outputs the HTTP headers via HTTP 1.1 HEAD command bia HTTPS and a valid certificate
+#    arg1 is the URL
+#    arg2 is optional and could be a request header. curl/wget don't send empty headers otherwise
 #
 # Only works if curl or wget is available.
 # The proxy environment variable is used automatically.
@@ -1889,10 +1890,10 @@ http_get_header() {
                response_headers="$(curl $xtra_params -x $PROXYIP:$PROXYPORT -H $''"$request_header"'' -A $''"$useragent"'' "$1")"
           fi
           ret=$?
-          tm_out "$response_headers"
+          [[ $ret -eq 0 ]] && tm_out "$response_headers"
           return $ret
      elif type -p wget &>/dev/null; then
-          xtra_params="--timeout=$HEADER_MAXSLEEP --tries=1 --content-on-error --cache=off"
+          xtra_params="--timeout=$HEADER_MAXSLEEP --tries=1 --cache=off"
           # wget has no proxy command line. We need to use http_proxy instead. And for the sake of simplicity
           # assume the GET protocol we query is using http -- http_proxy is the $ENV not for the connection TO
           # the proxy, but for the protocol we query THROUGH the proxy
@@ -1906,7 +1907,7 @@ http_get_header() {
                fi
           fi
           ret=$?
-          tm_out "$response_headers"
+          [[ $ret -eq 0 ]] && tm_out "$response_headers"
           # wget(1): "8: Server issued an error response.". Happens e.g. when 404 is returned. However also if the call wasn't correct (400)
           # So we assume for now that everything is submitted correctly. We parse the error code too later
           [[ $ret -eq 8 ]] && ret=0 && tm_out "$response_headers"
