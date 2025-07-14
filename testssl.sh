@@ -197,7 +197,7 @@ TESTSSL_INSTALL_DIR="${TESTSSL_INSTALL_DIR:-""}"  # If you run testssl.sh and it
 CA_BUNDLES_PATH="${CA_BUNDLES_PATH:-""}"          # You can have your CA stores some place else
 EXPERIMENTAL=${EXPERIMENTAL:-false}     # a development hook which allows us to disable code
 PROXY_WAIT=${PROXY_WAIT:-20}            # waiting at max 20 seconds for socket reply through proxy
-DNS_VIA_PROXY=${DNS_VIA_PROXY:-false}   # do DNS lookups via proxy. --ip=proxy reverses this
+DNS_VIA_PROXY=${DNS_VIA_PROXY:-true}    # do DNS lookups via proxy. --ip reverses this
 IGN_OCSP_PROXY=${IGN_OCSP_PROXY:-false} # Also when --proxy is supplied it is ignored when testing for revocation via OCSP via --phone-out
 HEADER_MAXSLEEP=${HEADER_MAXSLEEP:-5}   # we wait this long before killing the process to retrieve a service banner / http header
 MAX_SOCKET_FAIL=${MAX_SOCKET_FAIL:-2}   # If this many failures for TCP socket connects are reached we terminate
@@ -21240,7 +21240,6 @@ tuning / connect options (most also can be preset via environment variables):
      -6                            also use IPv6. Works only with supporting OpenSSL version and IPv6 connectivity
      --ip <ip>                     a) tests the supplied <ip> v4 or v6 address instead of resolving host(s) in URI
                                    b) "one" means: just test the first DNS returns (useful for multiple IPs)
-                                   c) "proxy" means: dns resolution via proxy. Needed when host has no DNS.
      -n, --nodns <min|none>        if "none": do not try any DNS lookups, "min" queries A, AAAA and MX records
      --sneaky                      leave less traces in target logs: user agent, referer
      --user-agent <user agent>     set a custom user agent instead of the standard user agent
@@ -22149,63 +22148,67 @@ get_txt_record() {
 determine_ip_addresses() {
      local ip4=""
      local ip6=""
+     
+     if [[ -n "$PROXY" ]] && "$DNS_VIA_PROXY";then
+          IPADDRs=$NODE
+     else
+          ip4="$(get_a_record "$NODE")"
+          ip6="$(get_aaaa_record "$NODE")"
+          IP46ADDRs=$(newline_to_spaces "$ip4 $ip6")
 
-     ip4="$(get_a_record "$NODE")"
-     ip6="$(get_aaaa_record "$NODE")"
-     IP46ADDRs=$(newline_to_spaces "$ip4 $ip6")
-
-     if [[ -n "$CMDLINE_IP" ]]; then
-          # command line has supplied an IP address or "one"
-          if [[ "$CMDLINE_IP" == one ]]; then
-               # use first IPv6 or IPv4 address
-               if "$HAS_IPv6" && [[ -n "$ip6" ]]; then
-                    CMDLINE_IP="$(head -1 <<< "$ip6")"
+          if [[ -n "$CMDLINE_IP" ]]; then
+               # command line has supplied an IP address or "one"
+               if [[ "$CMDLINE_IP" == one ]]; then
+                    # use first IPv6 or IPv4 address
+                    if "$HAS_IPv6" && [[ -n "$ip6" ]]; then
+                         CMDLINE_IP="$(head -1 <<< "$ip6")"
+                    else
+                         CMDLINE_IP="$(head -1 <<< "$ip4")"
+                    fi
+               fi
+               NODEIP="$CMDLINE_IP"
+               if is_ipv4addr "$NODEIP"; then
+                    ip4="$NODEIP"
+               elif is_ipv6addr "$NODEIP"; then
+                    ip6="$NODEIP"
                else
-                    CMDLINE_IP="$(head -1 <<< "$ip4")"
+                    fatal "couldn't identify supplied \"CMDLINE_IP\"" $ERR_DNSLOOKUP
+               fi
+          elif is_ipv4addr "$NODE"; then
+               ip4="$NODE"                        # only an IPv4 address was supplied as an argument, no hostname
+               SNI=""                             # override Server Name Indication as we test the IP only
+          else
+               ip4=$(get_local_a "$NODE")         # is there a local host entry?
+               if [[ -z "$ip4" ]]; then           # empty: no (LOCAL_A is predefined as false)
+                    ip4=$(get_a_record "$NODE")
+               else
+                    LOCAL_A=true                  # we have the ip4 from local host entry and need to signal this to testssl
+               fi
+               # same now for ipv6
+               ip6=$(get_local_aaaa "$NODE")
+               if [[ -z "$ip6" ]]; then
+                    ip6=$(get_aaaa_record "$NODE")
+               else
+                    LOCAL_AAAA=true               # we have a local ipv6 entry and need to signal this to testssl
                fi
           fi
-          NODEIP="$CMDLINE_IP"
-          if is_ipv4addr "$NODEIP"; then
-               ip4="$NODEIP"
-          elif is_ipv6addr "$NODEIP"; then
-               ip6="$NODEIP"
-          else
-               fatal "couldn't identify supplied \"CMDLINE_IP\"" $ERR_DNSLOOKUP
-          fi
-     elif is_ipv4addr "$NODE"; then
-          ip4="$NODE"                        # only an IPv4 address was supplied as an argument, no hostname
-          SNI=""                             # override Server Name Indication as we test the IP only
-     else
-          ip4=$(get_local_a "$NODE")         # is there a local host entry?
-          if [[ -z "$ip4" ]]; then           # empty: no (LOCAL_A is predefined as false)
-               ip4=$(get_a_record "$NODE")
-          else
-               LOCAL_A=true                  # we have the ip4 from local host entry and need to signal this to testssl
-          fi
-          # same now for ipv6
-          ip6=$(get_local_aaaa "$NODE")
-          if [[ -z "$ip6" ]]; then
-               ip6=$(get_aaaa_record "$NODE")
-          else
-               LOCAL_AAAA=true               # we have a local ipv6 entry and need to signal this to testssl
-          fi
-     fi
 
-     # IPv6 only address
-     if [[ -z "$ip4" ]]; then
-          if "$HAS_IPv6"; then
-               IPADDRs=$(newline_to_spaces "$ip6")
-               IP46ADDRs="$IPADDRs"          # IP46ADDRs are the ones to display, IPADDRs the ones to test
-          fi
-     else
-          if "$HAS_IPv6" && [[ -n "$ip6" ]]; then
-               if is_ipv6addr "$CMDLINE_IP"; then
+          # IPv6 only address
+          if [[ -z "$ip4" ]]; then
+               if "$HAS_IPv6"; then
                     IPADDRs=$(newline_to_spaces "$ip6")
-               else
-                    IPADDRs=$(newline_to_spaces "$ip4 $ip6")
+                    IP46ADDRs="$IPADDRs"          # IP46ADDRs are the ones to display, IPADDRs the ones to test
                fi
           else
-               IPADDRs=$(newline_to_spaces "$ip4")
+               if "$HAS_IPv6" && [[ -n "$ip6" ]]; then
+                    if is_ipv6addr "$CMDLINE_IP"; then
+                         IPADDRs=$(newline_to_spaces "$ip6")
+                    else
+                         IPADDRs=$(newline_to_spaces "$ip4 $ip6")
+                    fi
+               else
+                    IPADDRs=$(newline_to_spaces "$ip4")
+               fi
           fi
      fi
      if [[ -z "$IPADDRs" ]]; then
@@ -22215,7 +22218,7 @@ determine_ip_addresses() {
                fatal "No IPv4/IPv6 address(es) for \"$NODE\" available" $ERR_DNSLOOKUP
           fi
      fi
-     return 0                                # IPADDR and IP46ADDR is set now
+     return 0                                # IPADDRs and IP46ADDR is set now
 }
 
 determine_rdns() {
@@ -22297,9 +22300,9 @@ check_proxy() {
           else
                # We check now preferred whether there was an IPv4 proxy via DNS specified
                # If it fails it could be an IPv6 only proxy via DNS or we just can't reach the proxy
-               PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
+               PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //' | head -n1)"
                if [[ -z "$PROXYIP" ]]; then
-                    PROXYIP="$(get_aaaa_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
+                    PROXYIP="$(get_aaaa_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //' | head -n1)"
                     if [[ -n "$PROXYIP" ]]; then
                          if [[ ${OSSL_VER_MAJOR$}${OSSL_VER_MINOR} -lt 11 ]]; then
                               fatal_cmd_line "OpenSSL version >= 1.1.0 required for IPv6 proxy support" $ERR_OSSLBIN
@@ -23075,10 +23078,10 @@ datebanner() {
      local scan_time_f=""
      local node_banner=""
 
-     if [[ -n "$PROXY" ]] && "$DNS_VIA_PROXY"; then
-            node_banner="$NODE:$PORT"
+     if [[ -n "$PROXY" ]] && "$DNS_VIA_PROXY";then
+          node_banner="$NODE:$PORT"
      else
-            node_banner="$NODEIP:$PORT ($NODE)"
+          node_banner="$NODEIP:$PORT ($NODE)"
      fi
 
      if [[ "$1" =~ Done ]] ; then
@@ -24156,10 +24159,8 @@ parse_cmd_line() {
                --ip|--ip=*)
                     CMDLINE_IP="$(parse_opt_equal_sign "$1" "$2")"
                     [[ $? -eq 0 ]] && shift
-                    if [[ "$CMDLINE_IP" == proxy ]]; then
-                         DNS_VIA_PROXY=true
-                         unset CMDLINE_IP
-                    fi
+                    DNS_VIA_PROXY=false
+                    
                     # normalize any IPv6 address
                     CMDLINE_IP="${CMDLINE_IP//[/}"      # fix vim syntax highlighting "]
                     CMDLINE_IP="${CMDLINE_IP//]/}"
@@ -25047,30 +25048,24 @@ lets_roll() {
      [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs and IP46ADDR is set now
      prepare_logging
 
-     if [[ -n "$PROXY" ]] && $DNS_VIA_PROXY; then
-          NODEIP="$NODE"
-          lets_roll "${STARTTLS_PROTOCOL}"
-          RET=$?
-     else
-          determine_ip_addresses
-          if [[ $(count_words "$IPADDRs") -gt 1 ]]; then    # we have more than one ipv4 address to check
-               MULTIPLE_CHECKS=true
-               pr_bold "Testing all IPv4 addresses (port $PORT): "; outln "$IPADDRs"
-               for ip in $IPADDRs; do
-                    draw_line "-" $((TERM_WIDTH * 2 / 3))
-                    outln
-                    NODEIP="$ip"
-                    lets_roll "${STARTTLS_PROTOCOL}"
-                    RET=$((RET + $?))                       # RET value per IP address
-               done
+     determine_ip_addresses
+     if [[ $(count_words "$IPADDRs") -gt 1 ]]; then    # we have more than one ipv4 address to check
+          MULTIPLE_CHECKS=true
+          pr_bold "Testing all IPv4 addresses (port $PORT): "; outln "$IPADDRs"
+          for ip in $IPADDRs; do
                draw_line "-" $((TERM_WIDTH * 2 / 3))
                outln
-               pr_bold "Done testing now all IP addresses (on port $PORT): "; outln "$IPADDRs"
-          else                                              # Just 1x ip4v to check, applies also if CMDLINE_IP was supplied
-               NODEIP="$IPADDRs"
+               NODEIP="$ip"
                lets_roll "${STARTTLS_PROTOCOL}"
-               RET=$?
-          fi
+               RET=$((RET + $?))                       # RET value per IP address
+          done
+          draw_line "-" $((TERM_WIDTH * 2 / 3))
+          outln
+          pr_bold "Done testing now all IP addresses (on port $PORT): "; outln "$IPADDRs"
+     else                                              # Just 1x ip4v to check, applies also if CMDLINE_IP was supplied
+          NODEIP="$IPADDRs"
+          lets_roll "${STARTTLS_PROTOCOL}"
+          RET=$?
      fi
 
 exit $RET
