@@ -1933,11 +1933,33 @@ http_header_printf() {
      local errfile=$TEMPDIR/$NODE.$NODEIP.http_header_printf-err.log
      local -i ret=0
      local proto="" foo="" node="" query=""
+     local pid
 
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
 
      IFS=/ read -r proto foo node query <<< "$1"
-     exec 33<>/dev/tcp/$node/80
+
+     # This command may fail immediately if the server responds with "connection refused".
+     # To deal with this while also being able to interrupt the call, we can use 'wait' to check the real exit code if the process no longer exists.
+     # The connection is wrapped in a subshell so we can redirect stderr instead of polluting any test output.
+     bash -c "exec 33<>/dev/tcp/$NODEIP/80" 2>$errfile &
+     pid=$!
+     if ! ps $pid >/dev/null && ! wait $pid; then
+          [[ -n "$PROXY" ]] && return 3
+          return 1
+     fi
+
+     # On the other hand, if the process is still running then we'll need to check for a timeout, since the server doesn't seem to actively reject the connection
+     wait_kill $pid $HEADER_MAXSLEEP
+     if [[ $? -ne 0 ]]; then
+          # Killed, i.e. server didn't respond in time
+          [[ -n "$PROXY" ]] && return 3
+          return 1
+     fi
+
+     # Now we need to set up a new connection, which is very unlikely to fail at this point.
+     # Note that the actual HEAD request will overwrite $errfile, which is fine because it should always be empty if we came this far.
+     exec 33<>/dev/tcp/$NODEIP/80
      printf -- "%b" "HEAD ${proto}//${node}/${query} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\n${request_header}\r\nAccept: */*\r\n\r\n\r\n" >&33 2>$errfile &
      wait_kill $! $HEADER_MAXSLEEP
      if [[ $? -ne 0 ]]; then
