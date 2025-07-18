@@ -1942,7 +1942,7 @@ http_header_printf() {
      # This command may fail immediately if the server responds with "connection refused".
      # To deal with this while also being able to interrupt the call, we can use 'wait' to check the real exit code if the process no longer exists.
      # The connection is wrapped in a subshell so we can redirect stderr instead of polluting any test output.
-     bash -c "exec 33<>/dev/tcp/$NODEIP/80" 2>$errfile &
+     bash -c "exec 33<>/dev/tcp/$NODE/80" 2>$errfile &
      pid=$!
      if ! ps $pid >/dev/null && ! wait $pid; then
           [[ -n "$PROXY" ]] && return 3
@@ -1959,7 +1959,7 @@ http_header_printf() {
 
      # Now we need to set up a new connection, which is very unlikely to fail at this point.
      # Note that the actual HEAD request will overwrite $errfile, which is fine because it should always be empty if we came this far.
-     exec 33<>/dev/tcp/$NODEIP/80
+     exec 33<>/dev/tcp/$NODE/80
      printf -- "%b" "HEAD ${proto}//${node}/${query} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\n${request_header}\r\nAccept: */*\r\n\r\n\r\n" >&33 2>$errfile &
      wait_kill $! $HEADER_MAXSLEEP
      if [[ $? -ne 0 ]]; then
