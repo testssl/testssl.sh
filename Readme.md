@@ -62,6 +62,10 @@ You can download testssl.sh branch 3.3dev just by cloning this git repository:
 
     git clone --depth 1 https://github.com/testssl/testssl.sh.git --branch 3.3dev
 
+### Prerequisite for Kali Linux
+```
+sudo apt install bsdextrautils
+```
 3.3dev is the latest development branch which evolved from 3.2 stable. We're trying not to do big experiments in the dev branch, however the point of development is that there will be changes and changes might need a bit time to mature.
 
 
