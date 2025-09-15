@@ -2768,6 +2768,14 @@ run_http_date() {
      if [[ ! -s $HEADERFILE ]]; then
           run_http_header "$1" || return 1
      fi
+
+     # make sure that HTTP_AGE is either missing or a valid value (only digits) for the later expression.
+     if [[ -n "$HTTP_AGE" && ! "$HTTP_AGE" =~ ^[0-9]+$ ]]; then
+          pr_bold " HTTP Age Header              "
+          out "Age header has invalid value: $HTTP_AGE (treated as 0)";
+          unset HTTP_AGE
+          outln
+     fi
      pr_bold " HTTP clock skew              "
      if [[ -n "$HTTP_TIME" ]]; then
           if "$HAS_OPENBSDDATE"; then
