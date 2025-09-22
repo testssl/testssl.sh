@@ -2030,9 +2030,9 @@ check_revocation_crl() {
           fi
      fi
      if grep -qe '-----BEGIN CERTIFICATE-----' $TEMPDIR/intermediatecerts.pem; then
-          $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
+          $OPENSSL verify -crl_check -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
      else
-          $OPENSSL verify -crl_check -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
+          $OPENSSL verify -crl_check -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
      fi
      if [[ $? -eq 0 ]]; then
           out ", "
@@ -2090,14 +2090,14 @@ check_revocation_ocsp() {
                # Response appears to use SHA-1 in CertID
                $OPENSSL ocsp -no_nonce -respin "$TEMPDIR/stapled_ocsp_response.dd" \
                     -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-                    -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+                    -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
                success=$?
           fi
           if [[ $success -ne 0 ]] && [[ "$stapled_response" =~ 0609608648016503040201 ]]; then
                # Response appears to use SHA-256 in CertID
                $OPENSSL ocsp -sha256 -no_nonce -respin "$TEMPDIR/stapled_ocsp_response.dd" \
                     -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-                    -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+                    -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
                success=$?
           fi
      else
@@ -2128,7 +2128,7 @@ check_revocation_ocsp() {
           fi
           $openssl_bin ocsp -no_nonce ${host_header} -url "$uri" \
                -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-               -CAfile <(cat $ADDTL_CA_FILES "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+               -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
           success=$?
      fi
 
@@ -7810,9 +7810,9 @@ determine_trust() {
           # in a subshell because that should be valid here only
           (export SSL_CERT_DIR="/dev/null"; export SSL_CERT_FILE="/dev/null"
           if [[ $certificates_provided -ge 2 ]]; then
-               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat $ADDTL_CA_FILES "$bundle_fname") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
+               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$bundle_fname") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
           else
-               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat $ADDTL_CA_FILES "$bundle_fname") $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
+               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$bundle_fname") $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
           fi)
           verify_retcode[i]=$(awk '/error [1-9][0-9]? at [0-9]+ depth lookup:/ { if (!found) {print $2; found=1} }' $TEMPDIR/${certificate_file[i]}.1 $TEMPDIR/${certificate_file[i]}.2)
           [[ -z "${verify_retcode[i]}" ]] && verify_retcode[i]=0
@@ -24747,10 +24747,8 @@ parse_cmd_line() {
      fi
      if [[ -d "${ADDTL_CA_FILES}" ]]; then
           ADDTL_CA_FILES="$ADDTL_CA_FILES/*.pem"
-     else
-          ADDTL_CA_FILES="${ADDTL_CA_FILES//,/ }"
      fi
-     for fname in ${ADDTL_CA_FILES}; do
+     for fname in ${ADDTL_CA_FILES//,/ }; do
           [[ -s "$fname" ]] || fatal_cmd_line "The CA file \"$fname\" does not exist" $ERR_RESOURCE
           grep -q 'BEGIN CERTIFICATE' "$fname" || fatal_cmd_line "\"$fname\" is not CA file in PEM format" $ERR_RESOURCE
      done
