@@ -7924,6 +7924,10 @@ determine_tls_extensions() {
      local cbc_cipher_list="ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA256:DH-RSA-AES256-SHA256:DH-DSS-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-DSS-AES256-SHA:DH-RSA-AES256-SHA:DH-DSS-AES256-SHA:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CAMELLIA256-SHA384:DHE-RSA-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA256:DH-RSA-CAMELLIA256-SHA256:DH-DSS-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-DSS-CAMELLIA256-SHA:DH-RSA-CAMELLIA256-SHA:DH-DSS-CAMELLIA256-SHA:ECDH-RSA-AES256-SHA384:ECDH-ECDSA-AES256-SHA384:ECDH-RSA-AES256-SHA:ECDH-ECDSA-AES256-SHA:ECDH-RSA-CAMELLIA256-SHA384:ECDH-ECDSA-CAMELLIA256-SHA384:AES256-SHA256:AES256-SHA:CAMELLIA256-SHA256:CAMELLIA256-SHA:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:DHE-RSA-AES128-SHA256:DHE-DSS-AES128-SHA256:DH-RSA-AES128-SHA256:DH-DSS-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA:DH-RSA-AES128-SHA:DH-DSS-AES128-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA256:DH-RSA-CAMELLIA128-SHA256:DH-DSS-CAMELLIA128-SHA256:DHE-RSA-SEED-SHA:DHE-DSS-SEED-SHA:DH-RSA-SEED-SHA:DH-DSS-SEED-SHA:DHE-RSA-CAMELLIA128-SHA:DHE-DSS-CAMELLIA128-SHA:DH-RSA-CAMELLIA128-SHA:DH-DSS-CAMELLIA128-SHA:ECDH-RSA-AES128-SHA256:ECDH-ECDSA-AES128-SHA256:ECDH-RSA-AES128-SHA:ECDH-ECDSA-AES128-SHA:ECDH-RSA-CAMELLIA128-SHA256:ECDH-ECDSA-CAMELLIA128-SHA256:AES128-SHA256:AES128-SHA:CAMELLIA128-SHA256:SEED-SHA:CAMELLIA128-SHA:IDEA-CBC-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:EDH-DSS-DES-CBC3-SHA:DH-RSA-DES-CBC3-SHA:DH-DSS-DES-CBC3-SHA:ECDH-RSA-DES-CBC3-SHA:ECDH-ECDSA-DES-CBC3-SHA:DES-CBC3-SHA:EXP1024-DHE-DSS-DES-CBC-SHA:EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:DH-RSA-DES-CBC-SHA:DH-DSS-DES-CBC-SHA:EXP1024-DES-CBC-SHA:DES-CBC-SHA:EXP-EDH-RSA-DES-CBC-SHA:EXP-EDH-DSS-DES-CBC-SHA:EXP-DES-CBC-SHA:EXP-RC2-CBC-MD5:EXP-DH-DSS-DES-CBC-SHA:EXP-DH-RSA-DES-CBC-SHA"
      local cbc_cipher_list_hex="c0,28, c0,24, c0,14, c0,0a, 00,6b, 00,6a, 00,69, 00,68, 00,39, 00,38, 00,37, 00,36, c0,77, c0,73, 00,c4, 00,c3, 00,c2, 00,c1, 00,88, 00,87, 00,86, 00,85, c0,2a, c0,26, c0,0f, c0,05, c0,79, c0,75, 00,3d, 00,35, 00,c0, 00,84, c0,3d, c0,3f, c0,41, c0,43, c0,45, c0,49, c0,4b, c0,4d, c0,4f, c0,27, c0,23, c0,13, c0,09, 00,67, 00,40, 00,3f, 00,3e, 00,33, 00,32, 00,31, 00,30, c0,76, c0,72, 00,be, 00,bd, 00,bc, 00,bb, 00,9a, 00,99, 00,98, 00,97, 00,45, 00,44, 00,43, 00,42, c0,29, c0,25, c0,0e, c0,04, c0,78, c0,74, 00,3c, 00,2f, 00,ba, 00,96, 00,41, 00,07, c0,3c, c0,3e, c0,40, c0,42, c0,44, c0,48, c0,4a, c0,4c, c0,4e, c0,12, c0,08, 00,16, 00,13, 00,10, 00,0d, c0,0d, c0,03, 00,0a, fe,ff, ff,e0, 00,63, 00,15, 00,12, 00,0f, 00,0c, 00,62, 00,09, fe,fe, ff,e1, 00,14, 00,11, 00,08, 00,06, 00,0b, 00,0e"
      local using_sockets=true
+     local curves_to_use=", 00,18, 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01"
+     local tls13_ciphers="13,01, 13,02, 13,03, 13,04, 13,05"
+     local -a curves_ossl=("sect163k1" "sect163r1" "sect163r2" "sect193r1" "sect193r2" "sect233k1" "sect233r1" "sect239k1" "sect283k1" "sect283r1" "sect409k1" "sect409r1" "sect571k1" "sect571r1" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "prime192v1" "secp224k1" "secp224r1" "secp256k1" "prime256v1" "secp384r1" "secp521r1" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "X25519Kyber768Draft00")
+     local -a curves_ossl_output=("K-163" "sect163r1" "B-163" "sect193r1" "sect193r2" "K-233" "B-233" "sect239k1" "K-283" "B-283" "K-409" "B-409" "K-571" "B-571" "secp160k1" "secp160r1" "secp160r2" "secp192k1" "P-192" "secp224k1" "P-224" "secp256k1" "P-256" "P-384" "P-521" "brainpoolP256r1" "brainpoolP384r1" "brainpoolP512r1" "X25519" "X448" "brainpoolP256r1tls13" "brainpoolP384r1tls13" "brainpoolP512r1tls13" "SecP256r1MLKEM768" "X25519MLKEM768" "SecP384r1MLKEM1024" "X25519Kyber768Draft00")
 
      [[ "$OPTIMAL_PROTO" == -ssl2 ]] && return 0
      "$SSL_NATIVE" && using_sockets=false
@@ -7954,6 +7958,33 @@ determine_tls_extensions() {
                cp "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt" $TMPFILE
                tmpfile_handle ${FUNCNAME[0]}.txt
           fi
+          # In TLS version 1.3 the supported_groups extension is sent by the server in the EncryptedExtensions message.
+          # The extension is optionally sent if the client's supported groups are in a different order than the server's.
+          # Since we need to decrypt the EncryptedExtensions message to determine if the extension is sent, another connection
+          # is needed. Only two connections are needed in the worst case scenario.
+          # In the first try we move the secp256r1 curve to the end of the list to trigger the mismatch in the order.
+          if "$HAS_X25519"; then
+               curves_to_use+=", 00,1d, 00,1e"
+          fi
+          curves_to_use+=", 00,17"  # add secp256r1 at the end of the list
+          len1=$(printf "%02x" "$((2*${#curves_to_use}/7))")
+          len2=$(printf "%02x" "$((2*${#curves_to_use}/7+2))")
+          tls_sockets "04" "$tls13_ciphers" "all+" "00, 0a, 00, $len2, 00, $len1, ${curves_to_use:2}"
+          result=$?
+          [[ $result -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
+          if [[ ! "${TLS_EXTENSIONS[*]}" =~ supported_groups ]]; then
+               # If the supported_groups extension is not sent, and secp256r1 was not used.
+               # We try again by moving the used curve to the end of the list, after this we can assume that the extension is not sent
+               used_curve=$(awk -F': ' '/^Named Curve ID/ { print $2 }' "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt")
+               used_curve=", ${used_curve:0:2},${used_curve:2:2}"
+               if [[  "$used_curve" != ", 00,17" ]]; then
+                    # move the used curve to the end of the list
+                    curves_to_use="${curves_to_use/$used_curve/}$used_curve"
+                    tls_sockets "04" "$tls13_ciphers" "all+" "00, 0a, 00, $len2, 00, $len1, ${curves_to_use:2}"
+                    result=$?
+                    [[ $result -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
+               fi
+          fi
      else
           if "$HAS_ALPN" && [[ -z $STARTTLS ]]; then
                params="-alpn \"${ALPN_PROTOs// /,}\""  # we need to replace " " by ","
@@ -7977,6 +8008,26 @@ determine_tls_extensions() {
           fi
           [[ $success -eq 0 ]] && extract_new_tls_extensions $TMPFILE
           tmpfile_handle ${FUNCNAME[0]}.txt
+          curves_string=""
+          for curve in "${curves_ossl[@]}"; do
+               [[ "$OSSL_SUPPORTED_CURVES" =~ \ $curve\  ]] && curves_string+=":$curve" 
+          done
+          $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $addcmd -tls1_3 -tlsextdebug $params -curves ${curves_string:1}") </dev/null 2>$ERRFILE >$TMPFILE
+          sclient_connect_successful $? $TMPFILE
+          result=$?
+          [[ $result -eq 0 ]] && extract_new_tls_extensions $TMPFILE
+          used_curve=$(awk -F': ' '/^Negotiated TLS1.3 group/ { print $2 }' "$TMPFILE")
+          [[ -z "$used_curve" ]] && used_curve=$(awk -F' ' '/^Peer Temp Key/ { print $5 }' "$TMPFILE")
+          used_curve=${used_curve/,/}
+          last_curve=${curves_string##*:}
+          # If the used curve is not the first in the list, then try again with the used curve at the end of the list
+          if [[ -n "$used_curve" && "${used_curve%%:*}" != last_curve  ]]; then
+               curves_string="${curves_string/$used_curve:/}:$used_curve"
+               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $addcmd -tls1_3 -tlsextdebug $params -curves ${curves_string:1}") </dev/null 2>$ERRFILE >$TMPFILE
+               sclient_connect_successful $? $TMPFILE
+               result=$?
+               [[ $result -eq 0 ]] && extract_new_tls_extensions $TMPFILE
+          fi
      fi
 
      # Keep it "on file" for debugging purposes
@@ -10908,7 +10959,7 @@ run_fs() {
                               fi
                          done
                          [[ -z "$curves_to_test" ]] && break
-                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI -tlsextdebug") &>$TMPFILE </dev/null
+                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
                          sclient_connect_successful $? $TMPFILE || break
                          temp=$(awk -F': ' '/^Server Temp Key/ { print $2 }' "$TMPFILE")
                          curve_found="${temp%%,*}"
@@ -10927,9 +10978,6 @@ run_fs() {
                          done
                          [[ $i -eq $high ]] && break
                          supported_curve[i]=true
-                         if [[  ! "$TLS_EXTENSIONS" == *supported_groups* ]]; then
-                              extract_new_tls_extensions "$TMPFILE"
-                         fi
                     done
                     # Versions of TLS prior to 1.3 close the connection if the client does not support the curve
                     # used in the certificate. The easiest solution is to move the curves to the end of the list.
@@ -11031,32 +11079,6 @@ run_fs() {
                          [[ $i -eq $nr_curves ]] && break
                          supported_curve[i]=true
                     done
-               fi
-               # In TLS version 1.3 the supported_groups extension is sent by the server in the EncryptedExtensions message.
-               # The extension is optionally sent if the client's supported groups are in a different order than the server's.
-               # Since we need to decrypt the EncryptedExtensions message to determine if the extension is sent, another connection
-               # is needed. Only two connections are needed in the worst case scenario.
-               if [[ "$proto" == 04 ]]; then
-                    # In the first try we move the secp256r1 curve to the end of the list to trigger the mismatch in the order.
-                    curves_to_test=", 00,18, 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01, 00,17"
-                    if "$HAS_X25519"; then
-                         curves_to_test+=", 00,1d, 00,1e"
-                    fi
-                    len1=$(printf "%02x" "$((2*${#curves_to_test}/7))")
-                    len2=$(printf "%02x" "$((2*${#curves_to_test}/7+2))")
-                    tls_sockets "$proto" "${ecdhe_cipher_list_hex:2}, 00,ff" "all+" "00, 0a, 00, $len2, 00, $len1, ${curves_to_test:2}"
-                    [[ $? -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
-                    # If the supported_groups extension is not sent, we try again by moving the secp384r1 curve to the end of the list.
-                    # After this we can assume that the extension is not sent.
-                    if [[  ! "$TLS_EXTENSIONS" == *supported_groups* ]]; then
-                         curves_to_test=", 00,19, 00,1f, 00,20, 00,21, 01,00, 01,01, 00,17, 00,18"
-                         if "$HAS_X25519"; then
-                              curves_to_test+=", 00,1d, 00,1e"
-                         fi
-                         len1=$(printf "%02x" "$((2*${#curves_to_test}/7))")
-                         len2=$(printf "%02x" "$((2*${#curves_to_test}/7+2))")
-                         [[ $? -eq 0 ]] && extract_new_tls_extensions "$TEMPDIR/$NODEIP.parse_tls_serverhello.txt"
-                    fi
                fi
           done
      fi
@@ -14576,7 +14598,6 @@ parse_tls_serverhello() {
                echo "CONNECTED(00000003)" >> $TMPFILE
           fi
      fi
-
      # First parse the server hello handshake message
      # byte 0+1:    03, TLS version word          see byte 1+2
      # byte 2-5:    TLS timestamp                 for OpenSSL <1.01f
@@ -14633,6 +14654,7 @@ parse_tls_serverhello() {
                [[ $DEBUG -ge 1 ]] && tmpfile_handle ${FUNCNAME[0]}.txt
                return 1
           fi
+          named_curve_id=""
           for (( i=0; i<tls_extensions_len; i+=8+extension_len )); do
                if [[  $tls_extensions_len-$i -lt 8 ]]; then
                     debugme echo "Malformed response"
@@ -14774,6 +14796,7 @@ parse_tls_serverhello() {
                                fi
                                offset=$((extns_offset+12+i))
                                named_curve=$(hex2dec "${tls_serverhello_ascii:offset:4}")
+                               named_curve_id="${tls_serverhello_ascii:offset:4}"
                                offset=$((extns_offset+16+i))
                                msg_len=2*"$(hex2dec "${tls_serverhello_ascii:offset:4}")"
                                if [[ $msg_len -ne $extension_len-8 ]]; then
@@ -15014,6 +15037,7 @@ parse_tls_serverhello() {
           echo "Certificate Compression Algorithm: $cert_compression_method ($cert_compression_method_str)" >> $TMPFILE
      fi
      [[ -n "$tls_extensions" ]] && echo -e "$tls_extensions" >> $TMPFILE
+     [[ -n "$named_curve_id" ]] && echo "Named Curve ID: $named_curve_id" >> $TMPFILE
 
      if [[ $DEBUG -ge 3 ]]; then
           echo "TLS server hello message:"
