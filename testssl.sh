@@ -21135,9 +21135,9 @@ find_openssl_binary() {
      fi
 
      # Kind of fine this way as openssl 1.1.1 supports early_data, came with tls 1.3
-     if $OPENSSL s_client --help 2>&1 | grep -q early_data ; then
+     if $OPENSSL s_client -help 2>&1 | grep -q early_data ; then
           HAS_EARLYDATA=true
-     elif if OPENSSL_CONF='' $OPENSS2 s_client --help 2>&1 | grep -q early_data ; then
+     elif OPENSSL_CONF='' $OPENSS2 s_client --help 2>&1 | grep -q early_data ; then
           HAS2_EARLYDATA=true
      fi
 
