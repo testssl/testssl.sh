@@ -342,6 +342,8 @@ HAS_TLS12=false
 HAS_TLS13=false
 HAS_QUIC=false
 HAS2_QUIC=false                         # for automagically determined second OPENSSL version
+HAS_EARLYDATA=false
+HAS2_EARLYDATA=false
 HAS_X448=false
 HAS_X25519=false
 HAS_SIGALGS=false
@@ -21125,17 +21127,24 @@ find_openssl_binary() {
           $OPENSSL s_client -tls1_3 -sigalgs PSS+SHA256:PSS+SHA384 $NXCONNECT </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SIGALGS=true
      fi
 
+     #reminder: at some point of time we should check $OPENSSL first, then $OPENSSL2
      if [[ -x $OPENSSL2 ]] && OPENSSL_CONF='' $OPENSSL2 s_client -quic 2>&1 | grep -qi 'QUIC requires ALPN'; then
-          HAS2_QUIC="true"
-     elif OPENSSL_CONF='' $OPENSSL s_client -quic 2>&1 | grep -qi 'QUIC requires ALPN'; then
-          HAS_QUIC="true"
+          HAS2_QUIC=true
+     elif $OPENSSL s_client -quic 2>&1 | grep -qi 'QUIC requires ALPN'; then
+          HAS_QUIC=true
+     fi
+
+     # Kind of fine this way as openssl 1.1.1 supports early_data, came with tls 1.3
+     if $OPENSSL s_client --help 2>&1 | grep -q early_data ; then
+          HAS_EARLYDATA=true
+     elif if OPENSSL_CONF='' $OPENSS2 s_client --help 2>&1 | grep -q early_data ; then
+          HAS2_EARLYDATA=true
      fi
 
      $OPENSSL s_client -noservername </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NOSERVERNAME=true
      $OPENSSL s_client -ciphersuites </dev/null 2>&1 | grep -aiq "unknown option" || HAS_CIPHERSUITES=true
      $OPENSSL s_client -comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_COMP=true
      $OPENSSL s_client -no_comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NO_COMP=true
-
      $OPENSSL ciphers @SECLEVEL=0:ALL > /dev/null 2> /dev/null && HAS_SECLEVEL=true
 
      OPENSSL_NR_CIPHERS=$(count_ciphers "$(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL' 'ALL')")
