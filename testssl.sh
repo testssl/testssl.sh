@@ -247,10 +247,10 @@ CIPHERS_BY_STRENGTH_FILE=""
 TLS_DATA_FILE=""                        # mandatory file for socket-based handshakes
 OPENSSL=""                              # ~/bin/openssl.$(uname).$(uname -m) if you run this from GitHub. Linux otherwise probably /usr/bin/openssl
 OPENSSL2=${OPENSSL2:-/usr/bin/openssl}  # This will be openssl version >=1.1.1 (auto determined) as opposed to openssl-bad (OPENSSL)
-OPENSSL2_HAS_TLS_1_3=false              # If we run with supplied binary AND $OPENSSL2 supports TLS 1.3 this will be set to true
-OPENSSL2_HAS_CHACHA20=false
-OPENSSL2_HAS_AES128_GCM=false
-OPENSSL2_HAS_AES256_GCM=false
+HAS2_TLS13=false              # If we run with supplied binary AND $OPENSSL2 supports TLS 1.3 this will be set to true
+HAS2_CHACHA20=false
+HAS2_AES128_GCM=false
+HAS2_AES256_GCM=false
 OSSL_SHORTCUT=${OSSL_SHORTCUT:-true}    # If you don't want automagically switch from $OPENSSL to $OPENSSL2 for TLS 1.3-only hosts, set this to false
 OPENSSL_LOCATION=""
 OPENSSL_NOTIMEOUT=""                    # Needed for renegotiation tests
@@ -5560,6 +5560,7 @@ run_prototest_openssl() {
 #
 # arg1: protocol
 # arg2: available (yes) or not (no)
+#
 add_proto_offered() {
      # the ":" is mandatory here (and @ other places), otherwise e.g. tls1 will match tls1_2
      if [[ "$2" == yes ]] && [[ "$PROTOS_OFFERED" =~ $1:no ]]; then
@@ -5571,7 +5572,7 @@ add_proto_offered() {
      fi
 }
 
-# function which checks whether SSLv2 - TLS 1.2 is being offered, see add_proto_offered()
+# function which checks whether the supplied protocol was tested to be offered; see also add_proto_offered()
 # arg1:    protocol string or hex code for TLS protocol
 # echos:   0 if proto known being offered, 1: known not being offered, 2: we don't know yet whether proto is being offered
 # return value is always zero
@@ -7128,6 +7129,59 @@ sub_session_resumption() {
           tmpfile_handle ${FUNCNAME[0]}.byID.log $tmpfile || \
           tmpfile_handle ${FUNCNAME[0]}.byticket.log $tmpfile
      return $ret
+}
+
+
+# Tests for TSL 1.3 early data / 0-RTT (see RFC 8470). Defer processing or HTTP 425 is not yet tested.
+# Returns:
+# - 0: Early Data was accepted
+# - 1:              not
+# - 2: no TLS 1.3
+# - 3: STARTTLS
+# - 4/5: problem with openssl binary
+# - 6: Client Auth not possible
+# - 7: no session data
+#
+sub_early_data() {
+     local sess_data=$TEMPDIR/session_data.log
+     local early_data=$TEMPDIR/early_data.log
+     local openssl_bin=""
+
+     [[ "$CLIENT_AUTH" == required ]] && [[ -z "$MTLS" ]] && return 6
+     [[ $(has_server_protocol 04) -eq 1 ]] && return 2
+     [[ -n "$STARTTLS" ]] && return 3
+
+     if "$HAS_TLS13"; then
+          openssl_bin=$OPENSSL
+     elif "$HAS2_TLS13"; then
+          openssl_bin="$OPENSSL2"
+     else
+          return 4
+     fi
+
+     if "$HAS_EARLYDATA"; then
+          # OpenSSL also has early data, LibreSSL won't succeeded here
+          openssl_bin=$OPENSSL
+     elif "$HAS2_EARLYDATA"; then
+          openssl_bin="$OPENSSL2"
+     else
+          return 5
+     fi
+
+     safe_echo "HEAD / HTTP/1.1\r\nHost: $NODE\r\nConnection: close\r\nEarly-Data: 1\r\n\r\n" > $early_data
+     $openssl_bin s_client $(s_client_options "$STARTTLS $BUGS -tls1_3 -connect $NODEIP:$PORT $PROXY $SNI") -sess_out $sess_data -ign_eof \
+            < $early_data >/dev/null 2>$ERRFILE
+     if [[ ! -s "$sess_data" ]]; then
+          exit 7
+     fi
+
+     $openssl_bin s_client $(s_client_options "$STARTTLS $BUGS -tls1_3 -connect $NODEIP:$PORT $PROXY $SNI") -sess_in $sess_data \
+           -early_data $early_data </dev/null 2>$ERRFILE | grep -qi '^Early Data was accepted'
+     if [[ $? -eq 0 ]]; then
+          return 0
+     else
+          return 1
+     fi
 }
 
 run_server_preference() {
@@ -10665,20 +10719,20 @@ run_server_defaults() {
      jsonID="sessionresumption_ticket"
      sub_session_resumption "$sessticket_proto"
      case $? in
-          0) out "Tickets: yes, "
+          0) out "tickets: yes, "
              fileout "$jsonID" "INFO" "supported"
           ;;
-          1) out "Tickets no, "
+          1) out "tickets no, "
              fileout "$jsonID" "INFO" "not supported"
              ;;
-          5) pr_warning "Ticket resumption test failed, pls report / "
+          5) pr_warning "ticket resumption test failed, pls report / "
              fileout "$jsonID" "WARN" "check failed, pls report"
              ((ret++))
              ;;
           6) pr_warning "Client Auth: Ticket resumption test not supported / "
              fileout "$jsonID" "WARN" "check couldn't be performed because of client authentication"
              ;;
-          7) pr_warning "Connect problem: Ticket resumption test not possible / "
+          7) pr_warning "connect problem: Ticket resumption test not possible / "
              fileout "$jsonID" "WARN" "check failed because of connect problem"
              ((ret++))
              ;;
@@ -10708,6 +10762,43 @@ run_server_defaults() {
                   fileout "$jsonID" "WARN" "check failed because of connect problem"
                   ((ret++))
                   ;;
+          esac
+     fi
+
+     pr_bold " TLS 1.3 early data support   "
+     jsonID="early_data"
+     if "$NO_SSL_SESSIONID"; then
+          pr_svrty_good "no early data"; outln " (no SSL session ID)"
+          fileout "$jsonID" "OK" "No early data: no session SSL ID"
+     else
+          sub_early_data
+          case $? in
+               0) out "offered, potentially " ; pr_svrty_high "NOT ok"; outln " (check context, see e.g. RFC 8446 E.5)"
+                  fileout "$jsonID" "HIGH" "supported"
+                  # https://www.rfc-editor.org/rfc/rfc8446#appendix-E.5
+                  ;;
+               1) prln_svrty_good "no early data offered"
+                  fileout "$jsonID" "OK" "No early data"
+                  ;;
+               2) outln "not offered, as no TLS 1.3 offered"
+                  fileout "$jsonID" "INFO" "No TLS 1.3 offered"
+                  ;;
+               3) outln "not tested, as STARTTLS doesn't offer that"
+                  fileout "$jsonID" "OK" "not tested, as STARTTLS doesn't offer that"
+                  ;;
+               4) prln_warning "couldn't test it, no OpenSSL TLS 1.3 support"
+                  fileout "$jsonID" "WARN" "no OpenSSL support TLS 1.3 support"
+                  ;;
+               5) prln_warning "couldn't test it, no OpenSSL early_data support"
+                  fileout "$jsonID" "INFO" "no OpenSSL early_data support"
+                  ;;
+               6) prln_warning "Client Auth: early data check not supported"
+                  fileout "$jsonID" "WARN" "check couldn't be performed because of client authentication"
+                  ;;
+               7) prln_warning "check failed (no session data"
+                  fileout "$jsonID" "WARN" "check failed (no session data)"
+                  ((ret++))
+               ;;
           esac
      fi
 
@@ -13434,7 +13525,7 @@ chacha20() {
      if "$HAS_CHACHA20"; then
           plaintext="$(hex2binary "$ciphertext" | $OPENSSL enc -chacha20 -K "$key" -iv "01000000$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
           enc_chacha_used=true
-     elif "$OPENSSL2_HAS_CHACHA20"; then
+     elif "$HAS2_CHACHA20"; then
           # empty  OPENSSL_CONF temporarily as it might cause problems, see #2780
           plaintext="$(hex2binary "$ciphertext" | OPENSSL_CONF='' $OPENSSL2 enc -chacha20 -K "$key" -iv "01000000$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
           enc_chacha_used=true
@@ -14135,7 +14226,7 @@ gcm-decrypt() {
           if "$HAS_AES128_GCM"; then
                plaintext="$(hex2binary "$ciphertext" | $OPENSSL enc -aes-128-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
                enc_aesgcm_used=true
-          elif "$OPENSSL2_HAS_AES128_GCM"; then
+          elif "$HAS2_AES128_GCM"; then
                # empty  OPENSSL_CONF temporarily as it might cause problems, see #2780
                plaintext="$(hex2binary "$ciphertext" | OPENSSL_CONF='' $OPENSSL2 enc -aes-128-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
                enc_aesgcm_used=true
@@ -14144,7 +14235,7 @@ gcm-decrypt() {
           if "$HAS_AES256_GCM"; then
                plaintext="$(hex2binary "$ciphertext" | $OPENSSL enc -aes-256-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
                aesgcm_used=true
-          elif "$OPENSSL2_HAS_AES256_GCM"; then
+          elif "$HAS2_AES256_GCM"; then
                # empty  OPENSSL_CONF temporarily as it might cause problems, see #2780
                plaintext="$(hex2binary "$ciphertext" | OPENSSL_CONF='' $OPENSSL2 enc -aes-256-gcm -K "$key" -iv "$nonce" 2>/dev/null | hexdump -v -e '16/1 "%02X"')"
                enc_aesgcm_used=true
@@ -21137,7 +21228,7 @@ find_openssl_binary() {
      # Kind of fine this way as openssl 1.1.1 supports early_data, came with tls 1.3
      if $OPENSSL s_client -help 2>&1 | grep -q early_data ; then
           HAS_EARLYDATA=true
-     elif OPENSSL_CONF='' $OPENSS2 s_client --help 2>&1 | grep -q early_data ; then
+     elif OPENSSL_CONF='' $OPENSSL2 s_client --help 2>&1 | grep -q early_data ; then
           HAS2_EARLYDATA=true
      fi
 
@@ -21234,15 +21325,15 @@ find_openssl_binary() {
      if [[ $OPENSSL2 != $OPENSSL ]] && [[ -x $OPENSSL2 ]]; then
           if ! "$HAS_CHACHA20"; then
                OPENSSL_CONF='' $OPENSSL2 enc -chacha20 -K 12345678901234567890123456789012 -iv 01000000123456789012345678901234 >/dev/null 2>/dev/null <<< "test"
-               [[ $? -eq 0 ]] && OPENSSL2_HAS_CHACHA20=true
+               [[ $? -eq 0 ]] && HAS2_CHACHA20=true
           fi
           if ! "$HAS_AES128_GCM"; then
                OPENSSL_CONF='' $OPENSSL2 enc -aes-128-gcm -K 0123456789abcdef0123456789abcdef -iv 0123456789abcdef01234567 >/dev/null 2>/dev/null <<< "test"
-               [[ $? -eq 0 ]] && OPENSSL2_HAS_AES128_GCM=true
+               [[ $? -eq 0 ]] && HAS2_AES128_GCM=true
           fi
           if ! "$HAS_AES256_GCM"; then
                OPENSSL_CONF='' $OPENSSL2 enc -aes-256-gcm -K 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef -iv 0123456789abcdef01234567 >/dev/null 2>/dev/null <<< "test"
-               [[ $? -eq 0 ]] && OPENSSL2_HAS_AES256_GCM=true
+               [[ $? -eq 0 ]] && HAS2_AES256_GCM=true
           fi
 
           # Now check whether the standard $OPENSSL has Unix-domain socket and xmpp-server support. If
@@ -21256,7 +21347,7 @@ find_openssl_binary() {
                grep -q 'xmpp-server' $s_client2_starttls_has && HAS_XMPP_SERVER2=true
                # Likely we don't need the following second check here, see 6 lines above
                if grep -wq 'tls1_3' $s_client_has2; then
-                    OPENSSL_CONF='' OPENSSL2_HAS_TLS_1_3=true
+                    OPENSSL_CONF='' HAS2_TLS13=true
                fi
           fi
      fi
@@ -21598,10 +21689,10 @@ HAS_CURVES: $HAS_CURVES
 OSSL_SUPPORTED_CURVES: $OSSL_SUPPORTED_CURVES
 
 OPENSSL2: $OPENSSL2 ($($OPENSSL2 version -v 2>/dev/null))
-OPENSSL2_HAS_TLS_1_3: $OPENSSL2_HAS_TLS_1_3
-OPENSSL2_HAS_CHACHA20: $OPENSSL2_HAS_CHACHA20
-OPENSSL2_HAS_AES128_GCM: $OPENSSL2_HAS_AES128_GCM
-OPENSSL2_HAS_AES256_GCM: $OPENSSL2_HAS_AES256_GCM
+HAS2_TLS13: $HAS2_TLS13
+HAS2_CHACHA20: $HAS2_CHACHA20
+HAS2_AES128_GCM: $HAS2_AES128_GCM
+HAS2_AES256_GCM: $HAS2_AES256_GCM
 
 HAS_SSL2: $HAS_SSL2
 HAS_SSL3: $HAS_SSL3
@@ -23104,7 +23195,7 @@ determine_optimal_proto() {
           [[ $? -ne 0 ]] && exit $ERR_CLUELESS
      elif "$all_failed" && ! "$ALL_FAILED_SOCKETS"; then
           if ! "$HAS_TLS13" && "$TLS13_ONLY"; then
-               if "$OPENSSL2_HAS_TLS_1_3"; then
+               if "$HAS2_TLS13"; then
                     if "$OSSL_SHORTCUT" || [[ "$WARNINGS" == batch ]]; then
                          # switch w/o asking
                          OPEN_MSG=" $NODE:$PORT appeared to support TLS 1.3 ONLY. Thus switched automagically from\n \"$OPENSSL\" to \"$OPENSSL2\"."
