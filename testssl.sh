@@ -475,10 +475,14 @@ HAS_GNUDATE=false
 HAS_FREEBSDDATE=false
 HAS_OPENBSDDATE=false
 if date -d @735275209 >/dev/null 2>&1; then
-     if date -r @735275209  >/dev/null 2>&1; then
+     if date -r 735275209 >/dev/null 2>&1; then
           # It can't do any conversion from a plain date output.
           HAS_OPENBSDDATE=true
-     else
+     elif date -r 735275209 2>&1 | grep -q "No such file"; then
+          # e.g. Debian 24.04, Debian 11-13
+          HAS_GNUDATE=true
+     elif date -r @735275209 >/dev/null 2>&1; then
+          # Ubuntu >= 25.10
           HAS_GNUDATE=true
      fi
 fi
