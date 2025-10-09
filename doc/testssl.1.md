@@ -178,7 +178,7 @@ Any single check switch supplied as an argument prevents testssl.sh from doing a
 
 `-f, --fs, --nsa, --forward-secrecy` Checks robust forward secrecy key exchange. "Robust" means that ciphers having intrinsic severe weaknesses like Null Authentication or Encryption, 3DES and RC4 won't be considered here. There shouldn't be the wrong impression that a secure key exchange has been taking place and everything is fine when in reality the encryption sucks. Also this section lists the available elliptical curves and Diffie Hellman groups, as well as FFDHE groups (TLS 1.2 and TLS 1.3).
 
-`-p, --protocols` checks TLS/SSL protocols SSLv2, SSLv3, TLS 1.0 through TLS 1.3. And for HTTP also QUIC (HTTP/3), SPDY (NPN) and ALPN (HTTP/2). For TLS 1.3 the final version and several drafts (from 18 on) are tested. QUIC needs OpenSSL >= 3.2 which can be automatically picked up when in `/usr/bin/openssl` (or when defined environment variable OPENSSL2). If a TLS-1.3-only host is encountered and the openssl-bad version is used testssl.sh will e.g. for HTTP header checks switch to `/usr/bin/openssl` (or when defined via ENV to OPENSSL2). Also this will be tried for the QUIC check.
+`-p, --protocols` checks every SSL/TLS protocols: SSLv2, SSLv3, TLS 1.0 through TLS 1.3. And for HTTP also QUIC (HTTP/3), SPDY (NPN) and ALPN (HTTP/2). For TLS 1.3 the final version and several drafts (from 18 on) are tested. QUIC needs OpenSSL >= 3.2 which can be automatically picked up when in `/usr/bin/openssl` (or when defined environment variable OPENSSL2). If a TLS-1.3-only host is encountered and the openssl-bad version is used testssl.sh will e.g. for HTTP header checks switch to `/usr/bin/openssl` (or when defined via ENV to OPENSSL2). Also this will be tried for the QUIC check.
 
 `-P, --server-preference, --preference`  displays the servers preferences: cipher order, with used openssl client: negotiated protocol and cipher. If there's a cipher order enforced by the server it displays it for each protocol (openssl+sockets). If there's not, it displays instead which ciphers from the server were picked with each protocol.
 
@@ -187,6 +187,7 @@ Any single check switch supplied as an argument prevents testssl.sh from doing a
 * Available TLS extensions,
 * TLS ticket + session ID information/capabilities,
 * session resumption capabilities,
+* TLS 1.3 early data, a.k.a 0-RTT
 * Time skew relative to localhost (most server implementations return random values).
 * Several certificate information
     - signature algorithm,
@@ -525,10 +526,14 @@ Please note that for plain TLS-encrypted ports you must not specify the protocol
 * RFC 7919: Negotiated Finite Field Diffie-Hellman Ephemeral Parameters for Transport Layer Security
 * RFC 8143: Using Transport Layer Security (TLS) with Network News Transfer Protocol (NNTP)
 * RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3
+* RFC 8470: Using Early Data in HTTP
 * RFC 8701: Applying Generate Random Extensions And Sustain Extensibility (GREASE) to TLS Extensibility
 * RFC 9000: QUIC: A UDP-Based Multiplexed and Secure Transport
 * W3C CSP: Content Security Policy Level 1-3
 * TLSWG Draft: The Transport Layer Security (TLS) Protocol Version 1.3
+* FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard
+
+[More RFCs](ihttps://www.rfc-editor.org/search/rfc_search_detail.php?title=TLS&page=All) might be applicable.
 
 
 ## EXIT STATUS
@@ -549,7 +554,7 @@ Please note that for plain TLS-encrypted ports you must not specify the protocol
 * 252 (ERR_FNAMEPARSE)  Input file couldn't be parsed
 * 253 (ERR_FCREATE)     Output file couldn't be created
 * 254 (ERR_CMDLINE)     Cmd line couldn't be parsed
-* 255 (ERR_BASH)       Bash version incorrect
+* 255 (ERR_BASH)        Bash version incorrect
 
 ## FILES
 
