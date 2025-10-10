@@ -49,6 +49,9 @@
 # Cross-platform is one of the three main goals of this script. Second: Ease of installation.
 # No compiling, install gems, go to CPAN, use pip etc. Third: Easy to use and to interpret
 # the results.
+
+# Global variables for dark mode
+DARK_MODE=${DARK_MODE:-false}          # Whether to use dark mode in HTML output
 # /bin/bash including the builtin sockets fulfill all that.  The socket checks in bash may sound
 # cool and unique -- they are -- but probably you can achieve e.g. the same result with my favorite
 # interactive shell: zsh (zmodload zsh/net/socket -- checkout zsh/net/tcp) too! Oh, and btw.
@@ -1617,6 +1620,25 @@ html_header() {
           html_out "<head>\n"
           html_out "<meta http-equiv=\"Content-Type\" content=\"application/xhtml+xml; charset=UTF-8\" />\n"
           html_out "<title>testssl.sh</title>\n"
+          if "$DARK_MODE"; then
+               html_out "<style type=\"text/css\">\n"
+               html_out "body { background-color: #1e1e1e; color: #d4d4d4; }\n"
+               html_out "a { color: #3794ff; }\n"
+               html_out "span[style*=\"color:#008817\"] { color: #89d185 !important; }\n"
+               html_out "span[style*=\"color:#0000ee\"] { color: #3794ff !important; }\n"
+               html_out "span[style*=\"color:#5c5cff\"] { color: #4fc1ff !important; }\n"
+               html_out "span[style*=\"color:#cd00cd\"] { color: #c586c0 !important; }\n"
+               html_out "span[style*=\"color:#be32d0\"] { color: #b267e6 !important; }\n"
+               html_out "span[style*=\"color:#168092\"] { color: #4ec9b0 !important; }\n"
+               html_out "span[style*=\"color:#0d7ea2\"] { color: #36b6e5 !important; }\n"
+               html_out "span[style*=\"color:#71767a\"] { color: #858585 !important; }\n"
+               html_out "span[style*=\"color:#757575\"] { color: #858585 !important; }\n"
+               html_out "span[style*=\"color:#a86437\"] { color: #ce9178 !important; }\n"
+               html_out "span[style*=\"color:#c05600\"] { color: #e58833 !important; }\n"
+               html_out "span[style*=\"color:#e52207\"] { color: #f14c4c !important; }\n"
+               html_out "span[style*=\"background-color:black\"] { background-color: #1e1e1e !important; color: #d4d4d4 !important; }\n"
+               html_out "</style>\n"
+          fi
           html_out "</head>\n"
           html_out "<body>\n"
           html_out "<pre>\n"
@@ -21618,6 +21640,7 @@ file output options (can also be preset via environment variables)
      --csv                         additional output of findings to CSV file '\${NODE}-p\${port}\${YYYYMMDD-HHMM}.csv' in cwd or directory
      --csvfile|-oC <csvfile>       additional output as CSV to the specified file or directory, similar to --logfile
      --html                        additional output as HTML to file '\${NODE}-p\${port}\${YYYYMMDD-HHMM}.html'
+     --dark-html                   use dark mode theme for HTML output
      --htmlfile|-oH <htmlfile>     additional output as HTML to the specified file or directory, similar to --logfile
      --out(f,F)ile|-oa/-oA <fname> log to a LOG,JSON,CSV,HTML file (see nmap). -oA/-oa: pretty/flat JSON.
                                    "auto" uses '\${NODE}-p\${port}\${YYYYMMDD-HHMM}'. If fname is a dir uses 'dir/\${NODE}-p\${port}\${YYYYMMDD-HHMM}'
@@ -25004,6 +25027,10 @@ parse_cmd_line() {
                          fatal_cmd_line "No file name allowed after \"--html\" (use \"--htmlfile\" instead)" $ERR_CMDLINE
                     fi
                     do_html=true
+                    ;;
+               --dark-html)
+                    DARK_MODE=true
+                    "$do_html" || do_html=true
                     ;;  # DEFINITION of HTMLFILE is not arg specified: automagically in parse_hn_port()
                     # following does the same but additionally we can specify a file location
                --htmlfile|--htmlfile=*|-oH|-oH=*)
