@@ -59,10 +59,15 @@ $cat_csv      =~ s/x1303   AEAD-CHACHA20-POLY1305-SHA256/x1303   TLS_CHACHA20_PO
 # now the other lines, where we don't need to insert the additional space:
 $cat_csv      =~ s/AEAD-CHACHA20-POLY1305-SHA256/TLS_CHACHA20_POLY1305_SHA256/g;
 
+# For Ubuntu 24.04 we don't have MLKEMs yet
+$cat_csv      =~ s/ECDH\/MLKEM AESGCM/ECDH 253   AESGCM/g;
+$baseline_csv =~ s/ECDH\/MLKEM AESGCM/ECDH 253   AESGCM/g;
+$cat_csv      =~ s/ECDH\/MLKEM ChaCha20/ECDH 253   ChaCha20/g;
+$baseline_csv =~ s/ECDH\/MLKEM ChaCha20/ECDH 253   ChaCha20/g;
+
 # Same with ECDH bit length
 $cat_csv      =~ s/ECDH 253/ECDH 256/g;
 $baseline_csv =~ s/ECDH 253/ECDH 256/g;
-
 
 # this could contain the openssl path
 $cat_csv      =~ s/"engine_problem.*\n//g;
