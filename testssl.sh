@@ -89,7 +89,7 @@ declare -r ALLOK=0                 # All is fine
 
 
 [ -z "${BASH_VERSINFO[0]}" ] && printf "\n\033[1;35m Please make sure you're using \"bash\"! Bye...\033[m\n\n" >&2 && exit $ERR_BASH
-kill -l | grep -q SIG || printf "\n\033[1;35m Please make sure you're calling me not as \"/bin/sh\"! Bye...\033[m\n\n"  >&2 && exit $ERR_BASH
+if ! kill -l | grep -q SIG ; then printf "\n\033[1;35m Please make sure you're calling me not as \"/bin/sh\"! Bye...\033[m\n\n" >&2 ; exit $ERR_BASH; fi
 [ ${BASH_VERSINFO[0]} -lt 3 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 [ ${BASH_VERSINFO[0]} -le 3 ] && [ ${BASH_VERSINFO[1]} -le 1 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 
