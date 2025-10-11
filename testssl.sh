@@ -89,7 +89,7 @@ declare -r ALLOK=0                 # All is fine
 
 
 [ -z "${BASH_VERSINFO[0]}" ] && printf "\n\033[1;35m Please make sure you're using \"bash\"! Bye...\033[m\n\n" >&2 && exit $ERR_BASH
-[ $(kill -l | grep -c SIG) -eq 0 ] && printf "\n\033[1;35m Please make sure you're calling me without leading \"sh\"! Bye...\033[m\n\n"  >&2 && exit $ERR_BASH
+kill -l | grep -q SIG || printf "\n\033[1;35m Please make sure you're calling me not as \"/bin/sh\"! Bye...\033[m\n\n"  >&2 && exit $ERR_BASH
 [ ${BASH_VERSINFO[0]} -lt 3 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 [ ${BASH_VERSINFO[0]} -le 3 ] && [ ${BASH_VERSINFO[1]} -le 1 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 
@@ -3638,7 +3638,7 @@ normalize_ciphercode() {
 
 prettyprint_local() {
      local arg line
-     local hexc hexcode dash ciph sslvers kx auth enc mac export
+     local hexc hexcode dash ciph sslvers kx auth enc mac exprt
      local re='^[0-9A-Fa-f]+$'
 
      if [[ "$1" == 0x* ]] || [[ "$1" == 0X* ]]; then
@@ -3658,19 +3658,19 @@ prettyprint_local() {
      neat_header
 
      if [[ -z "$1" ]]; then
-          while read -r hexcode dash ciph sslvers kx auth enc mac export ; do
+          while read -r hexcode dash ciph sslvers kx auth enc mac exprt ; do
                hexc="$(normalize_ciphercode $hexcode)"
-               outln "$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export")"
+               outln "$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt")"
           done < <(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL:@STRENGTH' 'ALL' "-V")  # -V doesn't work with openssl < 1.0
      else
           #for arg in $(echo $@ | sed 's/,/ /g'); do
           for arg in ${*//,/ /}; do
-               while read -r hexcode dash ciph sslvers kx auth enc mac export ; do
+               while read -r hexcode dash ciph sslvers kx auth enc mac exprt ; do
                     hexc="$(normalize_ciphercode $hexcode)"
                     # for numbers we don't do word matching:
                     [[ $arg =~ $re ]] && \
-                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export" | grep -ai "$arg")" || \
-                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export" | grep -wai "$arg")"
+                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt" | grep -ai "$arg")" || \
+                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt" | grep -wai "$arg")"
                     [[ -n "$line" ]] && outln "$line"
                done < <(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL:@STRENGTH' 'ALL' "-V") # -V doesn't work with openssl < 1.0
           done
@@ -3831,7 +3831,7 @@ neat_header(){
 
 neat_list(){
      local hexcode="$1"
-     local ossl_cipher="$2" export="$5" tls_cipher=""
+     local ossl_cipher="$2" exprt="$5" tls_cipher=""
      local kx enc strength line what_dh bits
      local -i i len
      local how2show="$6"
@@ -3856,7 +3856,7 @@ neat_list(){
           set_ciph_str_score $strength
      fi
 
-     [[ "$export" =~ export ]] && strength="$strength,exp"
+     [[ "$exprt" =~ export ]] && strength="$strength,exp"
 
      [[ "$DISPLAY_CIPHERNAMES" != openssl-only ]] && tls_cipher="$(show_rfc_style "$hexcode")"
 
@@ -10925,7 +10925,7 @@ run_fs() {
      local -i sclient_success
      local fs_offered=false ecdhe_offered=false ffdhe_offered=false
      local fs_tls13_offered=false fs_tls12_offered=false
-     local protos_to_try proto hexc dash fs_cipher sslvers auth mac export curve dhlen
+     local protos_to_try proto hexc dash fs_cipher sslvers auth mac exprt curve dhlen
      local -a hexcode normalized_hexcode ciph rfc_ciph kx enc ciphers_found sigalg ossl_supported
      # generated from 'kEECDH:kEDH:!aNULL:!eNULL:!DES:!3DES:!RC4' with openssl 1.0.2i and openssl 1.1.0
      local fs_cipher_list="DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES128-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-DSS-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA:DHE-DSS-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA:DHE-DSS-SEED-SHA:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CHACHA20-POLY1305-OLD:DHE-RSA-CHACHA20-POLY1305:DHE-RSA-SEED-SHA:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305-OLD:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-RSA-CHACHA20-POLY1305-OLD:ECDHE-RSA-CHACHA20-POLY1305"
@@ -10998,7 +10998,7 @@ run_fs() {
                fi
           done
      else
-          while read -r hexc dash ciph[nr_supported_ciphers] sslvers kx[nr_supported_ciphers] auth enc[nr_supported_ciphers] mac export; do
+          while read -r hexc dash ciph[nr_supported_ciphers] sslvers kx[nr_supported_ciphers] auth enc[nr_supported_ciphers] mac exprt; do
                ciphers_found[nr_supported_ciphers]=false
                if [[ "${hexc:2:2}" == 00 ]]; then
                     normalized_hexcode[nr_supported_ciphers]="x${hexc:7:2}"
@@ -18360,9 +18360,9 @@ run_breach() {
 
                # Final verdict (if not happened preemptively before). We reuse $detected_compression here
                detected_compression=""
-               if [[ ${has_compression[@]} =~ warn ]]; then
+               if [[ ${has_compression[*]} =~ warn ]]; then
                     # warn_empty / warn_stalled
-                    if [[ ${has_compression[@]} =~ warn_empty ]]; then
+                    if [[ ${has_compression[*]} =~ warn_empty ]]; then
                          pr_warning "At least 1/4 checks failed (HTTP header request was empty, debug: ${has_compression[@]}"
                          outln ", debug: ${has_compression[@]})"
                          fileout "$jsonID" "WARN" "Test failed as HTTP response was empty, debug: ${has_compression[@]}" "$cve" "$cwe"
@@ -19778,7 +19778,7 @@ run_winshock() {
           # Check whether there are any TLS extension which should not be available under <= Windows 2012 R2
           for tls_ext in "${TLS_EXTENSIONS[@]}"; do
                # We use the whole array, got to be careful when the array becomes bigger (unintended match)
-               if [[ ${forbidden_tls_ext[@]} =~ $tls_ext ]]; then
+               if [[ ${forbidden_tls_ext[*]} =~ $tls_ext ]]; then
                     pr_svrty_best "not vulnerable (OK)"; outln " - TLS extension $tls_ext detected"
                     fileout "$jsonID" "OK" "not vulnerable  - TLS extension $tls_ext detected" "$cve" "$cwe"
                     return 0
@@ -24671,7 +24671,7 @@ parse_cmd_line() {
                     # then we need to make sure we catch --ids-friendly. Normally we do not,
                     # see #1717.  The following statement makes sure. In the do-while + case-esac
                     # loop it will be execute again, but it does not hurt
-                    if [[ "${CMDLINE_ARRAY[@]}" =~ --ids-friendly ]]; then
+                    if [[ "${CMDLINE_ARRAY[*]}" =~ --ids-friendly ]]; then
                          OFFENSIVE=false
                     fi
                     do_vulnerabilities=true
@@ -25204,7 +25204,7 @@ parse_cmd_line() {
 
      # Unless explicit disabled, check if rating can or should be enabled.
      # Should be called after set_scanning_defaults() and set_skip_tests()
-     if [[ ! ${SKIP_TESTS[@]} =~ rating ]] ; then
+     if [[ ! ${SKIP_TESTS[*]} =~ rating ]] ; then
           set_rating_state
      fi
 
