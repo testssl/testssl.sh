@@ -123,6 +123,7 @@ trap "child_error" USR1
 ########### Internal definitions
 #
 declare -r VERSION="3.3dev"
+# shellcheck disable=SC2034
 declare -r SWCONTACT="dirk aet testssl dot sh"
 [[ "$VERSION" =~ dev|rc|beta ]] && \
      SWURL="https://testssl.sh/dev/" ||
@@ -2499,13 +2500,13 @@ service_detection() {
                     send_app_data "$plaintext"
                     if [[ $? -eq 0 ]]; then
                          receive_app_data true
-                         [[ $? -eq 0 ]] || > "$TMPFILE"
+                         [[ $? -eq 0 ]] || : > "$TMPFILE"
                     else
-                         > "$TMPFILE"
+                         : > "$TMPFILE"
                     fi
                     send_close_notify "$DETECTED_TLS_VERSION"
                else
-                    > "$TMPFILE"
+                    : > "$TMPFILE"
                fi
           else
                # SNI is not standardized for !HTTPS but fortunately for other protocols s_client doesn't seem to care
@@ -2920,7 +2921,7 @@ run_hsts() {
           fi
           debugme echo "hsts_age_sec: $hsts_age_sec"
           if ! is_number "$hsts_age_sec"; then
-               pr_svrty_medium "misconfiguration: \'"$hsts_age_sec"\' is not a valid max-age specification"
+               pr_svrty_medium "misconfiguration: \'$hsts_age_sec\' is not a valid max-age specification"
                fileout "${jsonID}_time" "MEDIUM" "misconfiguration, specified not a number for max-age"
                set_grade_warning "HSTS max-age is misconfigured"
           else
@@ -18372,7 +18373,7 @@ run_breach() {
                          fileout "$jsonID" "WARN" "Test failed as HTTP request stalled and was terminated" "$cve" "$cwe"
                     fi
                else
-                    for c in ${has_compression[@]}; do
+                    for c in "${has_compression[@]}"; do
                          if [[ $c =~ yes ]]; then
                               detected_compression+="${c%:*} "
                          fi
@@ -24486,7 +24487,7 @@ debug_globals() {
 set_skip_tests() {
      local t
 
-     for t in ${SKIP_TESTS[@]} ; do
+     for t in "${SKIP_TESTS[@]}"; do
           t="do_${t}"
           # declare won't do it here --> local scope
           eval "$t"=false
