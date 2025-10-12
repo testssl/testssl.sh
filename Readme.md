@@ -1,6 +1,10 @@
 
 ## Intro
+<!--
 ![GitHub Tag](https://img.shields.io/github/v/tag/testssl/testssl.sh)
+This would display the latest tag which is from the 3.2 branch. Here we don't have tags yet
+-->
+![Static Badge](https://img.shields.io/badge/version-3.3dev-blue)
 ![Static Badge](https://img.shields.io/badge/%2Fbin%2Fbash_-blue)
 ![Static Badge](https://img.shields.io/badge/Libre+OpenSSL_-blue)
 [![License](https://img.shields.io/github/license/testssl/testssl.sh)](https://github.com/testssl/testssl.sh/LICENSE)
@@ -9,7 +13,9 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/testssl/testssl.sh)
 [![CI test Ubuntu](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml/badge.svg)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml?branch=3.3dev)
 [![CI test MacOS](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml/badge.svg)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml?branch=3.3dev)
-[![Docker](https://img.shields.io/docker/pulls/drwetter/testssl.sh)](https://github.com/testssl/testssl.sh/blob/3.2/Dockerfile.md)
+[![Docker](https://img.shields.io/docker/pulls/drwetter/testssl.sh)](https://github.com/testssl/testssl.sh/blob/3.3dev/Dockerfile.md)
+[![Vim](https://img.shields.io/badge/Vim-%2311AB00.svg?logo=vim&logoColor=white)](#)
+[![Visual Studio Code](https://custom-icon-badges.demolab.com/badge/Visual%20Studio%20Code-0078d7.svg?logo=vsc&logoColor=white)](#)
 ![Mastodon Follow](https://img.shields.io/mastodon/follow/109319848143024146?domain=infosec.exchange)
 [![Bluesky](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpublic.api.bsky.app%2Fxrpc%2Fapp.bsky.actor.getProfile%2F%3Factor%3Dtestssl.bsky.social&query=%24.followersCount&style=social&logo=bluesky&label=Follow%20%40testssl.sh)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/testssl/testssl.sh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -30,8 +36,8 @@ cryptographic flaws.
 * Reliability: features are tested thoroughly.
 * Privacy: It's only you who sees the result, not a third party.
 * Freedom: It's 100% open source. You can look at the code, see what's going on.
-* The development is free and open @ GitHub and participation is welcome.
-* Unit tests ensure maturity (output is consistent, JSON is valid, runs under Linux+MacOS etc)
+* The development is free and open @ GitHub. Participation and contributions are welcome.
+* Unit tests ensure maturity: check for consistency, whether JSON is valid, runs under Linux+MacOS, and a lot more!
 
 ### License
 
@@ -45,14 +51,14 @@ to get bugfixes, other feedback and more contributions.
 
 ### Compatibility
 
-Testssl.sh is working on every Linux/BSD distribution and MacOS out of the box. Latest by 2.9dev
-most of the limitations of disabled features from the openssl client are gone
-due to bash-socket-based checks. An old OpenSSL-bad version is supplied but
-but you can also use any LibreSSL or OpenSSL version.
+Testssl.sh is working on every Linux/BSD distribution and MacOS out of the box. Latest when 
+the very old version 2.9 was developed, most of the limitations due to disabled features from 
+the openssl client are gone due to bash-socket-based checks. An old OpenSSL-bad version is 
+supplied but these days you can also use _any_ LibreSSL or OpenSSL version.
    testssl.sh also works on other unixoid systems out of the box, supposed they have
-`/bin/bash` >= version 3.2 and standard tools like sed and awk installed. An implicit
-(silent) check for binaries is done when you start testssl.sh . System V needs probably
-to have GNU grep installed. Windows (using MSYS2, Cygwin or WSL) work too.
+`/bin/bash` >= version 3.2 and standard tools like sed and awk installed. Windows 
+(using MSYS2, Cygwin or WSL/WSL2) work too. An implicit (silent) check for binaries is performed 
+when you start testssl.sh . System V Unix needs probably to have GNU grep installed. 
 
 Update notifications can be found at [github](https://github.com/testssl/testssl.sh) or most important ones @ [mastodon](https://infosec.exchange/@testssl) or [bluesky](https://bsky.app/profile/testssl.bsky.social). [twitter](https://twitter.com/drwetter) is not being used anymore.
 
@@ -67,8 +73,6 @@ You can download testssl.sh branch 3.3dev just by cloning this git repository:
 
 
 #### Docker
-
-
 
 Testssl.sh has minimal requirements. As stated you don't have to install or build anything. You can just run it from the pulled/cloned directory. Still if you don't want to pull the GitHub repo to your directory of choice you can pull a container from dockerhub and run it:
 
@@ -107,7 +111,7 @@ Testssl.sh is intended to be used as a standalone CLI tool. While we tried to ap
 
 ### Status
 
-Given the current manpower we only support n-1 versions. You're looking at the 3.3.dev branch where further development takes place before 3.4 becomes the stable version and 3.2 becomes old-stable. If you are hestitant with respect to changes, you need to use 3.2. The version 3.0.10 was the last one, there will not be any updates.
+Given the current manpower we only support n-1 versions. You're looking at the 3.3.dev branch where further development takes place before 3.4 becomes the stable version and 3.2 becomes old-stable. If you are hestitant with respect to changes, you need to use 3.2. The version 3.0.10 was the last one, there won't be any more updates.
 
 
 ### Documentation
@@ -115,13 +119,13 @@ Given the current manpower we only support n-1 versions. You're looking at the 3
 * .. it is there for reading. Please do so :-) -- at least before asking questions. See man page in groff, html and markdown format in `~/doc/`.
 * [https://testssl.sh/](https://testssl.sh/) will help to get you started.
 * There's also an [AI generated doc](https://deepwiki.com/testssl/testssl.sh), see also below.
-* Will Hunt provides a longer [description](https://www.4armed.com/blog/doing-your-own-ssl-tls-testing/) for an older version (2.8), including useful background information.
+* Will Hunt provided a longer [description](https://www.4armed.com/blog/doing-your-own-ssl-tls-testing/) . While it was written for an older version (2.8), it still includes background information.
 
 ### Contributing
 
-A lot of contributors already helped to push the project where it currently is, see [CREDITS.md](https://github.com/testssl/testssl.sh/blob/3.2/CREDITS.md). Your contribution would be also welcome! There's an [issue list](https://github.com/testssl/testssl.sh/issues). To get started look for issues which are labeled as [good first issue](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), [for grabs](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22for+grabs%22) or [help wanted](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). The latter is more advanced. You can also lookout for [documentation issues](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3Adocumentation), or you can help with [unit testing](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22unit%20test%22) or improving github actions.
+A lot of contributors already helped to push the project where it currently is, see [CREDITS.md](https://github.com/testssl/testssl.sh/blob/3.3dev/CREDITS.md). Your contribution would be also welcome! There's an [issue list](https://github.com/testssl/testssl.sh/issues). To get started look for issues which are labeled as [good first issue](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), [for grabs](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22for+grabs%22) or [help wanted](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). The latter is more advanced. You can also lookout for [documentation issues](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3Adocumentation), or you can help with [unit testing](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22unit%20test%22) or improving github actions.
 
-It is recommended to read [CONTRIBUTING.md](https://github.com/testssl/testssl.sh/blob/3.2/CONTRIBUTING.md) and please also have a look at he [Coding Convention](https://github.com/testssl/testssl.sh/blob/3.2/Coding_Convention.md). Before you start writing PRs with hundreds of lines, better create an issue first.
+It is recommended to read [CONTRIBUTING.md](https://github.com/testssl/testssl.sh/blob/3.3dev/CONTRIBUTING.md) and please also have a look at he [Coding Convention](https://github.com/testssl/testssl.sh/blob/3.3dev/Coding_Convention.md). Before you start writing PRs with hundreds of lines, better create an issue first.
 
 In general there's also some maintenance burden, like maintaining handshakes and CA stores etc. . If you believe you can contribute and be responsible to one of those maintenance task, please speak up. That would free resources that we could use for development.
 
