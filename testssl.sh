@@ -11,17 +11,16 @@
 # Stable version            https://testssl.sh
 # File bugs at GitHub       https://github.com/testssl/testssl.sh/issues
 #
-# Project lead and initiator: Dirk Wetter, copyleft: 2007-today, contributions so far see CREDITS.md
-# Main contributions from David Cooper
-# Project lead and initiator: Dirk Wetter, copyleft: 2007-today.
+# Project lead and initiator: Dirk Wetter, copyleft: 2007-today, contributions so far
+# see CREDITS.md .
 # Main contributions from David Cooper. Further contributors see CREDITS.md .
 #
-# License: GPLv2, see https://opensource.org/licenses/gpl-2.0.php and
-# accompanying license "LICENSE.txt". Redistribution + modification under this
-# license permitted.
+# License: GPLv2, see https://opensource.org/licenses/gpl-2.0.php and accompanying
+# license "LICENSE.txt". Redistribution + modification under this license permitted.
+#
 # If you enclose this program or parts of it in your software, it has to be
 # accompanied by the same license (see link). Do not violate the license.
-# If you do not agree to these terms, do not use it in the first place!
+# If you do not agree to these terms, do not use testssl.sh in the first place!
 #
 # OpenSSL, which is being used and maybe distributed via one of this projects'
 # web sites, is subject to their licensing: https://www.openssl.org/source/license.txt
@@ -30,10 +29,11 @@
 # Terms of Use' (v2.2), see https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf,
 # stating a CC BY 3.0 US license: https://creativecommons.org/licenses/by/3.0/us/
 #
-# Please note:  USAGE WITHOUT ANY WARRANTY, THE SOFTWARE IS PROVIDED "AS IS".
-# USE IT AT your OWN RISK!
-# Seriously! The threat is you run this code on your computer and untrusted input e.g.
-# could be supplied from a server you are querying.
+# Please note:
+#     USAGE WITHOUT ANY WARRANTY, THE SOFTWARE IS PROVIDED "AS IS". USE IT AT your OWN RISK!
+#
+# The threat is you run this code on your computer and untrusted input could be supplied from
+# a server you are testing.
 #
 # HISTORY:
 # Back in 2006 it all started with a few openssl commands...
@@ -41,7 +41,7 @@
 # https://wiki.openssl.org/index.php/Command_Line_Utilities) that it was difficult to resist
 # wrapping some shell commands around it, which I used for my pen tests. This is how
 # everything started.
-# Now it has grown up, it has bash socket support for most features, which has been basically
+# Testssl.sh has grown up, it has bash socket support for most features, which has been basically
 # replacing more and more functions of OpenSSL and some sockets functions serve as some kind
 # of central functions.
 #
@@ -462,6 +462,7 @@ declare TLS_CIPHER_OSSL_NAME=()
 declare TLS_CIPHER_RFC_NAME=()
 declare TLS_CIPHER_SSLVERS=()
 declare TLS_CIPHER_KX=()
+# shellcheck disable=SC2034 . This is a false positive
 declare TLS_CIPHER_AUTH=()
 declare TLS_CIPHER_ENC=()
 declare TLS_CIPHER_EXPORT=()
@@ -13135,7 +13136,7 @@ derive-handshake-secret() {
           pubkeys_and_ciphers="${pubkeys_and_ciphers%--END HYBRID CIPHERTEXT--*}"
           privkeys="${tmpfile#*---BEGIN HYBRID PRIV KEY---}"
           privkeys="${privkeys%---END HYBRID PRIV KEY---*}"
-          
+
           while [[ "$pubkeys_and_ciphers" =~ BEGIN ]]; do
                if [[ "${pubkeys_and_ciphers:0:27}" =~ BEGIN\ CIPHERTEXT ]]; then
                     key_or_cipher="-----BEGIN CIPHERTEXT${pubkeys_and_ciphers#*-----BEGIN CIPHERTEXT}"
@@ -18364,16 +18365,16 @@ run_breach() {
                if [[ ${has_compression[*]} =~ warn ]]; then
                     # warn_empty / warn_stalled
                     if [[ ${has_compression[*]} =~ warn_empty ]]; then
-                         pr_warning "At least 1/4 checks failed (HTTP header request was empty, debug: ${has_compression[@]}"
-                         outln ", debug: ${has_compression[@]})"
-                         fileout "$jsonID" "WARN" "Test failed as HTTP response was empty, debug: ${has_compression[@]}" "$cve" "$cwe"
+                         pr_warning "At least 1/4 checks failed (HTTP header request was empty, debug: ${has_compression[*]}"
+                         outln ", debug: ${has_compression[*]})"
+                         fileout "$jsonID" "WARN" "Test failed as HTTP response was empty, debug: ${has_compression[*]}" "$cve" "$cwe"
                     else # warn_stalled
                          pr_warning "At least 1/4 checks failed (HTTP header request stalled and was terminated"
-                         outln ", debug: ${has_compression[@]})"
+                         outln ", debug: ${has_compression[*]})"
                          fileout "$jsonID" "WARN" "Test failed as HTTP request stalled and was terminated" "$cve" "$cwe"
                     fi
                else
-                    for c in "${has_compression[@]}"; do
+                    for c in ${has_compression[*]}; do
                          if [[ $c =~ yes ]]; then
                               detected_compression+="${c%:*} "
                          fi
@@ -18384,7 +18385,7 @@ run_breach() {
                     outln "${spaces}${when_makesense}"
                     fileout "$jsonID" "MEDIUM" "potentially VULNERABLE, $detected_compression HTTP compression detected $disclaimer" "$cve" "$cwe" "$hint"
                fi
-               debugme outln "${spaces}has_compression: ${has_compression[@]}"
+               debugme outln "${spaces}has_compression: ${has_compression[*]}"
                ;;
      esac
 
