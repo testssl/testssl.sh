@@ -11,17 +11,16 @@
 # Stable version            https://testssl.sh
 # File bugs at GitHub       https://github.com/testssl/testssl.sh/issues
 #
-# Project lead and initiator: Dirk Wetter, copyleft: 2007-today, contributions so far see CREDITS.md
-# Main contributions from David Cooper
-# Project lead and initiator: Dirk Wetter, copyleft: 2007-today.
+# Project lead and initiator: Dirk Wetter, copyleft: 2007-today, contributions so far
+# see CREDITS.md .
 # Main contributions from David Cooper. Further contributors see CREDITS.md .
 #
-# License: GPLv2, see https://opensource.org/licenses/gpl-2.0.php and
-# accompanying license "LICENSE.txt". Redistribution + modification under this
-# license permitted.
+# License: GPLv2, see https://opensource.org/licenses/gpl-2.0.php and accompanying
+# license "LICENSE.txt". Redistribution + modification under this license permitted.
+#
 # If you enclose this program or parts of it in your software, it has to be
 # accompanied by the same license (see link). Do not violate the license.
-# If you do not agree to these terms, do not use it in the first place!
+# If you do not agree to these terms, do not use testssl.sh in the first place!
 #
 # OpenSSL, which is being used and maybe distributed via one of this projects'
 # web sites, is subject to their licensing: https://www.openssl.org/source/license.txt
@@ -30,10 +29,11 @@
 # Terms of Use' (v2.2), see https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf,
 # stating a CC BY 3.0 US license: https://creativecommons.org/licenses/by/3.0/us/
 #
-# Please note:  USAGE WITHOUT ANY WARRANTY, THE SOFTWARE IS PROVIDED "AS IS".
-# USE IT AT your OWN RISK!
-# Seriously! The threat is you run this code on your computer and untrusted input e.g.
-# could be supplied from a server you are querying.
+# Please note:
+#     USAGE WITHOUT ANY WARRANTY, THE SOFTWARE IS PROVIDED "AS IS". USE IT AT your OWN RISK!
+#
+# The threat is you run this code on your computer and untrusted input could be supplied from
+# a server you are testing.
 #
 # HISTORY:
 # Back in 2006 it all started with a few openssl commands...
@@ -41,7 +41,7 @@
 # https://wiki.openssl.org/index.php/Command_Line_Utilities) that it was difficult to resist
 # wrapping some shell commands around it, which I used for my pen tests. This is how
 # everything started.
-# Now it has grown up, it has bash socket support for most features, which has been basically
+# Testssl.sh has grown up, it has bash socket support for most features, which has been basically
 # replacing more and more functions of OpenSSL and some sockets functions serve as some kind
 # of central functions.
 #
@@ -89,7 +89,7 @@ declare -r ALLOK=0                 # All is fine
 
 
 [ -z "${BASH_VERSINFO[0]}" ] && printf "\n\033[1;35m Please make sure you're using \"bash\"! Bye...\033[m\n\n" >&2 && exit $ERR_BASH
-[ $(kill -l | grep -c SIG) -eq 0 ] && printf "\n\033[1;35m Please make sure you're calling me without leading \"sh\"! Bye...\033[m\n\n"  >&2 && exit $ERR_BASH
+if ! kill -l | grep -q SIG ; then printf "\n\033[1;35m Please make sure you're calling me not as \"/bin/sh\"! Bye...\033[m\n\n" >&2 ; exit $ERR_BASH; fi
 [ ${BASH_VERSINFO[0]} -lt 3 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 [ ${BASH_VERSINFO[0]} -le 3 ] && [ ${BASH_VERSINFO[1]} -le 1 ] && printf "\n\033[1;35m Minimum requirement is bash 3.2. You have $BASH_VERSION \033[m\n\n"  >&2 && exit $ERR_BASH
 
@@ -123,6 +123,7 @@ trap "child_error" USR1
 ########### Internal definitions
 #
 declare -r VERSION="3.3dev"
+# shellcheck disable=SC2034
 declare -r SWCONTACT="dirk aet testssl dot sh"
 [[ "$VERSION" =~ dev|rc|beta ]] && \
      SWURL="https://testssl.sh/dev/" ||
@@ -461,6 +462,7 @@ declare TLS_CIPHER_OSSL_NAME=()
 declare TLS_CIPHER_RFC_NAME=()
 declare TLS_CIPHER_SSLVERS=()
 declare TLS_CIPHER_KX=()
+# shellcheck disable=SC2034 . This is a false positive
 declare TLS_CIPHER_AUTH=()
 declare TLS_CIPHER_ENC=()
 declare TLS_CIPHER_EXPORT=()
@@ -2499,13 +2501,13 @@ service_detection() {
                     send_app_data "$plaintext"
                     if [[ $? -eq 0 ]]; then
                          receive_app_data true
-                         [[ $? -eq 0 ]] || > "$TMPFILE"
+                         [[ $? -eq 0 ]] || : > "$TMPFILE"
                     else
-                         > "$TMPFILE"
+                         : > "$TMPFILE"
                     fi
                     send_close_notify "$DETECTED_TLS_VERSION"
                else
-                    > "$TMPFILE"
+                    : > "$TMPFILE"
                fi
           else
                # SNI is not standardized for !HTTPS but fortunately for other protocols s_client doesn't seem to care
@@ -2920,7 +2922,7 @@ run_hsts() {
           fi
           debugme echo "hsts_age_sec: $hsts_age_sec"
           if ! is_number "$hsts_age_sec"; then
-               pr_svrty_medium "misconfiguration: \'"$hsts_age_sec"\' is not a valid max-age specification"
+               pr_svrty_medium "misconfiguration: \'$hsts_age_sec\' is not a valid max-age specification"
                fileout "${jsonID}_time" "MEDIUM" "misconfiguration, specified not a number for max-age"
                set_grade_warning "HSTS max-age is misconfigured"
           else
@@ -3638,7 +3640,7 @@ normalize_ciphercode() {
 
 prettyprint_local() {
      local arg line
-     local hexc hexcode dash ciph sslvers kx auth enc mac export
+     local hexc hexcode dash ciph sslvers kx auth enc mac exprt
      local re='^[0-9A-Fa-f]+$'
 
      if [[ "$1" == 0x* ]] || [[ "$1" == 0X* ]]; then
@@ -3658,19 +3660,19 @@ prettyprint_local() {
      neat_header
 
      if [[ -z "$1" ]]; then
-          while read -r hexcode dash ciph sslvers kx auth enc mac export ; do
+          while read -r hexcode dash ciph sslvers kx auth enc mac exprt ; do
                hexc="$(normalize_ciphercode $hexcode)"
-               outln "$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export")"
+               outln "$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt")"
           done < <(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL:@STRENGTH' 'ALL' "-V")  # -V doesn't work with openssl < 1.0
      else
           #for arg in $(echo $@ | sed 's/,/ /g'); do
           for arg in ${*//,/ /}; do
-               while read -r hexcode dash ciph sslvers kx auth enc mac export ; do
+               while read -r hexcode dash ciph sslvers kx auth enc mac exprt ; do
                     hexc="$(normalize_ciphercode $hexcode)"
                     # for numbers we don't do word matching:
                     [[ $arg =~ $re ]] && \
-                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export" | grep -ai "$arg")" || \
-                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$export" | grep -wai "$arg")"
+                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt" | grep -ai "$arg")" || \
+                         line="$(neat_list "$hexc" "$ciph" "$kx" "$enc" "$exprt" | grep -wai "$arg")"
                     [[ -n "$line" ]] && outln "$line"
                done < <(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL:@STRENGTH' 'ALL' "-V") # -V doesn't work with openssl < 1.0
           done
@@ -3831,7 +3833,7 @@ neat_header(){
 
 neat_list(){
      local hexcode="$1"
-     local ossl_cipher="$2" export="$5" tls_cipher=""
+     local ossl_cipher="$2" exprt="$5" tls_cipher=""
      local kx enc strength line what_dh bits
      local -i i len
      local how2show="$6"
@@ -3856,7 +3858,7 @@ neat_list(){
           set_ciph_str_score $strength
      fi
 
-     [[ "$export" =~ export ]] && strength="$strength,exp"
+     [[ "$exprt" =~ export ]] && strength="$strength,exp"
 
      [[ "$DISPLAY_CIPHERNAMES" != openssl-only ]] && tls_cipher="$(show_rfc_style "$hexcode")"
 
@@ -10925,7 +10927,7 @@ run_fs() {
      local -i sclient_success
      local fs_offered=false ecdhe_offered=false ffdhe_offered=false
      local fs_tls13_offered=false fs_tls12_offered=false
-     local protos_to_try proto hexc dash fs_cipher sslvers auth mac export curve dhlen
+     local protos_to_try proto hexc dash fs_cipher sslvers auth mac exprt curve dhlen
      local -a hexcode normalized_hexcode ciph rfc_ciph kx enc ciphers_found sigalg ossl_supported
      # generated from 'kEECDH:kEDH:!aNULL:!eNULL:!DES:!3DES:!RC4' with openssl 1.0.2i and openssl 1.1.0
      local fs_cipher_list="DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES128-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-DSS-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA:DHE-DSS-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA:DHE-DSS-SEED-SHA:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-CAMELLIA256-SHA256:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-CHACHA20-POLY1305-OLD:DHE-RSA-CHACHA20-POLY1305:DHE-RSA-SEED-SHA:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305-OLD:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-RSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA256-SHA384:ECDHE-RSA-CHACHA20-POLY1305-OLD:ECDHE-RSA-CHACHA20-POLY1305"
@@ -10998,7 +11000,7 @@ run_fs() {
                fi
           done
      else
-          while read -r hexc dash ciph[nr_supported_ciphers] sslvers kx[nr_supported_ciphers] auth enc[nr_supported_ciphers] mac export; do
+          while read -r hexc dash ciph[nr_supported_ciphers] sslvers kx[nr_supported_ciphers] auth enc[nr_supported_ciphers] mac exprt; do
                ciphers_found[nr_supported_ciphers]=false
                if [[ "${hexc:2:2}" == 00 ]]; then
                     normalized_hexcode[nr_supported_ciphers]="x${hexc:7:2}"
@@ -13134,7 +13136,7 @@ derive-handshake-secret() {
           pubkeys_and_ciphers="${pubkeys_and_ciphers%--END HYBRID CIPHERTEXT--*}"
           privkeys="${tmpfile#*---BEGIN HYBRID PRIV KEY---}"
           privkeys="${privkeys%---END HYBRID PRIV KEY---*}"
-          
+
           while [[ "$pubkeys_and_ciphers" =~ BEGIN ]]; do
                if [[ "${pubkeys_and_ciphers:0:27}" =~ BEGIN\ CIPHERTEXT ]]; then
                     key_or_cipher="-----BEGIN CIPHERTEXT${pubkeys_and_ciphers#*-----BEGIN CIPHERTEXT}"
@@ -18360,19 +18362,19 @@ run_breach() {
 
                # Final verdict (if not happened preemptively before). We reuse $detected_compression here
                detected_compression=""
-               if [[ ${has_compression[@]} =~ warn ]]; then
+               if [[ ${has_compression[*]} =~ warn ]]; then
                     # warn_empty / warn_stalled
-                    if [[ ${has_compression[@]} =~ warn_empty ]]; then
-                         pr_warning "At least 1/4 checks failed (HTTP header request was empty, debug: ${has_compression[@]}"
-                         outln ", debug: ${has_compression[@]})"
-                         fileout "$jsonID" "WARN" "Test failed as HTTP response was empty, debug: ${has_compression[@]}" "$cve" "$cwe"
+                    if [[ ${has_compression[*]} =~ warn_empty ]]; then
+                         pr_warning "At least 1/4 checks failed (HTTP header request was empty, debug: ${has_compression[*]}"
+                         outln ", debug: ${has_compression[*]})"
+                         fileout "$jsonID" "WARN" "Test failed as HTTP response was empty, debug: ${has_compression[*]}" "$cve" "$cwe"
                     else # warn_stalled
                          pr_warning "At least 1/4 checks failed (HTTP header request stalled and was terminated"
-                         outln ", debug: ${has_compression[@]})"
+                         outln ", debug: ${has_compression[*]})"
                          fileout "$jsonID" "WARN" "Test failed as HTTP request stalled and was terminated" "$cve" "$cwe"
                     fi
                else
-                    for c in ${has_compression[@]}; do
+                    for c in ${has_compression[*]}; do
                          if [[ $c =~ yes ]]; then
                               detected_compression+="${c%:*} "
                          fi
@@ -18383,7 +18385,7 @@ run_breach() {
                     outln "${spaces}${when_makesense}"
                     fileout "$jsonID" "MEDIUM" "potentially VULNERABLE, $detected_compression HTTP compression detected $disclaimer" "$cve" "$cwe" "$hint"
                fi
-               debugme outln "${spaces}has_compression: ${has_compression[@]}"
+               debugme outln "${spaces}has_compression: ${has_compression[*]}"
                ;;
      esac
 
@@ -19778,7 +19780,7 @@ run_winshock() {
           # Check whether there are any TLS extension which should not be available under <= Windows 2012 R2
           for tls_ext in "${TLS_EXTENSIONS[@]}"; do
                # We use the whole array, got to be careful when the array becomes bigger (unintended match)
-               if [[ ${forbidden_tls_ext[@]} =~ $tls_ext ]]; then
+               if [[ ${forbidden_tls_ext[*]} =~ $tls_ext ]]; then
                     pr_svrty_best "not vulnerable (OK)"; outln " - TLS extension $tls_ext detected"
                     fileout "$jsonID" "OK" "not vulnerable  - TLS extension $tls_ext detected" "$cve" "$cwe"
                     return 0
@@ -24486,7 +24488,7 @@ debug_globals() {
 set_skip_tests() {
      local t
 
-     for t in ${SKIP_TESTS[@]} ; do
+     for t in "${SKIP_TESTS[@]}"; do
           t="do_${t}"
           # declare won't do it here --> local scope
           eval "$t"=false
@@ -24671,7 +24673,7 @@ parse_cmd_line() {
                     # then we need to make sure we catch --ids-friendly. Normally we do not,
                     # see #1717.  The following statement makes sure. In the do-while + case-esac
                     # loop it will be execute again, but it does not hurt
-                    if [[ "${CMDLINE_ARRAY[@]}" =~ --ids-friendly ]]; then
+                    if [[ "${CMDLINE_ARRAY[*]}" =~ --ids-friendly ]]; then
                          OFFENSIVE=false
                     fi
                     do_vulnerabilities=true
@@ -25204,7 +25206,7 @@ parse_cmd_line() {
 
      # Unless explicit disabled, check if rating can or should be enabled.
      # Should be called after set_scanning_defaults() and set_skip_tests()
-     if [[ ! ${SKIP_TESTS[@]} =~ rating ]] ; then
+     if [[ ! ${SKIP_TESTS[*]} =~ rating ]] ; then
           set_rating_state
      fi
 
