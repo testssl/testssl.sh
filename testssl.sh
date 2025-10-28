@@ -232,7 +232,7 @@ else
 fi
 DISPLAY_CIPHERNAMES="openssl"           # display OpenSSL ciphername (but both OpenSSL and RFC ciphernames in wide mode)
 declare UA_STD="TLS tester from $SWURL"
-declare -r UA_SNEAKY="Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0"
+declare -r UA_SNEAKY="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
 SSL_RENEG_ATTEMPTS=${SSL_RENEG_ATTEMPTS:-10}       # number of times to check SSL Renegotiation
 SSL_RENEG_WAIT=${SSL_RENEG_WAIT:-0.25}   # time between SSL Renegotiation checks
 
