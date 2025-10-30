@@ -40,7 +40,7 @@ $uri="smtp-relay.gmail.com:587";
 # unlink "tmp.json";
 # we will have client simulations later, so we don't need to run everything again:
 printf "\n%s\n", "STARTTLS SMTP unit test via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run_smtp -t smtp $uri 2>&1`;
+$socket_out = `$prg $check2run_smtp -t smtp $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
@@ -48,7 +48,7 @@ $tests++;
 #2
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS SMTP unit tests via OpenSSL --> $uri ...";
-$openssl_out = `./testssl.sh --ssl-native $check2run_smtp -t smtp $uri 2>&1`;
+$openssl_out = `$prg --ssl-native $check2run_smtp -t smtp $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -58,14 +58,14 @@ $uri="pop.gmx.net:110";
 #3
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS POP3 unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t pop3 $uri 2>&1`;
+$socket_out = `$prg $check2run -t pop3 $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
 #4
 printf "\n%s\n", "STARTTLS POP3 unit tests via OpenSSL --> $uri ...";
-$openssl_out = `./testssl.sh --ssl-native $check2run -t pop3 $uri 2>&1`;
+$openssl_out = `$prg --ssl-native $check2run -t pop3 $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -75,14 +75,14 @@ $uri="imap.gmx.net:143";
 #5
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS IMAP unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t imap $uri 2>&1`;
+$socket_out = `$prg $check2run -t imap $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
 #6
 printf "\n%s\n", "STARTTLS IMAP unit tests via OpenSSL --> $uri ...";
-$openssl_out = `./testssl.sh --ssl-native $check2run -t imap $uri 2>&1`;
+$openssl_out = `$prg --ssl-native $check2run -t imap $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -92,7 +92,7 @@ $uri="mail.tigertech.net:4190";
 #7
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS MANAGE(SIEVE) unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t sieve $uri 2>&1`;
+$socket_out = `$prg $check2run -t sieve $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -102,7 +102,7 @@ $uri="jabber.org:5222";
 #8
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS XMPP unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t xmpp $uri 2>&1`;
+$socket_out = `$prg $check2run -t xmpp $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -110,14 +110,14 @@ $tests++;
 # commented out, bc of travis' limits
 #
 #printf "\n%s\n", "STARTTLS XMPP unit tests via OpenSSL --> $uri ...";
-#$openssl_out = `./testssl.sh --ssl-native $check2run -t xmpp $uri 2>&1`;
+#$openssl_out = `$prg --ssl-native $check2run -t xmpp $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 #unlike($openssl_out, qr/$openssl_regex_bl/, "");
 #$tests++;
 
 # $uri="jabber.ccc.de:5269";
 # printf "\n%s\n", "Quick STARTTLS XMPP S2S unit tests via sockets --> $uri ...";
-# $openssl_out = `./testssl.sh --openssl=/usr/bin/openssl -p $check2run -t xmpp-server $uri 2>&1`;
+# $openssl_out = `$prg --openssl=/usr/bin/openssl -p $check2run -t xmpp-server $uri 2>&1`;
 # # $openssl_json = json('tmp.json');
 # unlike($openssl_out, qr/$openssl_regex_bl/, "");
 # $tests++;
@@ -128,7 +128,7 @@ $uri="ldap.uni-rostock.de:21";
 #9
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS FTP unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t ftp $uri 2>&1`;
+$socket_out = `$prg $check2run -t ftp $uri 2>&1`;
 # $socket_json = json('tmp.json');
 # OCSP stapling fails sometimes with: 'offered, error querying OCSP responder (ERROR: No Status found)'
 $socket_out =~ s/ error querying OCSP responder .*\n//g;
@@ -138,7 +138,7 @@ $tests++;
 # commented out, bc of travis' limits
 #
 # printf "\n%s\n", "STARTTLS FTP unit tests via OpenSSL --> $uri ...";
-# $openssl_out = `./testssl.sh --ssl-native $check2run -t ftp $uri 2>&1`;
+# $openssl_out = `$prg --ssl-native $check2run -t ftp $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 # OCSP stapling fails sometimes with: 'offered, error querying OCSP responder (ERROR: No Status found)'
 # $openssl_out =~ s/ error querying OCSP responder .*\n//g;
@@ -151,14 +151,14 @@ $uri="db.debian.org:389";
 
 #10
 printf "\n%s\n", "STARTTLS LDAP unit tests via sockets --> $uri ...";
-$socket_out = `./testssl.sh $check2run -t ldap $uri 2>&1`;
+$socket_out = `$prg $check2run -t ldap $uri 2>&1`;
 # $socket_json = json('tmp.json');
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
 #11
 printf "\n%s\n", "STARTTLS LDAP unit tests via OpenSSL --> $uri ...";
-$openssl_out = `./testssl.sh --ssl-native $check2run -t ldap $uri 2>&1`;
+$openssl_out = `$prg --ssl-native $check2run -t ldap $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
@@ -168,14 +168,14 @@ $tests++;
 #$uri="144.76.182.167:119";
 
 #printf "\n%s\n", "STARTTLS NNTP unit tests via sockets --> $uri ...";
-#$socket_out = `./testssl.sh $check2run -t nntp $uri 2>&1`;
+#$socket_out = `$prg $check2run -t nntp $uri 2>&1`;
 #unlike($socket_out, qr/$socket_regex_bl/, "");
 #$tests++;
 
 # commented out, bc of travis' limits
 #
 #printf "\n%s\n", "STARTTLS NNTP unit tests via OpenSSL --> $uri ...";
-#$openssl_out = `./testssl.sh --ssl-native $check2run -t nntp $uri 2>&1`;
+#$openssl_out = `$prg --ssl-native $check2run -t nntp $uri 2>&1`;
 # $openssl_json = json('tmp.json');
 #unlike($openssl_out, qr/$openssl_regex_bl/, "");
 #$tests++;

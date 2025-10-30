@@ -16,7 +16,7 @@ my (
 $tests = 0;
 
 my $prg="./testssl.sh";
-my $check2run = '-S -e --ids-friendly -U --severity LOW --color 0';
+my $check2run = '-S --beast --sweet32 --breach --beast --lucky13 --rc4 --severity LOW --color 0';
 my $uri = 'badssl.com';
 
 printf "\n%s\n", "Doing severity level checks";
