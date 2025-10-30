@@ -15,7 +15,7 @@ my (
 );
 # OK
 pass("Running testssl.sh against badssl.com to create a baseline (may take 2~3 minutes)"); $tests++;
-my $okout = `$prg -S -e --freak --logjam --drown --rc4 --sweet32 --breach --winshock --crime --jsonfile tmp.json --color 0 badssl.com`;
+my $okout = `$prg -S --jsonfile tmp.json --color 0 badssl.com`;
 my $okjson = json('tmp.json');
 unlink 'tmp.json';
 cmp_ok(@$okjson,'>',10,"We should have more then 10 findings"); $tests++;
@@ -118,7 +118,7 @@ is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 
 # TODO: CBC
 #pass("Running testssl against cbc.badssl.com"); $tests++;
-#$out = `./testssl.sh -e -U --jsonfile tmp.json --color 0 cbc.badssl.com`;
+#$out = `./testssl.sh -e --jsonfile tmp.json --color 0 cbc.badssl.com`;
 #like($out, qr/Chain of trust.*?NOT ok\s+\(chain incomplete\)/,"Chain of trust should fail because of incomplete"); $tests++;
 #$json = json('tmp.json');
 #unlink 'tmp.json';
