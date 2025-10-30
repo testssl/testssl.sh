@@ -468,11 +468,12 @@ declare TLS13_OSSL_CIPHERS="TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CH
 HAS_GNUDATE=false
 HAS_FREEBSDDATE=false
 HAS_OPENBSDDATE=false
+
 if date -d @735275209 >/dev/null 2>&1; then
      if date -r @735275209 >/dev/null 2>&1; then
           # Ubuntu >= 25.10
           HAS_GNUDATE=true
-     elif date -r 735275209 2>&1 | grep -q "No such file"; then
+     elif LC_ALL=C date -r 735275209 2>&1 | grep -q "No such file"; then
           # e.g. Debian 24.04, Debian 11-13
           HAS_GNUDATE=true
      elif date -r 735275209 >/dev/null 2>&1; then
@@ -483,6 +484,7 @@ fi
 # FreeBSD and OS X date(1) accept "-f inputformat", so do newer OpenBSD versions >~ 6.6.
 date -j -f '%s' 1234567 >/dev/null 2>&1 && \
      HAS_FREEBSDDATE=true
+
 
 echo A | sed -E 's/A//' >/dev/null 2>&1 && \
      declare -r HAS_SED_E=true || \
