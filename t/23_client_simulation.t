@@ -57,7 +57,7 @@ $tests++;
 #
 # unlink "tmp.json";
 #printf "\n%s\n", "STARTTLS: Client simulations unit test via OpenSSL --> $uri ...";
-#$openssl_out = `./testssl.sh --ssl-native $check2run -t smtp $uri 2>&1`;
+#$openssl_out = `$prg --ssl-native $check2run -t smtp $uri 2>&1`;
 ## $openssl_json = json('tmp.json');
 #unlike($openssl_out, qr/$openssl_regex_bl/, "");
 #$tests++;
