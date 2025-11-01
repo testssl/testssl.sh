@@ -60,6 +60,7 @@
 98p3phDj1CRHJAaS29V8/RPPBCrNIGLmpiuHue2Bwac= subject=CN = Atos TrustedRoot Root CA RSA TLS 2021, O = Atos, C = DE
 9CNSw8w9hLhRiYnWR8iMowHIj7mRk4u87MnuYOVl03c= subject=C = ES, serialNumber = Q2863006I, O = CONSEJO GENERAL DE LA ABOGACIA, CN = ACA ROOT
 9eGcjhT+dV9VHOwrcRPnyYAjsXbr5sGrz4crKnuTIwQ= subject=C = ES, O = Consejo General de la Abogacia NIF:Q-2863006I, CN = Autoridad de Certificacion de la Abogacia
+9GMuWHAcC9fa/H44MTVexDP8E3d94oZoPo7FCWTfBFI= subject=C = CN, O = "TrustAsia Technologies, Inc.", CN = TrustAsia TLS ECC Root CA
 9GPFTZ8aBHrtUmVqx4Xgfr7FKOAge/0/VdiTI3Zo9q4= subject=C = ch, O = Swisscom, OU = Digital Certificate Services, CN = Swisscom Root EV CA 2
 9hRrwjjo/ODUe3B0yaJrGqD4g1KFEPBtnP7EH/bKGWg= subject=C = HU, L = Budapest, O = NetLock Halozatbiztonsagi Kft., OU = Tanusitvanykiadok, CN = NetLock Minositett Kozjegyzoi (Class QA) Tanusitvanykiado, emailAddress = info@netlock.hu
 9Iut199qBmkNCuMTc7EoVfje2xRRfzYqMTEBzJjMazU= subject=C = HU, L = Budapest, O = NetLock Kft., OU = Tan\C3\BAs\C3\ADtv\C3\A1nykiad\C3\B3k (Certification Services), CN = NetLock Arany (Class Gold) F\C5\91tan\C3\BAs\C3\ADtv\C3\A1ny
@@ -433,6 +434,7 @@ VeAL4nfOsFRSmfJP2fh34qzzKFLbQ//NKbynSzm0yfo= subject=C = TR, L = Gebze - Kocaeli
 Vfd95BwDeSQo+NUYxVEEIlvkOlWY2SalKK1lPhzOx78= subject=C = US, O = Google Trust Services LLC, CN = GTS Root R2
 v+gpCYcuRDTxFcUaVhaAGVlNDgPco2PZ87SDnQurzeU= subject=C = US, O = Verizon Business, OU = OmniRoot, CN = Verizon Global Root CA
 VhdNOtlxqJRJZLGJgR8wCEk6apBCLjxYBOyDjU+U9iI= subject=C = EE, O = AS Sertifitseerimiskeskus, CN = EE Certification Centre Root CA, emailAddress = pki@sk.ee
+ViiHLiRf5mFIuAut6snED2JS5kL6lZWuzks+ili4/UY= subject=C = CN, O = "TrustAsia Technologies, Inc.", CN = TrustAsia TLS RSA Root CA
 vj23t5v+V53PmwfKTK11r/FpdVaOW0XPyuTWH7Yxdag= subject=C = BM, O = QuoVadis Limited, OU = Root Certification Authority, CN = QuoVadis Root Certification Authority
 vjKAxoY8dwozyQQL2X1VQLIW0dkduLCIzqwRl9rh1mA= subject=C = HR, O = Financijska agencija, CN = Fina Root CA
 VjLZe/p3W/PJnd6lL8JVNBCGQBZynFLdZSTIqcO0SJ8= subject=C = US, O = "The Go Daddy Group, Inc.", OU = Go Daddy Class 2 Certification Authority
