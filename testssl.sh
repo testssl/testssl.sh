@@ -22206,24 +22206,27 @@ filter_ip4_address() {
 
 # For security testing sometimes we have local entries. Getent is BS under Linux for localhost: No network, no resolution
 # arg1 is the entry we want to look up in the host file
+#
 get_local_aaaa() {
      local ip6=""
      local etchosts="/etc/hosts /c/Windows/System32/drivers/etc/hosts"
 
      [[ -z "$1" ]] && echo "" && return 1
-     # Also multiple records should work fine
-     ip6=$(grep -wih "$1" $etchosts 2>/dev/null | grep ':' | grep -Ev '^#|\.local' | grep -Ei "[[:space:]]$1" | awk '{ print $1 }')
+     # grep: find hostname with trailing lf or space. -w doesn't work here
+     ip6=$(grep -Eih "[[:space:]]$1([[:space:]]|$)" $etchosts 2>/dev/null | grep ':' | grep -Ev '^#|\.local' | awk '{ print $1 }')
      if is_ipv6addr "$ip6"; then
           echo "$ip6"
      else
           echo ""
      fi
 }
+
 get_local_a() {
      local ip4=""
      local etchosts="/etc/hosts /c/Windows/System32/drivers/etc/hosts"
 
-     ip4=$(grep -wih "$1" $etchosts 2>/dev/null | grep -Ev ':|^#|\.local' | grep -Ei "[[:space:]]$1" | awk '{ print $1 }')
+     # grep: find hostname with trailing lf or space. -w doesn't work here
+     ip4=$(grep -Eih "[[:space:]]$1([[:space:]]|$)" $etchosts 2>/dev/null | grep -Ev ':|^#|\.local' | awk '{ print $1 }')
      if is_ipv4addr "$ip4"; then
           echo "$ip4"
      else
