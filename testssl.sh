@@ -8012,21 +8012,23 @@ determine_tls_extensions() {
           for curve in "${curves_ossl[@]}"; do
                [[ "$OSSL_SUPPORTED_CURVES" =~ \ $curve\  ]] && curves_string+=":$curve" 
           done
-          $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $addcmd -tls1_3 -tlsextdebug $params -curves ${curves_string:1}") </dev/null 2>$ERRFILE >$TMPFILE
-          sclient_connect_successful $? $TMPFILE
-          result=$?
-          [[ $result -eq 0 ]] && extract_new_tls_extensions $TMPFILE
-          used_curve=$(awk -F': ' '/^Negotiated TLS1.3 group/ { print $2 }' "$TMPFILE")
-          [[ -z "$used_curve" ]] && used_curve=$(awk -F' ' '/^Peer Temp Key/ { print $5 }' "$TMPFILE")
-          used_curve=${used_curve/,/}
-          last_curve=${curves_string##*:}
-          # If the used curve is not the first in the list, then try again with the used curve at the end of the list
-          if [[ -n "$used_curve" && "${used_curve%%:*}" != last_curve  ]]; then
-               curves_string="${curves_string/$used_curve:/}:$used_curve"
+          if sclient_supported "tls1_3"; then
                $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $addcmd -tls1_3 -tlsextdebug $params -curves ${curves_string:1}") </dev/null 2>$ERRFILE >$TMPFILE
                sclient_connect_successful $? $TMPFILE
                result=$?
                [[ $result -eq 0 ]] && extract_new_tls_extensions $TMPFILE
+               used_curve=$(awk -F': ' '/^Negotiated TLS1.3 group/ { print $2 }' "$TMPFILE")
+               [[ -z "$used_curve" ]] && used_curve=$(awk -F' ' '/^Peer Temp Key/ { print $5 }' "$TMPFILE")
+               used_curve=${used_curve/,/}
+               last_curve=${curves_string##*:}
+               # If the used curve is not the first in the list, then try again with the used curve at the end of the list
+               if [[ -n "$used_curve" && "${used_curve%%:*}" != last_curve  ]]; then
+                    curves_string="${curves_string/$used_curve:/}:$used_curve"
+                    $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $addcmd -tls1_3 -tlsextdebug $params -curves ${curves_string:1}") </dev/null 2>$ERRFILE >$TMPFILE
+                    sclient_connect_successful $? $TMPFILE
+                    result=$?
+                    [[ $result -eq 0 ]] && extract_new_tls_extensions $TMPFILE
+               fi
           fi
      fi
 
