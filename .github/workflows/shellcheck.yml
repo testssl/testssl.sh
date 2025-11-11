@@ -11,7 +11,7 @@ jobs:
     env:
       LANG: C.UTF-8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install shellcheck
         run: sudo apt update && sudo apt install -y shellcheck && shellcheck --version
