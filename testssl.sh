@@ -21598,6 +21598,7 @@ tuning / connect options (most also can be preset via environment variables):
      --mtls <CLIENT CERT file>     path to <CLIENT CERT> file in PEM format containing unencrypted certificate key (beta)
      --basicauth <user:pass>       provide HTTP basic auth information
      --reqheader <header>          add custom http request headers
+     --rating-only                 test only the checks required for rating
 
 output options (can also be preset via environment variables):
      --quiet                       don't output the banner. By doing this you acknowledge usage terms normally appearing in the banner
@@ -21610,7 +21611,7 @@ output options (can also be preset via environment variables):
      --color <0|1|2|3>             0: no escape or other codes,  1: b/w escape codes,  2: color (default), 3: extra color (color all ciphers)
      --colorblind                  swap green and blue in the output
      --debug <0-6>                 1: screen output normal but keeps debug output in /tmp/.  2-6: see "grep -A 5 '^DEBUG=' testssl.sh"
-     --disable-rating              Explicitly disables the rating output
+     --disable-rating              explicitly disables the rating output
 
 file output options (can also be preset via environment variables)
      --log, --logging              logs stdout to '\${NODE}-p\${port}\${YYYYMMDD-HHMM}.log' in current working directory (cwd)
@@ -25146,6 +25147,31 @@ parse_cmd_line() {
                     REQHEADER="$(parse_opt_equal_sign "$1" "$2")"
                     [[ $? -eq 0 ]] && shift
                     REQHEADERS+=("$REQHEADER")
+                    ;;
+               --rating[-_]only)
+                    # Do only the bare minimum for rating to be successfully done
+                    # See set_rating_state() for required variables
+                    do_protocols=true
+                    do_cipherlists=true
+                    do_fs=true
+                    do_server_defaults=true
+                    do_header=true
+                    do_heartbleed=true
+                    do_ccs_injection=true
+                    do_ticketbleed=true
+                    do_robot=true
+                    do_renego=true
+                    do_crime=true
+                    do_ssl_poodle=true
+                    do_tls_fallback_scsv=true
+                    do_drown=true
+                    do_beast=true
+                    do_rc4=true
+                    do_logjam=true
+                    do_allciphers=true
+
+                    # Force vuln. checks to be shown under the same header
+                    VULN_THRESHLD=-1
                     ;;
                (--) shift
                     break

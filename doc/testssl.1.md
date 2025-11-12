@@ -156,6 +156,7 @@ The same can be achieved by setting the environment variable `WARNINGS`.
 
 `--add-ca <CAfile>` enables you to add your own CA(s) in PEM format for trust chain checks. `CAfile` can be a directory containing files with a \.pem extension, a single file or multiple files as a comma separated list of root CAs. Internally they will be added during runtime to all CA stores. This is (only) useful for internal hosts whose certificates are issued by internal CAs. Alternatively ADDTL_CA_FILES is the environment variable for this.
 
+`--rating-only` makes testssl.sh do the bare minimum to allow rating to succeed. See RATING for more
 
 ### SINGLE CHECK OPTIONS
 
@@ -448,7 +449,7 @@ set_grade_warning "Documentation is always right"
 
 #### Implementing a new check which contains grade caps
 
-When implementing a new check (be it vulnerability or not) that sets grade caps, the `set_rating_state()` has to be updated (i.e. the `$do_mycheck` variable-name has to be added to the loop, and `$nr_enabled` if-statement has to be incremented)
+When implementing a new check (be it vulnerability or not) that sets grade caps, the `set_rating_state()` has to be updated (i.e. the `$do_mycheck` variable-name has to be added to the loop, and `$nr_enabled` if-statement has to be incremented), and the `--rating-only` switch statement needs to have `$do_mycheck=true` added
 
 The `set_rating_state()` automatically disables rating, if all the required checks are *not* enabled.
 This is to prevent giving out a misleading or wrong grade.
