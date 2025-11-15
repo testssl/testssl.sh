@@ -1,3 +1,5 @@
+# "paths-ignore" should be in line with unit_tests_macos.yml
+# and shellcheck.yml
 ---
 name: CI run Ubuntu
 
