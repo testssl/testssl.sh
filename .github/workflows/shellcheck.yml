@@ -1,19 +1,24 @@
+# Runs shellcheck on code -- in error mode only.
+# "paths-ignore" should be in line with unit_test.*yml files
 ---
 name: Shellcheck
-on: [pull_request]
-  paths-ignore:
-    - 'utils/**'
-    - 'doc/**'
-    - 'bin/**'
-    - '**.md'
-    - '**.1'
-    - '**.html'
-    - '**.pem'
-    - '**.pdf'
-    - '**.yml'
-    - 'LICENSE'
-    - 'Dockerfile'
-    - 'Dockerfile.alpine'
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'utils/**'
+      - 'doc/**'
+      - 'bin/**'
+      - '**.md'
+      - '**.1'
+      - '**.html'
+      - '**.pem'
+      - '**.pdf'
+      - '**.yml'
+      - 'LICENSE'
+      - 'Dockerfile'
+      - 'Dockerfile.alpine'
+
 permissions:
   contents: read
 
