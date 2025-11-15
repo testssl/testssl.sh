@@ -1,6 +1,19 @@
 ---
 name: Shellcheck
 on: [pull_request]
+  paths-ignore:
+    - 'utils/**'
+    - 'doc/**'
+    - 'bin/**'
+    - '**.md'
+    - '**.1'
+    - '**.html'
+    - '**.pem'
+    - '**.pdf'
+    - '**.yml'
+    - 'LICENSE'
+    - 'Dockerfile'
+    - 'Dockerfile.alpine'
 permissions:
   contents: read
 
