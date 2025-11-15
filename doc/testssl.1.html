@@ -413,6 +413,8 @@
         hosts whose certificates are issued by internal CAs.
         Alternatively ADDTL_CA_FILES is the environment variable for
         this.</p>
+        <p><code>--rating-only</code> makes testssl.sh do the bare
+        minimum to allow rating to succeed. See RATING for more</p>
         <h3 id="single-check-options">SINGLE CHECK OPTIONS</h3>
         <p>Any single check switch supplied as an argument prevents
         testssl.sh from doing a default run. It just takes this and if
@@ -1089,7 +1091,9 @@
         that sets grade caps, the <code>set_rating_state()</code> has to
         be updated (i.e. the <code>$do_mycheck</code> variable-name has
         to be added to the loop, and <code>$nr_enabled</code>
-        if-statement has to be incremented)</p>
+        if-statement has to be incremented), and the
+        <code>--rating-only</code> switch statement needs to have
+        <code>$do_mycheck=true</code> added</p>
         <p>The <code>set_rating_state()</code> automatically disables
         rating, if all the required checks are <em>not</em> enabled.
         This is to prevent giving out a misleading or wrong grade.</p>
