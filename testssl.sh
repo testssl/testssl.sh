@@ -1939,26 +1939,25 @@ http_head() {
 }
 
 # does a simple http head via printf with no proxy, only used by run_opossum()
-#    arg1: URL
-#    arg2: extra http header
+#    arg1: extra http header
 #
 # return codes:
 #    0: all fine (response header is returned as string)
 #    1: server didn't respond within HEADER_MAXSLEEP
 #    3: server didn't respond within HEADER_MAXSLEEP and PROXY was defined
 #
+#    return http header as string
+#
 http_head_printf() {
-     local request_header="$2"
+     local node="$NODE"
+     local path="$URL_PATH"
+     local extra_header="$1"
      local useragent="$UA_STD"
      local tmpfile=$TEMPDIR/$NODE.$NODEIP.http_head_printf.log
      local errfile=$TEMPDIR/$NODE.$NODEIP.http_head_printf-err.log
      local -i ret=0
-     local proto="" foo="" node="" query=""
 
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
-
-     IFS=/ read -r proto foo node query <<< "$1"
-     node=${node%:*}
      # $node works here good as it connects via IPv6 first, then IPv4.
      # This is a subshell, so fd 8 is not inherited
      bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
@@ -1969,14 +1968,16 @@ http_head_printf() {
           bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null
           if [[ $? -eq 0 ]]; then
                exec 33<>/dev/tcp/$node/80
-               # not killed --> socket open. Now we connect to the virtual host "$node"
-               printf -- "%b" "HEAD ${proto}//${node}/${query} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\n${request_header}\r\nAccept: */*\r\n\r\n\r\n" >&33 2>$errfile
+               safe_echo "HEAD ${path} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\nAccept: */*\r\n${extra_header}\r\n\r\n" >&33 2>$errfile
                ret=0
-               if [[ $DEBUG -eq 0 ]] ; then
-                    cat <&33
-               else
-                    cat <&33 >$tmpfile
-                    cat $tmpfile
+               touch $tmpfile
+               # This doesn't block
+               while IFS= read -r line <&33; do
+                    safe_echo "$line" >>$tmpfile
+               done
+               cat $tmpfile
+               if [[ $DEBUG -ge 2 ]]; then
+                    cat $tmpfile >&2
                fi
           else
                if [[ -n "$PROXY" ]]; then
@@ -8054,10 +8055,10 @@ determine_trust() {
                     out "$code"
                fi
                fileout "${jsonID}${json_postfix}" "CRITICAL" "failed $code. $addtl_warning"
-               if [[ "$code" =~ "chain incomplete" ]]; then 
-                  set_grade_cap "B" "Issues with chain of trust $code"
+               if [[ "$code" =~ "chain incomplete" ]]; then
+                    set_grade_cap "B" "Issues with chain of trust $code"
                else
-                  set_grade_cap "T" "Issues with chain of trust $code"
+                    set_grade_cap "T" "Issues with chain of trust $code"
                fi
           else
                # alt least one ok and other(s) not ==> display the culprit store(s)
@@ -17860,6 +17861,8 @@ run_ticketbleed() {
 }
 
 # https://opossum-attack.com/, TLS Upgrade via old RFC 2817
+# TL;DR: curl -vi -I -H "Upgrade: TLS/1.0" <FQDN> --> returns "Upgrade: TLS/1.0"?
+# We might be better off with cURL but sockets are sometimes better
 #
 run_opossum() {
      local cve='CVE-2025-49812'
@@ -17881,8 +17884,7 @@ run_opossum() {
      fi
      case $service in
           HTTP)
-               uri=${URI/https:\/\//}
-               response=$(http_head_printf http://${uri} 'Upgrade: TLS/1.0\r\n\r\nClose\r\n')
+               response=$(http_head_printf 'Upgrade: TLS/1.0')
                # In any case we use $response but we handle the return codes
                #           0: connection was fine, 1 or 3: no http connection
                ret=$?
@@ -17904,6 +17906,7 @@ run_opossum() {
                     fi
                fi
           ;;
+
           IMAP|FTP|POP3|SMTP|LMTP|NNTP)
                outln "(implemented currently for HTTP only)"
                fileout "$jsonID" "INFO" "not yet implemented" "$cve" "$cwe"
