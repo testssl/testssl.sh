@@ -22,7 +22,7 @@ jobs:
         run: echo "REPO=${GITHUB_REPOSITORY@L}" >> "${GITHUB_ENV}"
 
       - name: Source checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup QEMU
         id: qemu

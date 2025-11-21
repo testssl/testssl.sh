@@ -9,7 +9,7 @@ jobs:
     name: Check for spelling errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: codespell-project/actions-codespell@master
         with:
           skip: ca_hashes.txt,tls_data.txt,*.pem,OPENSSL-LICENSE.txt,CREDITS.md,openssl.cnf,fedora-dirk-ipv6.diff,testssl.1
