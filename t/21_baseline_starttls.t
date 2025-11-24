@@ -25,6 +25,8 @@ my $openssl_out="";
 # Blacklists we use to trigger an error:
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
+my $openssl_fallback_cmd="";       # empty for Linux
+my $os="$^O";
 
 # my $socket_json="";
 # my $openssl_json="";
@@ -32,6 +34,24 @@ my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client c
 # $check2run="--jsonfile tmp.json $check2run";
 
 die "Unable to open $prg" unless -f $prg;
+
+if ( $os eq "darwin" ){
+     # MacOS silicon doesn't have ~/bin/openssl.Darwin.arm64 binary so we use the
+     # homebrew version which was moved to /opt/homebrew/bin/openssl.NOPE in
+     # .github/workflows/unit_tests_macos.yml . The LibreSSL version from MacOS
+     # sometimes have problems to finish the run, thus we use homebrew's version
+     # as fallback.
+     # If this will be run outside GH actions, i.e. locally, we provide a fallback to
+     # /opt/homebrew/bin/openssl or just leave this thing
+     if ( -x "/opt/homebrew/bin/openssl.NOPE" ) {
+          $openssl_fallback_cmd="--openssl /opt/homebrew/bin/openssl.NOPE";
+     }
+     elsif ( -x "/opt/homebrew/bin/openssl" ) {
+          $openssl_fallback_cmd="--openssl /opt/homebrew/bin/openssl";
+     }
+}
+
+$check2run_smtp="$check2run_smtp $openssl_fallback_cmd" ;
 
 #1
 $uri="smtp-relay.gmail.com:587";
