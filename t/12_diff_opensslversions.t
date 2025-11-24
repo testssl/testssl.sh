@@ -21,7 +21,7 @@ my $diff="";
 my $distro_openssl="/usr/bin/openssl";
 my @args="";
 # that can be done better but I am a perl n00b ;-)
-my $os=`perl -e 'print "$^O";'`;
+my $os="$^O";
 
 die "Unable to open $prg" unless -f $prg;
 die "Unable to open $distro_openssl" unless -f $distro_openssl;
