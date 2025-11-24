@@ -6,6 +6,7 @@ name: Shellcheck
 on:
   pull_request:
     paths-ignore:
+      - 't/**'
       - 'utils/**'
       - 'doc/**'
       - 'bin/**'
