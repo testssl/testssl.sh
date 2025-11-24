@@ -18,7 +18,7 @@ my $cmd_timeout="--openssl-timeout=10";
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 # that can be done better but I am a perl n00b ;-)
-my $os="$^O";'
+my $os="$^O";
 
 die "Unable to open $prg" unless -f $prg;
 
