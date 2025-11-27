@@ -10,7 +10,7 @@
 use strict;
 use Test::More;
 use Data::Dumper;
-# if JSON wlll be needed this and the lines below need to be uncommented
+# if JSON it'll be needed to uncommented this and the lines below
 # use JSON;
 
 my $tests = 0;
