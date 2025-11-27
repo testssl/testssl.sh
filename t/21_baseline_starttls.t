@@ -26,6 +26,9 @@ my $openssl_out="";
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
+
 # my $socket_json="";
 # my $openssl_json="";
 # $check2run_smtp="--jsonfile tmp.json $check2run_smtp";
