@@ -28,6 +28,9 @@ my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client c
 my $openssl_fallback_cmd="";       # empty for Linux
 my $os="$^O";
 
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
+
 # my $socket_json="";
 # my $openssl_json="";
 # $check2run_smtp="--jsonfile tmp.json $check2run_smtp";
