@@ -53,7 +53,7 @@ $tests++;
 
 
 #3
-uri = "smtp-relay.gmail.com:587";
+$uri = "smtp-relay.gmail.com:587";
 printf "%s\n", " .. plain JSON and STARTTLS --> $uri ...";
 $out = `$prg --jsonfile $json_file $check2run -t smtp $uri`;
 $json = json($json_file);
