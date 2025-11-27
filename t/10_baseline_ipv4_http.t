@@ -30,6 +30,8 @@ my $socket_errors='(e|E)rror|FIXME|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand 
 my $openssl_errors='(e|E)rror|FIXME|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 my $json_errors='(id".*:\s"scanProblem"|severity".*:\s"FATAL"|"Scan interrupted")';
 
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
 
 die "Unable to open $prg" unless -f $prg;
 
