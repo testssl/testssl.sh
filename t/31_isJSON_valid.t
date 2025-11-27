@@ -9,23 +9,27 @@ use JSON;
 
 my $tests = 0;
 my $prg="./testssl.sh";
+my $json="tmp.json";
 my $check2run ="--ip=one --ids-friendly -q --color 0";
-my $uri="";
-my $json="";
+my $uri="example.com";        # Cloudflare blocks too often
 my $out="";
 my $cmd_timeout="--openssl-timeout=10";
-# Blacklists we use to trigger an error:
+
+# Patterns used to trigger an error:
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
-# that can be done better but I am a perl n00b ;-)
 my $os="$^O";
+
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
 
 die "Unable to open $prg" unless -f $prg;
 
-my $uri="cloudflare.com";
+# Provide proper start conditions
+unlink $json;
 
+# Title
 printf "\n%s\n", "Unit testing JSON output ...";
-unlink 'tmp.json';
 
 #1
 printf "%s\n", ".. plain JSON --> $uri ";
@@ -35,7 +39,6 @@ unlink 'tmp.json';
 my @errors=eval { decode_json($json) };
 is(@errors,0,"no errors");
 $tests++;
-
 
 #2
 printf "%s\n", ".. pretty JSON --> $uri ";
@@ -86,15 +89,16 @@ if ( $os eq "linux" ){
      printf "skipped two checks on MacOS\n\n";
 }
 
-printf "\n";
 done_testing($tests);
+printf "\n";
 
 sub json($) {
     my $file = shift;
     $file = `cat $file`;
+    unlink $file;
     return from_json($file);
 }
 
 
-#  vim:ts=5:sw=5:expandtab
+# vim:ts=5:sw=5:expandtab
 
