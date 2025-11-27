@@ -22,7 +22,7 @@ my $check2run="-q --ip=one --color 0";
 my $uri="";
 my $socket_out="";
 my $openssl_out="";
-# Blacklists we use to trigger an error:
+# Patterns used to trigger an error:
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 my $openssl_fallback_cmd="";       # empty for Linux
