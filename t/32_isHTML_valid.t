@@ -11,16 +11,15 @@ use Text::Diff;
 my $tests = 0;
 my $prg="./testssl.sh";
 my $html="";
+my $htmlfile="tmp.html";
 my $check2run="--ip=one -4 --openssl /usr/bin/openssl --sneaky --ids-friendly --color 0 --htmlfile $htmlfile";
 my $uri="github.com";
 my $out="";
 my $debughtml="";
 my $edited_html="";
-my $htmlfile="tmp.html";
 # Pick /usr/bin/openssl as we want to avoid the debug messages like "Your ./bin/openssl.Linux.x86_64 doesn't support X25519"
 my $diff="";
 my $ip="";
-
 
 die "Unable to open $prg" unless -f $prg;
 
