@@ -2,8 +2,6 @@
 
 # baseline test for testssl, screen and JSON output
 
-# This is referred by the documentation.
-
 # We could also inspect the JSON for any problems for
 #    "id"           : "scanProblem"
 #    "finding"      : "Scan interrupted"
@@ -50,7 +48,6 @@ $tests++;
 #2
 unlike($socket_json, qr/$json_errors/, "via sockets checking JSON output");
 $tests++;
-
 unlink $tmp_json;
 
 #3
@@ -62,7 +59,6 @@ $tests++;
 #4
 unlike($openssl_json, qr/$json_errors/, "via OpenSSL (builtin) checking JSON output");
 $tests++;
-
 unlink $tmp_json;
 
 done_testing($tests);
