@@ -24,6 +24,9 @@ printf "\n%s\n", "Doing severity level checks";
 die "Unable to open $prg" unless -f $prg;
 unlink 'tmp.json';
 
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
+
 #1
 pass(" .. running testssl.sh against $uri to create a JSON report with severity level >= LOW (may take 2~3 minutes)"); $tests++;
 $out = `$prg $check2run --jsonfile tmp.json $uri`;

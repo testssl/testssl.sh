@@ -20,10 +20,19 @@ my $htmlfile="tmp.html";
 # Pick /usr/bin/openssl as we want to avoid the debug messages like "Your ./bin/openssl.Linux.x86_64 doesn't support X25519"
 my $diff="";
 my $ip="";
+
+
 die "Unable to open $prg" unless -f $prg;
 
 printf "\n%s\n", "Doing HTML output checks";
+
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
+
+
+# Provide proper start conditions
 unlink $htmlfile;
+
 
 #1
 printf "%s\n", " .. running $prg against \"$uri\" to create HTML and terminal outputs (may take ~2 minutes)";
