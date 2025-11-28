@@ -52,15 +52,15 @@ $tests++;
 #2
 unlike($json_string, qr/$json_errors/, "via sockets checking JSON output");
 $tests++;
-unlink $json_file;
 
 #3
 if ( $os eq "linux" ){
+     unlink $json_file;
      $terminal_out = `$prg --ssl-native $check2run $json_file $uri 2>&1`;
      $json_string = json($json_file);
      unlike($terminal_out, qr/$openssl_errors/, "via (builtin) OpenSSL, checking terminal output");
 } elsif ( $os eq "darwin" ){
-     printf "%s\n", "skipping test. The result of the check under MacOS is not understood" ;
+     printf "%s\n", "Skipping test. The result of the check under MacOS is not understood" ;
 }
 $tests++;
 
