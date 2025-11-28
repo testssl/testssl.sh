@@ -54,6 +54,7 @@ $tests++;
 unlink $json_file;
 
 #3
+$uri="testssl.net";
 $terminal_out = `$prg --ssl-native $check2run $json_file $uri 2>&1`;
 $json_string = json($json_file);
 unlike($terminal_out, qr/$openssl_errors/, "via (builtin) OpenSSL, checking terminal output");
