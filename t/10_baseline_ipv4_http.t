@@ -89,10 +89,10 @@ if ( $os eq "linux" ){
      } else {
          fail("0‑RTT test for $uri failed");
      }
+     $tests++;
 } elsif ( $os eq "darwin" ){
      printf "%s\n", "Skipping test. The result of the check under MacOS is not understood" ;
 }
-$tests++;
 
 done_testing($tests);
 printf "\n\n";
