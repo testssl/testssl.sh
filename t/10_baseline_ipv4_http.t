@@ -54,43 +54,43 @@ unlike($json_string, qr/$json_errors/, "via sockets checking JSON output");
 $tests++;
 
 #3
-if ( $os eq "linux" ){
-     unlink $json_file;
-     $terminal_out = `$prg --ssl-native $check2run $json_file $uri 2>&1`;
-     $json_string = json($json_file);
-     unlike($terminal_out, qr/$openssl_errors/, "via (builtin) OpenSSL, checking terminal output");
-} elsif ( $os eq "darwin" ){
-     printf "%s\n", "Skipping test. The result of the check under MacOS is not understood" ;
-}
+unlink $json_file;
+$terminal_out = `$prg --ssl-native $check2run $json_file $uri 2>&1`;
+$json_string = json($json_file);
+unlike($terminal_out, qr/$openssl_errors/, "via (builtin) OpenSSL, checking terminal output");
 $tests++;
 
 #4
 unlike($json_string, qr/$json_errors/, "via OpenSSL (builtin) checking JSON output");
 $tests++;
 
-#5 -- early data test. We just take the last check
-my $found=0;
-open my $fh, '<', $json_file or die "Can't open '$json_file': $!";
-local $/;                    # undef slurp mode
-my $data = decode_json(<$fh>);
-close $fh;
+if ( $os eq "linux" ){
+     #5 -- early data test. We just take the last check
+     my $found=0;
+     open my $fh, '<', $json_file or die "Can't open '$json_file': $!";
+     local $/;                    # undef slurp mode
+     my $data = decode_json(<$fh>);
+     close $fh;
 
-# Check if the decoded data is an array
-if (ref $data eq 'ARRAY') {
-     # Iterate through the array of JSON objects
-     foreach my $obj (@$data) {
-          # Check if the 'id' is "early_data" and 'severity' is "HIGH"
-          if ($obj->{id} eq 'early_data' && $obj->{severity} eq 'HIGH') {
-               $found=1;
-               last;          # we can leave the loop
+     # Check if the decoded data is an array
+     if (ref $data eq 'ARRAY') {
+          # Iterate through the array of JSON objects
+          foreach my $obj (@$data) {
+               # Check if the 'id' is "early_data" and 'severity' is "HIGH"
+               if ($obj->{id} eq 'early_data' && $obj->{severity} eq 'HIGH') {
+                    $found=1;
+                    last;          # we can leave the loop
+               }
           }
      }
-}
 
-if ($found) {
-    ok(1, "0‑RTT found in JSON from $uri");
-} else {
-    fail("0‑RTT test for $uri failed");
+     if ($found) {
+         ok(1, "0‑RTT found in JSON from $uri");
+     } else {
+         fail("0‑RTT test for $uri failed");
+     }
+} elsif ( $os eq "darwin" ){
+     printf "%s\n", "Skipping test. The result of the check under MacOS is not understood" ;
 }
 $tests++;
 
