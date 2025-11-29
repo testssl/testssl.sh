@@ -1,15 +1,16 @@
 #!/usr/bin/env perl
 
 # Just a functional test, whether there are any problems on the client side
-# Probably we could also inspect the JSON for any problems for
+
+# We could also inspect the JSON for any problems for
 #    "id"           : "scanProblem"
 #    "finding"      : "Scan interrupted"
 
 use strict;
 use Test::More;
 use Data::Dumper;
+# if needed: comment this and the lines below in:
 # use JSON;
-# if we need JSON we need to comment this and the lines below in
 
 my $tests = 0;
 my $prg="./testssl.sh";
@@ -17,7 +18,7 @@ my $check2run ="--client-simulation -q --ip=one --color 0";
 my $uri="";
 my $socket_out="";
 my $openssl_out="";
-# Blacklists we use to trigger an error:
+# Pattern we use to trigger an error:
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 
@@ -30,8 +31,8 @@ STDOUT->autoflush(1);
 
 die "Unable to open $prg" unless -f $prg;
 
+#1
 $uri="google.com";
-
 # unlink "tmp.json";
 printf "\n%s\n", "Client simulations unit test via sockets --> $uri ...";
 $socket_out = `$prg $check2run $uri 2>&1`;
@@ -39,6 +40,7 @@ $socket_out = `$prg $check2run $uri 2>&1`;
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
+#2 Makes little sense anymore but lets just keep this unit test
 # unlink "tmp.json";
 printf "\n%s\n", "Client simulations unit test via OpenSSL --> $uri ...";
 $openssl_out = `$prg $check2run --ssl-native $uri 2>&1`;
@@ -47,8 +49,8 @@ unlike($openssl_out, qr/$openssl_regex_bl/, "");
 $tests++;
 
 
+#3
 $uri="smtp-relay.gmail.com:587";
-
 # unlink "tmp.json";
 printf "\n%s\n", "STARTTLS: Client simulations unit test via sockets --> $uri ...";
 $socket_out = `$prg $check2run -t smtp $uri 2>&1`;
@@ -56,18 +58,10 @@ $socket_out = `$prg $check2run -t smtp $uri 2>&1`;
 unlike($socket_out, qr/$socket_regex_bl/, "");
 $tests++;
 
-# commented out, bc of travis' limits
-#
 # unlink "tmp.json";
-#printf "\n%s\n", "STARTTLS: Client simulations unit test via OpenSSL --> $uri ...";
-#$openssl_out = `$prg --ssl-native $check2run -t smtp $uri 2>&1`;
-## $openssl_json = json('tmp.json');
-#unlike($openssl_out, qr/$openssl_regex_bl/, "");
-#$tests++;
 
 done_testing($tests);
-unlink "tmp.json";
-
+printf "\n";
 
 
 sub json($) {
@@ -78,5 +72,5 @@ sub json($) {
 }
 
 
-#  vim:ts=5:sw=5:expandtab
+# vim:ts=5:sw=5:expandtab
 

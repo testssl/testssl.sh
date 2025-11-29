@@ -1971,8 +1971,9 @@ http_head_printf() {
                safe_echo "HEAD ${path} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\nAccept: */*\r\n${extra_header}\r\n\r\n" >&33 2>$errfile
                ret=0
                touch $tmpfile
-               # This doesn't block
-               while IFS= read -r line <&33; do
+               # This doesn't block. A timeout seems necessary for MacOS 18 and e.g. Akamai
+               # but maybe it's due because the server side keeps the connection open
+               while IFS= read -t 4 -r line <&33; do
                     safe_echo "$line" >>$tmpfile
                done
                cat $tmpfile
