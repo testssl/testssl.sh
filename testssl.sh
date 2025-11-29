@@ -7177,12 +7177,11 @@ sub_early_data() {
      else
           return 5
      fi
-
-     safe_echo "HEAD / HTTP/1.1\r\nHost: $NODE\r\nConnection: close\r\nEarly-Data: 1\r\n\r\n" > $early_data
+     safe_echo "GET / HTTP/1.1\r\nHost: $NODE\r\nEarly-Data: 1\r\nConnection: close\r\n\r\n" > $early_data
      $openssl_bin s_client $(s_client_options "$STARTTLS $BUGS -tls1_3 -connect $NODEIP:$PORT $PROXY $SNI") -sess_out $sess_data -ign_eof \
             < $early_data >/dev/null 2>$ERRFILE
      if [[ ! -s "$sess_data" ]]; then
-          exit 7
+          return 7
      fi
 
      $openssl_bin s_client $(s_client_options "$STARTTLS $BUGS -tls1_3 -connect $NODEIP:$PORT $PROXY $SNI") -sess_in $sess_data \
@@ -10805,7 +10804,7 @@ run_server_defaults() {
                6) prln_warning "Client Auth: early data check not supported"
                   fileout "$jsonID" "WARN" "check couldn't be performed because of client authentication"
                   ;;
-               7) prln_warning "check failed (no session data"
+               7) prln_warning "check failed (no session data received)"
                   fileout "$jsonID" "WARN" "check failed (no session data)"
                   ((ret++))
                ;;
