@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# disabled as IPv6 wasn't supported by Travis CI and isn't by GH action, see https://github.com/testssl/testssl.sh/issues/1177
+# disabled as IPv6 wasn't supported by Travis CI and isn't also supported by GH action, see https://github.com/testssl/testssl.sh/issues/1177
 
 # Just a functional test, whether there are any problems on the client side
 # Probably we could also inspect the JSON for any problems for
@@ -10,8 +10,8 @@
 use strict;
 use Test::More;
 use Data::Dumper;
+# if JSON it'll be needed to uncommented this and the lines below
 # use JSON;
-# if we need JSON we need to comment this and the lines below in
 
 my $tests = 0;
 my $prg="./testssl.sh";
@@ -19,7 +19,7 @@ my $check2run ="-p -s -P --fs -S -h -U -q --ip=one --color 0";
 my $uri="";
 my $socket_out="";
 my $openssl_out="";
-# Blacklists we use to trigger an error:
+# Patterns used to trigger an error:
 my $socket_regex_bl='(e|E)rror|\.\/testssl\.sh: line |(f|F)atal|(c|C)ommand not found';
 my $openssl_regex_bl='(e|E)rror|(f|F)atal|\.\/testssl\.sh: line |Oops|s_client connect problem|(c|C)ommand not found';
 

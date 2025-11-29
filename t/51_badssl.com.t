@@ -20,6 +20,9 @@ my (
 
 die "Unable to open $prg" unless -f $prg;
 
+# useful against "failed to flush stdout" messages
+STDOUT->autoflush(1);
+
 # Provide proper start conditions
 unlink 'tmp.json';
 
