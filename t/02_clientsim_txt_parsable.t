@@ -8,7 +8,7 @@ use Test::More;
 
 my $tests = 0;
 my $fileout="";
-# Blacklists we use to trigger an error:
+# Patterns used to trigger an error:
 my $error_regexp1='(syntax|parse) (e|E)rror';
 my $error_regexp2='client-simulation.txt:';
 

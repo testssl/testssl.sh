@@ -3,7 +3,7 @@
 # Baseline diff test against testssl.sh (csv output)
 #
 # We don't use a full run yet and only the certificate section.
-# There we would need to blacklist more, like:
+# There we would need to block-list more, like:
 # cert_serialNumber, cert_fingerprintSHA1, cert_fingerprintSHA256, cert
 # cert_expirationStatus, cert_notBefore, cert_notAfter, cert_caIssuers, intermediate_cert
 #

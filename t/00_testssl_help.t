@@ -13,7 +13,7 @@ my $out="";
 
 # Try to detect remainders from debugging:
 my $debug_regexp='^(\s)*set (-|\+)x';
-# Blacklists we use to trigger an error:
+# Patterns used to trigger an error:
 my $error_regexp1='(syntax|parse) (e|E)rror';
 my $error_regexp2='testssl.sh: line';
 my $error_regexp3='bash: warning';
