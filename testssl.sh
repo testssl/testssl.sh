@@ -11198,11 +11198,14 @@ run_fs() {
                     fi
                fi
           done
+          pr_bold " KEMs offered                 "
           if [[ -n "$kems_offered" ]]; then
-               pr_bold " KEMs offered                 "
                out_row_aligned_max_width_by_entry "$kems_offered" "                              " $TERM_WIDTH pr_kem_param_set_quality
                outln
                fileout "${jsonID}_KEMs" "OK" "$kems_offered"
+          else
+               prln_svrty_low "None"
+               fileout "${jsonID}_KEMs" "LOW" "No KEMs offered"
           fi
           if [[ -n "$curves_offered" ]]; then
                pr_bold " Elliptic curves offered:     "
