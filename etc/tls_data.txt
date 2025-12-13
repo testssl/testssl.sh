@@ -7,7 +7,7 @@
 readonly TLS13_CIPHER="
 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5"
 
-# 123 standard cipher + 4x GOST for TLS 1.2 and SPDY/NPN HTTP2/ALPN
+# 113 standard cipher + 4x GOST for TLS 1.2 and SPDY/NPN HTTP2/ALPN
 declare TLS12_CIPHER="
 c0,30, c0,2c, c0,28, c0,24, c0,14, c0,0a, 00,9f, 00,6b,
 00,39, 00,9d, 00,3d, 00,35, c0,2f, c0,2b, c0,27, c0,23,
@@ -23,10 +23,9 @@ c0,75, 00,c0, 00,84, 00,a4, 00,a2, 00,a0, 00,40, 00,3f,
 c0,78, c0,74, 00,ba, 00,96, 00,41, 00,07, c0,11, c0,07,
 00,66, c0,0c, c0,02, 00,05, 00,04, c0,12, c0,08, 00,16,
 00,13, 00,10, 00,0d, c0,0d, c0,03, 00,0a, 00,80, 00,81,
-00,82, 00,83, 00,63, 00,15, 00,12, 00,0f, 00,0c, 00,62,
-00,09, 00,65, 00,64, 00,14, 00,11, 00,08, 00,03, 00,ff"
+00,82, 00,83, 00,63, 00,15, 00,12, 00,ff"
 
-# 127 less common ciphers for TLS 1.2 and SPDY/NPN HTTP2/ALPN
+# 117 less common ciphers for TLS 1.2 and SPDY/NPN HTTP2/ALPN
 readonly TLS12_CIPHER_2ND_TRY="
 c0,22, c0,21, c0,20, 00,b7, 00,b3, 00,91, c0,9b, c0,99,
 c0,97, 00,af, c0,95, c0,af, c0,ad, c0,a3, c0,9f, c0,19,
@@ -41,11 +40,10 @@ c0,98, c0,96, 00,ae, c0,94, 00,94, 00,8c, 00,21, 00,25,
 c0,16, 00,18, 00,92, 00,8a, 00,20, 00,24, c0,33, 00,8e,
 c0,1c, c0,1b, c0,1a, c0,17, 00,1b, 00,93, 00,8b, 00,1f,
 00,23, c0,34, 00,8f, 00,1a, 00,61, 00,60, 00,19, 00,06,
-00,0b, 00,0e, 00,17, c0,10, c0,06, c0,15, c0,0b, c0,01,
-c0,3b, c0,3a, c0,39, 00,b9, 00,b8, 00,b5, 00,b4, 00,2e,
-00,2d, 00,b1, 00,b0, 00,2c, 00,3b, 00,02, 00,01, 00,ff"
+00,0b, 00,0e, 00,17, 00,0f, 00,0c, 00,62, 00,09, 00,65,
+00,64, 00,14, 00,11, 00,08, 00,03, 00,ff"
 
-# 97 less common ciphers for TLS 1.2 and SPDY/NPN HTTP2/ALPN
+# 117 less common ciphers for TLS 1.2 and SPDY/NPN HTTP2/ALPN
 readonly TLS12_CIPHER_3RD_TRY="
 c0,3d, c0,3f, c0,41, c0,43, c0,45, c0,47, c0,49, c0,4b,
 c0,4d, c0,4f, c0,51, c0,53, c0,55, c0,57, c0,59, c0,5b,
@@ -59,7 +57,9 @@ c0,64, c0,66, c0,68, c0,6a, c0,6c, c0,6e, c0,70, c0,7a,
 c0,7c, c0,7e, c0,80, c0,82, c0,84, c0,86, c0,88, c0,8a,
 c0,8c, c0,8e, c0,90, c0,92, fe,ff, ff,e0, 00,1e, 00,22,
 fe,fe, ff,e1, 00,27, 00,26, 00,2a, 00,29, 00,28, 00,2b,
-ff,87, 00,ff"
+ff,87, c0,10, c0,06, c0,15, c0,0b, c0,01, c0,3b, c0,3a,
+c0,39, 00,b9, 00,b8, 00,b5, 00,b4, 00,2e, 00,2d, 00,b1,
+00,b0, 00,2c, 00,3b, 00,02, 00,01, 00,ff"
 
 # 76 standard cipher + 4x GOST for SSLv3, TLS 1, TLS 1.1
 readonly TLS_CIPHER="

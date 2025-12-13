@@ -6448,10 +6448,10 @@ run_cipherlists() {
      # # Now all AES, CAMELLIA, ARIA and SEED CBC ciphers plus GOST
      ossl_obsoleted_ciphers='HIGH:MEDIUM:AES:CAMELLIA:ARIA:!IDEA:!CHACHA20:!3DES:!RC2:!RC4:!AESCCM8:!AESCCM:!AESGCM:!ARIAGCM:!aNULL:!MD5'
      # grep -Ew "256|128" etc/cipher-mapping.txt | grep -Ev "Au=None|AEAD|RC2|RC4|IDEA|MD5"
-     obsoleted_ciphers="00,2F, 00,30, 00,31, 00,32, 00,33, 00,35, 00,36, 00,37, 00,38, 00,39, 00,3C, 00,3D, 00,3E, 00,3F, 00,40, 00,41, 00,42, 00,43, 00,44, 00,45, 00,67, 00,68, 00,69, 00,6A, 00,6B, 00,84, 00,85, 00,86, 00,87, 00,88, 00,8C, 00,8D, 00,90, 00,91, 00,94, 00,95, 00,96, 00,97, 00,98, 00,99, 00,9A, 00,AE, 00,AF, 00,B2, 00,B3, 00,B6, 00,B7, 00,BA, 00,BB, 00,BC, 00,BD, 00,BE, 00,C0, 00,C1, 00,C2, 00,C3, 00,C4, C0,04, C0,05, C0,09, C0,0A, C0,0E, C0,0F, C0,13, C0,14, C0,1D, C0,1E, C0,1F, C0,20, C0,21, C0,22, C0,23, C0,24, C0,25, C0,26, C0,27, C0,28, C0,29, C0,2A, C0,35, C0,36, C0,37, C0,38, C0,3C, C0,3D, C0,3E, C0,3F, C0,40, C0,41, C0,42, C0,43, C0,44, C0,45, C0,48, C0,49, C0,4A, C0,4B, C0,4C, C0,4D, C0,4E, C0,4F, C0,64, C0,65, C0,66, C0,67, C0,68, C0,69, C0,70, C0,71, C0,72, C0,73, C0,74, C0,75, C0,76, C0,77, C0,78, C0,79, C0,94, C0,95, C0,96, C0,97, C0,98, C0,99, C0,9A, C0,9B"
-     # Workaround: If we use sockets and in order not to hit 131+1 ciphers we omit the GOST ciphers if SERVER_SIZE_LIMIT_BUG is true.
-     # This won't be supported by Cisco ACE anyway.
-     "$SERVER_SIZE_LIMIT_BUG" || obsoleted_ciphers="${obsoleted_ciphers}, 00,80, 00,81, FF,01, FF,02, FF,03, FF,85"
+     obsoleted_ciphers="00,2F, 00,30, 00,31, 00,32, 00,33, 00,35, 00,36, 00,37, 00,38, 00,39, 00,3C, 00,3D, 00,3E, 00,3F, 00,40, 00,41, 00,42, 00,43, 00,44, 00,45, 00,67, 00,68, 00,69, 00,6A, 00,6B, 00,84, 00,85, 00,86, 00,87, 00,88, 00,8C, 00,8D, 00,90, 00,91, 00,94, 00,95, 00,96, 00,97, 00,98, 00,99, 00,9A, 00,AE, 00,AF, 00,B2, 00,B3, 00,B6, 00,B7, 00,BA, 00,BB, 00,BC, 00,BD, 00,BE, 00,C0, 00,C1, 00,C2, 00,C3, 00,C4, C0,04, C0,05, C0,09, C0,0A, C0,0E, C0,0F, C0,13, C0,14, C0,1D, C0,1E, C0,1F, C0,20, C0,21, C0,22, C0,23, C0,24, C0,25, C0,26, C0,27, C0,28, C0,29, C0,2A, C0,35, C0,36, C0,37, C0,38, C0,3C, C0,3D, C0,3E, C0,3F, C0,40, C0,41, C0,42, C0,43, C0,44, C0,45, C0,48, C0,49, C0,4A, C0,4B, C0,4C, C0,4D, C0,4E, C0,4F, C0,66, C0,67, C0,68, C0,69, C0,70, C0,71, C0,72, C0,73, C0,74, C0,75, C0,76, C0,77, C0,78, C0,79, C0,94, C0,95, C0,96, C0,97, C0,98, C0,99, C0,9A, C0,9B"
+     # Workaround: If we use sockets and in order not to hit 131+1 ciphers we omit the GOST ciphers and the
+     # ARIA PSK-only ciphers if SERVER_SIZE_LIMIT_BUG is true. These won't be supported by Cisco ACE anyway.
+     "$SERVER_SIZE_LIMIT_BUG" || obsoleted_ciphers="${obsoleted_ciphers}, C0,64, C0,65, 00,80, 00,81, FF,01, FF,02, FF,03, FF,85"
      obsoleted_ciphers="${obsoleted_ciphers}, 00,FF"
 
      ossl_good_ciphers='AESGCM:CHACHA20:CamelliaGCM:AESCCM:ARIAGCM:!kEECDH:!kEDH:!kDHE:!kDHEPSK:!kECDHEPSK:!aNULL'
@@ -10254,6 +10254,11 @@ run_server_defaults() {
      certificate_type[7]="" ; certificate_type[8]="RSASig"
      certificate_type[9]="ECDSA" ; certificate_type[10]="EdDSA"
      certificate_type[11]="MLDSA"
+
+     if "$SERVER_SIZE_LIMIT_BUG"; then
+          ciphers_to_test[3]="aDSS:aDH:aECDH"
+          ciphers_to_test[6]="aECDSA:aGOST"
+     fi
 
      for (( n=1; n <= 18 ; n++ )); do
           # Some servers use a different certificate if the ClientHello
@@ -19069,7 +19074,7 @@ run_beast(){
      local first=true
      local continued=false
      local cbc_cipher_list="EXP-RC2-CBC-MD5:IDEA-CBC-SHA:EXP-DES-CBC-SHA:DES-CBC-SHA:DES-CBC3-SHA:EXP-DH-DSS-DES-CBC-SHA:DH-DSS-DES-CBC-SHA:DH-DSS-DES-CBC3-SHA:EXP-DH-RSA-DES-CBC-SHA:DH-RSA-DES-CBC-SHA:DH-RSA-DES-CBC3-SHA:EXP-EDH-DSS-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:EDH-DSS-DES-CBC3-SHA:EXP-EDH-RSA-DES-CBC-SHA:EDH-RSA-DES-CBC-SHA:EDH-RSA-DES-CBC3-SHA:EXP-ADH-DES-CBC-SHA:ADH-DES-CBC-SHA:ADH-DES-CBC3-SHA:KRB5-DES-CBC-SHA:KRB5-DES-CBC3-SHA:KRB5-IDEA-CBC-SHA:KRB5-DES-CBC-MD5:KRB5-DES-CBC3-MD5:KRB5-IDEA-CBC-MD5:EXP-KRB5-DES-CBC-SHA:EXP-KRB5-RC2-CBC-SHA:EXP-KRB5-DES-CBC-MD5:EXP-KRB5-RC2-CBC-MD5:AES128-SHA:DH-DSS-AES128-SHA:DH-RSA-AES128-SHA:DHE-DSS-AES128-SHA:DHE-RSA-AES128-SHA:ADH-AES128-SHA:AES256-SHA:DH-DSS-AES256-SHA:DH-RSA-AES256-SHA:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ADH-AES256-SHA:CAMELLIA128-SHA:DH-DSS-CAMELLIA128-SHA:DH-RSA-CAMELLIA128-SHA:DHE-DSS-CAMELLIA128-SHA:DHE-RSA-CAMELLIA128-SHA:ADH-CAMELLIA128-SHA:EXP1024-RC2-CBC-MD5:EXP1024-DES-CBC-SHA:EXP1024-DHE-DSS-DES-CBC-SHA:CAMELLIA256-SHA:DH-DSS-CAMELLIA256-SHA:DH-RSA-CAMELLIA256-SHA:DHE-DSS-CAMELLIA256-SHA:DHE-RSA-CAMELLIA256-SHA:ADH-CAMELLIA256-SHA:PSK-3DES-EDE-CBC-SHA:PSK-AES128-CBC-SHA:PSK-AES256-CBC-SHA:DHE-PSK-3DES-EDE-CBC-SHA:DHE-PSK-AES128-CBC-SHA:DHE-PSK-AES256-CBC-SHA:RSA-PSK-3DES-EDE-CBC-SHA:RSA-PSK-AES128-CBC-SHA:RSA-PSK-AES256-CBC-SHA:SEED-SHA:DH-DSS-SEED-SHA:DH-RSA-SEED-SHA:DHE-DSS-SEED-SHA:DHE-RSA-SEED-SHA:ADH-SEED-SHA:PSK-AES128-CBC-SHA256:PSK-AES256-CBC-SHA384:DHE-PSK-AES128-CBC-SHA256:DHE-PSK-AES256-CBC-SHA384:RSA-PSK-AES128-CBC-SHA256:RSA-PSK-AES256-CBC-SHA384:ECDH-ECDSA-DES-CBC3-SHA:ECDH-ECDSA-AES128-SHA:ECDH-ECDSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA:ECDH-RSA-DES-CBC3-SHA:ECDH-RSA-AES128-SHA:ECDH-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:AECDH-DES-CBC3-SHA:AECDH-AES128-SHA:AECDH-AES256-SHA:SRP-3DES-EDE-CBC-SHA:SRP-RSA-3DES-EDE-CBC-SHA:SRP-DSS-3DES-EDE-CBC-SHA:SRP-AES-128-CBC-SHA:SRP-RSA-AES-128-CBC-SHA:SRP-DSS-AES-128-CBC-SHA:SRP-AES-256-CBC-SHA:SRP-RSA-AES-256-CBC-SHA:SRP-DSS-AES-256-CBC-SHA:ECDHE-PSK-3DES-EDE-CBC-SHA:ECDHE-PSK-AES128-CBC-SHA:ECDHE-PSK-AES256-CBC-SHA:ECDHE-PSK-AES128-CBC-SHA256:ECDHE-PSK-AES256-CBC-SHA384:PSK-CAMELLIA128-SHA256:PSK-CAMELLIA256-SHA384:DHE-PSK-CAMELLIA128-SHA256:DHE-PSK-CAMELLIA256-SHA384:RSA-PSK-CAMELLIA128-SHA256:RSA-PSK-CAMELLIA256-SHA384:ECDHE-PSK-CAMELLIA128-SHA256:ECDHE-PSK-CAMELLIA256-SHA384"
-     local cbc_ciphers_hex="00,06, 00,07, 00,08, 00,09, 00,0A, 00,0B, 00,0C, 00,0D, 00,0E, 00,0F, 00,10, 00,11, 00,12, 00,13, 00,14, 00,15, 00,16, 00,19, 00,1A, 00,1B, 00,1E, 00,1F, 00,21, 00,22, 00,23, 00,25, 00,26, 00,27, 00,29, 00,2A, 00,2F, 00,30, 00,31, 00,32, 00,33, 00,34, 00,35, 00,36, 00,37, 00,38, 00,39, 00,3A, 00,41, 00,42, 00,43, 00,44, 00,45, 00,46, 00,61, 00,62, 00,63, 00,84, 00,85, 00,86, 00,87, 00,88, 00,89, 00,8B, 00,8C, 00,8D, 00,8F, 00,90, 00,91, 00,93, 00,94, 00,95, 00,96, 00,97, 00,98, 00,99, 00,9A, 00,9B, 00,AE, 00,AF, 00,B2, 00,B3, 00,B6, 00,B7, C0,03, C0,04, C0,05, C0,08, C0,09, C0,0A, C0,0D, C0,0E, C0,0F, C0,12, C0,13, C0,14, C0,17, C0,18, C0,19, C0,1A, C0,1B, C0,1C, C0,1D, C0,1E, C0,1F, C0,21, C0,22, C0,34, C0,35, C0,36, C0,37, C0,38, C0,64, C0,65, C0,66, C0,67, C0,68, C0,69, C0,70, C0,71, C0,94, C0,95, C0,96, C0,97, C0,98, C0,99, C0,9A, C0,9B, FE,FE, FE,FF, FF,E0, FF,E1"
+     local cbc_ciphers_hex="00,06, 00,07, 00,08, 00,09, 00,0A, 00,0B, 00,0C, 00,0D, 00,0E, 00,0F, 00,10, 00,11, 00,12, 00,13, 00,14, 00,15, 00,16, 00,19, 00,1A, 00,1B, 00,1E, 00,1F, 00,21, 00,22, 00,23, 00,25, 00,26, 00,27, 00,29, 00,2A, 00,2F, 00,30, 00,31, 00,32, 00,33, 00,34, 00,35, 00,36, 00,37, 00,38, 00,39, 00,3A, 00,41, 00,42, 00,43, 00,44, 00,45, 00,46, 00,61, 00,62, 00,63, 00,84, 00,85, 00,86, 00,87, 00,88, 00,89, 00,8B, 00,8C, 00,8D, 00,8F, 00,90, 00,91, 00,93, 00,94, 00,95, 00,96, 00,97, 00,98, 00,99, 00,9A, 00,9B, 00,AE, 00,AF, 00,B2, 00,B3, 00,B6, 00,B7, C0,03, C0,04, C0,05, C0,08, C0,09, C0,0A, C0,0D, C0,0E, C0,0F, C0,12, C0,13, C0,14, C0,17, C0,18, C0,19, C0,1B, C0,1C, C0,1E, C0,1F, C0,21, C0,22, C0,34, C0,35, C0,36, C0,37, C0,38, C0,64, C0,65, C0,66, C0,67, C0,68, C0,69, C0,70, C0,71, C0,94, C0,95, C0,96, C0,97, C0,98, C0,99, C0,9A, C0,9B, FE,FE, FE,FF, FF,E0, FF,E1"
      local has_dh_bits="$HAS_DH_BITS"
      local using_sockets=true
      local cve="CVE-2011-3389"
@@ -19101,9 +19106,10 @@ run_beast(){
           outln " Test skipped"
           return 1
      fi
-     # $cbc_ciphers_hex has 126 ciphers, we omitted SRP-AES-256-CBC-SHA bc the trailing 00,ff below will pose
-     # a problem for ACE loadbalancers otherwise. So in case we know this is not true, we'll re-add it
-     ! "$SERVER_SIZE_LIMIT_BUG" && "$using_sockets" && cbc_ciphers_hex="$cbc_ciphers_hex, C0,20"
+     # $cbc_ciphers_hex has 124 ciphers, we omitted SRP-3DES-EDE-CBC-SHA, SRP-AES-128-CBC-SHA, and 
+     # SRP-AES-256-CBC-SHA bc the trailing 00,ff below will pose a problem for ACE loadbalancers
+     # otherwise. So in case we know this is not true, we'll re-add it
+     ! "$SERVER_SIZE_LIMIT_BUG" && "$using_sockets" && cbc_ciphers_hex="$cbc_ciphers_hex, C0,1A, C0,1D, C0,20"
 
      [[ $TLS_NR_CIPHERS == 0 ]] && using_sockets=false
      if "$using_sockets" || [[ $OSSL_VER_MAJOR -lt 1 ]]; then
@@ -20202,7 +20208,7 @@ run_grease() {
 #TODO: we need to clarify whether the mit is hit at 128 or 129 ciphers.
      if "$normal_hello_ok" && [[ "$proto" == 03 ]]; then
           debugme echo -e "\nSending ClientHello with 129 cipher suites."
-          tls_sockets "$proto" "00,27, $cipher_list"
+          tls_sockets "$proto" "c0,86, c0,88, c0,8a, c0,8c, c0,8e, c0,90, c0,92, fe,ff, ff,e0, 00,1e, 00,22, $cipher_list"
           success=$?
           if [[ $success -ne 0 ]] && [[ $success -ne 2 ]]; then
                prln_svrty_medium " Server fails if ClientHello includes more than 128 cipher suites."
@@ -23024,8 +23030,8 @@ determine_service() {
 # Return value is 0 unless we have a problem executing
 #
 determine_sizelimitbug() {
-     # overflow_cipher must be some cipher that does not appear in TLS12_CIPHER.
-     local overflow_cipher='C0,86'
+     # overflow_cipher must be 11 ciphers that do not appear in TLS12_CIPHER.
+     local overflow_cipher='C0,86, C0,88, C0,8A, C0,8C, C0,8E, C0,90, C0,92, FE,FF, FF,E0, 00,1E, 00,22'
      local -i nr_ciphers
 
      # For STARTTLS protocols not being implemented yet via sockets this is a bypass otherwise it won't be usable at all (e.g. LDAP)
