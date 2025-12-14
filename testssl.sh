@@ -17299,7 +17299,6 @@ run_heartbleed(){
      local cwe="CWE-119"
      local hint=""
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for heartbleed vulnerability " && outln
      pr_bold " Heartbleed"; out " ($cve)                "
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
@@ -17409,7 +17408,6 @@ run_ccs_injection(){
      local cwe="CWE-310"
      local hint=""
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for CCS injection vulnerability " && outln
      pr_bold " CCS"; out " ($cve)                       "
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
@@ -17605,7 +17603,6 @@ run_ticketbleed() {
      local hint=""
 
      [[ -n "$STARTTLS" ]] && return 0
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for Ticketbleed vulnerability " && outln
      pr_bold " Ticketbleed"; out " ($cve), experiment.  "
 
      if [[ "$SERVICE" != HTTP ]] && [[ "$CLIENT_AUTH" != required ]]; then
@@ -17885,7 +17882,6 @@ run_opossum() {
      local response=""
 
      [[ -n "$STARTTLS" ]] && return 0
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for Opossum vulnerability " && outln
      pr_bold " Opossum"; out " ($cve)                  "
 
      # we're trying to connect also if ASSUME_HTTP is not set, there should be either one of following hints though
@@ -17947,8 +17943,6 @@ run_renego() {
      # In cases where there's no default host configured we need SNI here as openssl then would return otherwise an error and the test will fail
 
      "$HAS_TLS13" && [[ -z "$proto" ]] && proto="-no_tls1_3"
-
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for Renegotiation vulnerabilities " && outln
 
      pr_bold " Secure Renegotiation (RFC 5746)           "
      jsonID="secure_renego"
@@ -18162,7 +18156,6 @@ run_crime() {
      #
      # https://blog.qualys.com/ssllabs/2012/09/14/crime-information-leakage-attack-against-ssltls
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for CRIME vulnerability " && outln
      pr_bold " CRIME, TLS " ; out "($cve)                "
      jsonID="CRIME_TLS"
 
@@ -18315,7 +18308,6 @@ run_breach() {
 
      [[ $SERVICE != HTTP ]] && [[ "$CLIENT_AUTH" != required ]] && return 7
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for BREACH (HTTP compression) vulnerability " && outln
      pr_bold " BREACH"; out " ($cve)                    "
      if [[ "$CLIENT_AUTH" == required ]] && [[ -z "$MTLS" ]]; then
           prln_warning "not having provided client certificate and private key file, the client x509-based authentication prevents this from being tested"
@@ -18430,7 +18422,6 @@ run_sweet32() {
      local using_sockets=true
      local tls1_1_vulnerable=false
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for SWEET32 (Birthday Attacks on 64-bit Block Ciphers)       " && outln
      pr_bold " SWEET32"; out " (${cve// /, })    "
 
      if "$TLS13_ONLY"; then
@@ -18561,7 +18552,6 @@ run_ssl_poodle() {
      local cwe="CWE-310"
      local jsonID="POODLE_SSL"
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for SSLv3 POODLE (Padding Oracle On Downgraded Legacy Encryption) " && outln
      pr_bold " POODLE, SSL"; out " ($cve)               "
 
      if "$TLS13_ONLY" || [[ $(has_server_protocol ssl3) -eq 1 ]]; then
@@ -18647,7 +18637,6 @@ run_tls_fallback_scsv() {
 
      "$SSL_NATIVE" && using_sockets=false
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for TLS_FALLBACK_SCSV Protection " && outln
      pr_bold " TLS_FALLBACK_SCSV"; out " (RFC 7507)              "
 
      # First check we have support for TLS_FALLBACK_SCSV in our local OpenSSL
@@ -18907,7 +18896,6 @@ run_freak() {
      local hint=""
      local jsonID="FREAK"
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for FREAK attack " && outln
      pr_bold " FREAK"; out " ($cve)                     "
 
      if "$TLS13_ONLY"; then
@@ -19117,7 +19105,6 @@ run_logjam() {
      local jsonID="LOGJAM"
      local jsonID2="${jsonID}-common_primes"
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for LOGJAM vulnerability " && outln
      pr_bold " LOGJAM"; out " ($cve), experimental      "
 
      "$SSL_NATIVE" && using_sockets=false
@@ -19286,11 +19273,6 @@ run_drown() {
      local jsonID="DROWN"
      local censys_host_url="https://search.censys.io/search?resource=hosts&virtual_hosts=INCLUDE"
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Testing for DROWN vulnerability "
-          outln
-     fi
 # if we want to use OPENSSL: check for < openssl 1.0.2g, openssl 1.0.1s if native openssl
      pr_bold " DROWN"; out " (${cve// /, })      "
 
@@ -19387,11 +19369,6 @@ run_beast(){
      local hint=""
      local jsonID="BEAST"
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Testing for BEAST vulnerability "
-          outln
-     fi
      pr_bold " BEAST"; out " ($cve)                     "
 
      if "$TLS13_ONLY" || [[ $(has_server_protocol ssl3) -eq 1 && $(has_server_protocol tls1) -eq 1 ]]; then
@@ -19711,11 +19688,6 @@ run_winshock() {
      local cwe="CWE-94"
      local jsonID="winshock"
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Testing for winshock vulnerability "
-          outln
-     fi
      pr_bold " Winshock"; out " ($cve), experimental    "
 
      if [[ "$(has_server_protocol "tls1_3")" -eq 0 ]] ; then
@@ -19898,11 +19870,6 @@ run_lucky13() {
      local hint=""
      local jsonID="LUCKY13"
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Testing for LUCKY13 vulnerability "
-          outln
-     fi
      pr_bold " LUCKY13"; out " ($cve), experimental     "
 
      if "$TLS13_ONLY"; then
@@ -20707,7 +20674,6 @@ run_robot() {
      local cwe="CWE-203"
      local jsonID="ROBOT"
 
-     [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for Return of Bleichenbacher's Oracle Threat (ROBOT) vulnerability " && outln
      pr_bold " ROBOT                                     "
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
@@ -25425,7 +25391,7 @@ lets_roll() {
                fi
 
                # vulnerabilities
-               if [[ $VULN_COUNT -gt $VULN_THRESHLD ]] || "$do_vulnerabilities"; then
+               if [[ $VULN_COUNT -ge 1 ]] || "$do_vulnerabilities"; then
                     outln; pr_headlineln " Testing vulnerabilities "
                     outln
                fi
