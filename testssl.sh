@@ -10106,8 +10106,9 @@ certificate_info() {
           check_pwnedkeys "$HOSTCERT" "$cert_key_algo" "$cert_keysize"
           case "$?" in
                0) outln "not checked"; fileout "pwnedkeys${json_postfix}" "INFO" "not checked" ;;
-               1) pr_svrty_good "not in database"; fileout "pwnedkeys${json_postfix}" "OK" "not in database" ;;
-               2) pr_svrty_critical "NOT ok --"; outln " key appears in database"; fileout "pwnedkeys${json_postfix}" "CRITICAL" "private key is known" ;;
+               1) prln_svrty_good "not in database"; fileout "pwnedkeys${json_postfix}" "OK" "not in database" ;;
+               2) pr_svrty_critical "NOT ok --"; outln " key appears in database"
+                    fileout "pwnedkeys${json_postfix}" "CRITICAL" "private key is known" ;;
                7) prln_warning "error querying https://v1.pwnedkeys.com"; fileout "pwnedkeys${json_postfix}" "WARN" "connection error" ;;
           esac
      fi
@@ -10115,7 +10116,9 @@ certificate_info() {
      out "$indent"; pr_bold " Certificate Revocation List  "
      jsonID="cert_crlDistributionPoints"
      # ~ get next 50 lines after pattern , strip until Signature Algorithm and retrieve URIs
-     crl="$(awk '/X509v3 CRL Distribution/{i=50} i&&i--' <<< "$cert_txt" | awk '/^$|^.*Name.*$|^.*Reasons.*$|^.*CRL Issuer.*$/,/^            [a-zA-Z0-9]+|^    Signature Algorithm:/' | awk -F'URI:' '/URI/ { print $2 }')"
+     crl="$(awk '/X509v3 CRL Distribution/{i=50} i&&i--' <<< "$cert_txt" | \
+          awk '/^$|^.*Name.*$|^.*Reasons.*$|^.*CRL Issuer.*$/,/^            [a-zA-Z0-9]+|^    Signature Algorithm:/' | \
+          awk -F'URI:' '/URI/ { print $2 }')"
      if [[ -z "$crl" ]] ; then
           fileout "${jsonID}${json_postfix}" "INFO" "--"
           outln "--"
