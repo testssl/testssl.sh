@@ -24710,6 +24710,7 @@ parse_cmd_line() {
                     ;;
                -BB|--BB|--robot)
                     do_robot=true
+                    ((VULN_COUNT++))
                     ;;
                -R|--renegotiation)
                     do_renego=true
