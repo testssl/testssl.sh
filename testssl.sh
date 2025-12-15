@@ -209,6 +209,7 @@ MAX_WAITSOCK=${MAX_WAITSOCK:-5}         # waiting at max 5 seconds for socket re
 QUIC_WAIT=${QUIC_WAIT:-3}               # QUIC is UDP. Thus we run the connect in the background. This is how long in sec to wait
 CCS_MAX_WAITSOCK=${CCS_MAX_WAITSOCK:-5} # for the two CCS payload (each). There shouldn't be any reason to change this.
 HEARTBLEED_MAX_WAITSOCK=${HEARTBLEED_MAX_WAITSOCK:-8}      # for the heartbleed payload. There shouldn't be any reason to change this.
+ROBOT_TIMEOUT=${ROBOT_TIMEOUT:5}        # Initial timeout for ROBOT check
 STARTTLS_SLEEP=${STARTTLS_SLEEP:-10}    # max time wait on a socket for STARTTLS. MySQL has a fixed value of 1 which can't be overwritten (#914)
 FAST_STARTTLS=${FAST_STARTTLS:-true}    # at the cost of reliability decrease the handshakes for STARTTLS
 USLEEP_SND=${USLEEP_SND:-0.1}           # sleep time for general socket send
@@ -20669,7 +20670,7 @@ run_robot() {
      local -i i subret len iteration testnum pubkeybytes
      local pubkeybits
      local vulnerable=false send_ccs_finished=true
-     local -i start_time end_time robottimeout=$MAX_WAITSOCK
+     local -i start_time end_time robottimeout=$ROBOT_TIMEOUT
      local cve="CVE-2017-17382 CVE-2017-17427 CVE-2017-17428 CVE-2017-13098 CVE-2017-1000385 CVE-2017-13099 CVE-2016-6883 CVE-2012-5081 CVE-2017-6168"
      local cwe="CWE-203"
      local jsonID="ROBOT"
@@ -20839,6 +20840,11 @@ run_robot() {
                     end_time=$(LC_ALL=C date "+%s")
                     resp=$(hexdump -v -e '16/1 "%02x"' "$SOCK_REPLY_FILE")
                     response[testnum]="${resp%%[!0-9A-F]*}"
+                    # TLS alert length seems to vary sometimes within this loop which leads to
+                    # wrong test results, see #2083. Thus we cut this here to length 14, if
+                    # it's a TLS alert with the length of 2
+                    [[ ${response[testnum]::2} == 15 ]] && [[ ${response[testnum]:10:2} == 02 ]] &&
+                          response[testnum]=${response[testnum]::14}
                     # The first time a response is received to a client key
                     # exchange message, measure the amount of time it took to
                     # receive a response and set the timeout value for future
