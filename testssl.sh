@@ -20847,7 +20847,7 @@ find_openssl_binary() {
      initialize_engine
 
      openssl_location="$(type -p $OPENSSL)"
-     
+
      [[ -n "$GIT_REL" ]] && \
           cwd="$PWD" || \
           cwd="$RUN_DIR"
@@ -24328,6 +24328,7 @@ parse_cmd_line() {
                     ;;
                -BB|--BB|--robot)
                     do_robot=true
+                    ((VULN_COUNT++))
                     ;;
                -R|--renegotiation)
                     do_renego=true
