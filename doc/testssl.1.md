@@ -233,7 +233,7 @@ Also for multiple server certificates are being checked for as well as for the c
 
 ### VULNERABILITIES
 
-`-U, --vulnerable, --vulnerabilities` Just tests all (of the following) vulnerabilities. The environment variable `VULN_THRESHLD` determines after which value a separate headline for each vulnerability is being displayed. Default is `1` which means if you check for two vulnerabilities, only the general headline for vulnerabilities section is displayed -- in addition to the vulnerability and the result. Otherwise each vulnerability or vulnerability section gets its own headline in addition to the output of the name of the vulnerability and test result. A vulnerability section is comprised of more than one check, e.g. the renegotiation vulnerability check has two checks, so has Logjam.
+`-U, --vulnerable, --vulnerabilities` Just tests all (of the following) vulnerabilities.
 
 `-H, --heartbleed`              Checks for Heartbleed, a memory leakage in openssl. Unless the server side doesn't support the heartbeat extension it is likely that this check runs into a timeout. The seconds to wait for a reply can be adjusted with `HEARTBLEED_MAX_WAITSOCK`. 8 is the default.
 
@@ -243,7 +243,7 @@ Also for multiple server certificates are being checked for as well as for the c
 
 `--OP, --opossum`               Checks for HTTP to HTTPS upgrade vulnerability named Opossum.
 
-`--BB, --robot`                 Checks for vulnerability to ROBOT / (*Return Of Bleichenbacher's Oracle Threat*) attack.
+`--BB, --robot`                 Checks for vulnerability to ROBOT / (*Return Of Bleichenbacher's Oracle Threat*) attack. The predefined timeout of 5 seconds can be changed with the environment variable `ROBOT_TIMEOUT`.
 
 `--SI, --starttls-injection`    Checks for STARTTLS injection vulnerabilities (SMTP, IMAP, POP3 only). `socat` and OpenSSL >=1.1.0 is needed.
 
@@ -393,6 +393,7 @@ Except the environment variables mentioned above which can replace command line 
 * MAX_WAITSOCK: It instructs testssl.sh to wait until the specified time before declaring a socket connection dead. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
 * CCS_MAX_WAITSOCK Is the similar to above but applies only to the CCS handshakes, for both of the two the two CCS payload. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
 * HEARTBLEED_MAX_WAITSOCK  Is the similar to MAX_WAITSOCK but applies only to the ServerHello after sending the Heartbleed payload. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
+* ROBOT_TIMEOUT  is similar to above and applies to the ROBOT check.
 * MEASURE_TIME_FILE For seldom cases when you don't want the scan time to be included in the output you can set this to false.
 * STARTTLS_SLEEP is per default set to 10 (seconds). That's the value testssl.sh waits for a string in the STARTTLS handshake before giving up.
 * MAX_PARALLEL is the maximum number of tests to run in parallel in parallel mass testing mode. The default value of 20 may be made larger on systems with faster processors.
