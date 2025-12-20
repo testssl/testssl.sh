@@ -30,8 +30,7 @@ Alternatively: A clear and concise description of what your problem is. Example:
 A clear and concise description of what you want to happen instead.
 -->
 
-**Which version are you referring to**
- 3.3dev 
+**Which version of testssl.sh are you referring to?**
 
 <!---
 Please note that for 3.2.x we are in maintenance mode. There will be likely no new features. We assume when you file this you have checked whether this proposed feature also doesn't exist in 3.3dev.
