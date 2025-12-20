@@ -236,7 +236,7 @@ Also for multiple server certificates are being checked for as well as for the c
 
 `-T, --ticketbleed`             Checks for Ticketbleed memory leakage in BigIP loadbalancers.
 
-`--BB, --robot`          Checks for vulnerability to ROBOT / (*Return Of Bleichenbacher's Oracle Threat*) attack.
+`--BB, --robot`          	Checks for vulnerability to ROBOT / (*Return Of Bleichenbacher's Oracle Threat*) attack. The predefined timeout of 10 seconds can be changed with the environment variable `ROBOT_TIMEOUT`.
 
 `--SI, --starttls-injection`          Checks for STARTTLS injection vulnerabilities (SMTP, IMAP, POP3 only). `socat` and OpenSSL >=1.1.0 is needed.
 
@@ -386,6 +386,7 @@ Except the environment variables mentioned above which can replace command line 
 * MAX_WAITSOCK: It instructs testssl.sh to wait until the specified time before declaring a socket connection dead. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
 * CCS_MAX_WAITSOCK Is the similar to above but applies only to the CCS handshakes, for both of the two the two CCS payload. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
 * HEARTBLEED_MAX_WAITSOCK  Is the similar to MAX_WAITSOCK but applies only to the ServerHello after sending the Heartbleed payload. Don't change this unless you're absolutely sure what you're doing. Value is in seconds.
+* ROBOT_TIMEOUT  is similar to above and applies to the ROBOT check.
 * MEASURE_TIME_FILE For seldom cases when you don't want the scan time to be included in the output you can set this to false.
 * STARTTLS_SLEEP is per default set to 10 (seconds). That's the value testssl.sh waits for a string in the STARTTLS handshake before giving up.
 * MAX_PARALLEL is the maximum number of tests to run in parallel in parallel mass testing mode. The default value of 20 may be made larger on systems with faster processors.
