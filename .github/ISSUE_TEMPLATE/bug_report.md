@@ -16,7 +16,7 @@ _Feel free to remove this line but please stick to the template. We would like t
 I am running version (``git log | head -1`` if running from the git repo. Otherwise ``testssl.sh -v | grep from``)
 
 
-**Before you open an issue please whether this is a known problem by searching the issues**
+**Before you open an issue please consult the [FAQ](https://github.com/testssl/testssl.sh/blob/3.3dev/FAQ.md) and check whether this is a known problem by searching the  [issues](https://github.com/testssl/testssl.sh/issues)**
 
 Is related to / couldn't find anything
 
@@ -38,4 +38,4 @@ A clear and concise description of what you would expect to happen.
 
 **Additional context**
 
-Add any other context about the problem goes here.
+Any other context about the problem goes here.
