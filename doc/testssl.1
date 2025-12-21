@@ -227,7 +227,7 @@ Security headers (X\-Frame\-Options, X\-XSS\-Protection, Expect\-CT,\|\.\|\.\|\.
 .P
 \fB\-T, \-\-ticketbleed\fR Checks for Ticketbleed memory leakage in BigIP loadbalancers\.
 .P
-\fB\-\-BB, \-\-robot\fR Checks for vulnerability to ROBOT / (\fIReturn Of Bleichenbacher's Oracle Threat\fR) attack\.
+\fB\-\-BB, \-\-robot\fR Checks for vulnerability to ROBOT / (\fIReturn Of Bleichenbacher's Oracle Threat\fR) attack\. The predefined timeout of 10 seconds can be changed with the environment variable \fBROBOT_TIMEOUT\fR\.
 .P
 \fB\-\-SI, \-\-starttls\-injection\fR Checks for STARTTLS injection vulnerabilities (SMTP, IMAP, POP3 only)\. \fBsocat\fR and OpenSSL >=1\.1\.0 is needed\.
 .P
@@ -392,6 +392,8 @@ MAX_WAITSOCK: It instructs testssl\.sh to wait until the specified time before d
 CCS_MAX_WAITSOCK Is the similar to above but applies only to the CCS handshakes, for both of the two the two CCS payload\. Don't change this unless you're absolutely sure what you're doing\. Value is in seconds\.
 .IP "\[ci]" 4
 HEARTBLEED_MAX_WAITSOCK Is the similar to MAX_WAITSOCK but applies only to the ServerHello after sending the Heartbleed payload\. Don't change this unless you're absolutely sure what you're doing\. Value is in seconds\.
+.IP "\[ci]" 4
+ROBOT_TIMEOUT is similar to above and applies to the ROBOT check\.
 .IP "\[ci]" 4
 MEASURE_TIME_FILE For seldom cases when you don't want the scan time to be included in the output you can set this to false\.
 .IP "\[ci]" 4
