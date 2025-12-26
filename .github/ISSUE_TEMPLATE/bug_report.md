@@ -29,7 +29,7 @@ It's much appreciated if you spot bugs and file them! Please keep in mind though
 
 **Command line to reproduce (or docker command)**
 
-Which was your command line? In addition the target of your scan if often needed to reproduce what happend. If you don't want to disclose it publicly: ``grep SWCONTACT testssl.sh``. 
+Which was your command line? In addition the target of your scan is often needed to reproduce what happened. If you don't want to disclose it publicly: ``grep SWCONTACT testssl.sh``. 
 
 
 **Expected behavior**
