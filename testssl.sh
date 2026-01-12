@@ -23233,7 +23233,7 @@ determine_optimal_proto() {
                     fileout "$jsonID" "WARN" "Your $OPENSSL cannot connect to $NODEIP:$PORT."
                fi
                outln
-               ignore_no_or_lame " If you continue the results are likely not corrrect. Really proceed ? (\"yes\" to continue)" "yes"
+               ignore_no_or_lame " If you continue the results are likely not correct. Really proceed ? (\"yes\" to continue)" "yes"
                [[ $? -ne 0 ]] && exit $ERR_CLUELESS
           fi
      elif "$all_failed"; then
