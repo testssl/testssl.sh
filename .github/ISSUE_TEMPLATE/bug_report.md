@@ -13,7 +13,7 @@ _Feel free to remove this line but please stick to the template. We would like t
 
 **General remark**
 
-It's much appreciated if you spot bugs and file them! Please keep in mind though that you'd need to enable us to reproduce what you encountered. If otherwise we need to play ping-pong this is time we'd otherwise like to spend on the development.
+It's much appreciated if you spot bugs and file them! Please keep in mind though that you'd need to enable us to reproduce what you encountered. If otherwise we need to play ping-pong it costs time on our side we'd rather like to spend on the development. 
 
 **Before you open an issue please check which version you are running and whether it is the latest in stable / dev branch**
 
@@ -34,7 +34,7 @@ Which was your command line? In addition the target of your scan is often needed
 
 **Expected behavior**
 
-A clear and concise description of what you would expect to happen.
+A clear and concise description of what you would expect to happen instead.
 
 
 **Your system (please complete the following information):**
