@@ -24430,7 +24430,7 @@ set_scanning_defaults() {
      do_tls_fallback_scsv=true
      do_client_simulation=true
 
-     # A counter wie use but only for if there are vulnerabilties to check or not
+     # A counter wie use but only for if there are vulnerabilities to check or not
      if "$OFFENSIVE"; then
           VULN_COUNT=18
      else
@@ -24686,7 +24686,7 @@ parse_cmd_line() {
                     do_winshock=true
                     do_rc4=true
                     do_starttls_injection=true
-                    # A counter which we use but only for if there are vulnerabilties to check or not
+                    # A counter which we use but only for if there are vulnerabilities to check or not
                     if "$OFFENSIVE"; then
                          VULN_COUNT=18
                     else
