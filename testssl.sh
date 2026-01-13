@@ -220,7 +220,6 @@ HPKP_MIN=${HPKP_MIN:-30}                # >=30 days should be ok for HPKP_MIN, p
      HPKP_MIN=$((HPKP_MIN * 86400))     # correct to seconds
 DAYS2WARN1=${DAYS2WARN1:-60}            # days to warn before cert expires, threshold 1
 DAYS2WARN2=${DAYS2WARN2:-30}            # days to warn before cert expires, threshold 2
-VULN_THRESHLD=${VULN_THRESHLD:-1}       # if vulnerabilities to check >$VULN_THRESHLD we DON'T show a separate header line in the output each vuln. check
 UNBRACKTD_IPV6=${UNBRACKTD_IPV6:-false} # some versions of OpenSSL (like Gentoo) don't support [bracketed] IPv6 addresses
 NO_ENGINE=${NO_ENGINE:-false}           # if there are problems finding the (external) openssl engine set this to true
 declare -r CLIENT_MIN_FS=5              # number of ciphers needed to run a test for FS
@@ -19953,11 +19952,6 @@ run_rc4() {
      "$FAST" && using_sockets=false
      [[ $TLS_NR_CIPHERS == 0 ]] && using_sockets=false
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Checking for vulnerable RC4 Ciphers "
-          outln
-     fi
      pr_bold " RC4"; out " (${cve// /, })        "
 
      if "$TLS13_ONLY"; then
@@ -20223,11 +20217,6 @@ run_starttls_injection() {
 
      [[ -z "$STARTTLS" ]] && return 0
 
-     if [[ $VULN_COUNT -le $VULN_THRESHLD ]]; then
-          outln
-          pr_headlineln " Checking for STARTTLS injection "
-          outln
-     fi
      pr_bold " STARTTLS injection" ; out " (CVE-2011-0411, exp.)  "
 
      # We'll do a soft fail here, also no warning, as I do not expect everybody to have socat installed
@@ -24441,6 +24430,7 @@ set_scanning_defaults() {
      do_tls_fallback_scsv=true
      do_client_simulation=true
 
+     # A counter wie use but only for if there are vulnerabilties to check or not
      if "$OFFENSIVE"; then
           VULN_COUNT=18
      else
@@ -24696,6 +24686,7 @@ parse_cmd_line() {
                     do_winshock=true
                     do_rc4=true
                     do_starttls_injection=true
+                    # A counter which we use but only for if there are vulnerabilties to check or not
                     if "$OFFENSIVE"; then
                          VULN_COUNT=18
                     else
@@ -25165,8 +25156,6 @@ parse_cmd_line() {
                     do_logjam=true
                     do_allciphers=true
 
-                    # Force vuln. checks to be shown under the same header
-                    VULN_THRESHLD=-1
                     ;;
                (--) shift
                     break
