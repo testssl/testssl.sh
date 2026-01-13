@@ -17634,8 +17634,8 @@ run_ticketbleed() {
           $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS $tls_proto -connect $NODEIP:$PORT $PROXY") >$TMPFILE 2>$ERRFILE </dev/null
           sclient_connect_successful $? "$TMPFILE"
           if [[ $? -ne 0 ]]; then
-               prln_warning "Cannot test for ticketbleed. Your OpenSSL cannot connect to $NODEIP:$PORT"
-               fileout "$jsonID" "WARN" "Cannot test for ticketbleed. Your OpenSSL cannot connect to $NODEIP:$PORT."
+               prln_warning "Cannot test for ticketbleed. $OPENSSL cannot connect to $NODEIP:$PORT"
+               fileout "$jsonID" "WARN" "Cannot test for ticketbleed as $OPENSSL cannot connect to $NODEIP:$PORT."
                return 1
           fi
           case "$(get_protocol $TMPFILE)" in
@@ -23224,9 +23224,16 @@ determine_optimal_proto() {
                [[ $? -ne 0 ]] && exit $ERR_CLUELESS
                MAX_OSSL_FAIL=10
           else
-               prln_warning " Your OpenSSL cannot connect to $NODEIP:$PORT"
-               fileout "$jsonID" "WARN" "Your OpenSSL cannot connect to $NODEIP:$PORT."
-               ignore_no_or_lame " The results might look ok but they could be nonsense. Really proceed ? (\"yes\" to continue)" "yes"
+               outln
+               prln_warning " Your $OPENSSL cannot connect to $NODEIP:$PORT."
+               if [[ -x $OPENSSL2 ]] ; then
+                    outln " Restarting with --openssl=$OPENSSL2 likely helps"
+                    fileout "$jsonID" "WARN" "$OPENSSL cannot connect to $NODEIP:$PORT. Recommended using --openssl=$OPENSSL2"
+               else
+                    fileout "$jsonID" "WARN" "Your $OPENSSL cannot connect to $NODEIP:$PORT."
+               fi
+               outln
+               ignore_no_or_lame " If you continue the results are likely not correct. Really proceed ? (\"yes\" to continue)" "yes"
                [[ $? -ne 0 ]] && exit $ERR_CLUELESS
           fi
      elif "$all_failed"; then
