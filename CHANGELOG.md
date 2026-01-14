@@ -5,6 +5,7 @@
 
 * QUIC protocol check
 * TLS 1.3 early data (0-RTT)
+* Adds a check for mandatory extended master secret TLS extension
 * Bump SSLlabs rating guide to 2009r
 * Check for Opossum vulnerability
 * Enable IPv6 automagically, i.e. if target via IPv6 is reachable just (also) scan it
