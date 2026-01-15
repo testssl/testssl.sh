@@ -96,6 +96,7 @@ $debughtml =~ s/No engine or GOST support via engine with your.*\n//g;
 $debughtml =~ s/.*built: .*\n//g;
 $debughtml =~ s/.*Using bash .*\n//g;
 $debughtml =~ s/.*has_compression.*\n//g;
+$debughtml =~ s/.*Extended master secret extension detected.*\n//g;
 # is whole line:   s/.*<pattern> .*\n//g;
 
 # Extract and mask IP address as it can change
