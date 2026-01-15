@@ -8223,6 +8223,12 @@ determine_tls_extensions() {
      "$SSL_NATIVE" && using_sockets=false
 
      if "$using_sockets"; then
+          # 01 max_fragment_length, RFC 6066
+          # 02 client_certificate_url, RFC 6066
+          # 04 truncated_hmac, RFC 6066
+          # signed_certificate_timestamp, RFC 6962
+          # encrypt_then_mac, RFC 7366
+          # extended_master_secret, RFC 7627
           tls_extensions="00,01,00,01,02, 00,02,00,00, 00,04,00,00, 00,12,00,00, 00,16,00,00, 00,17,00,00"
           if [[ -z $STARTTLS ]]; then
                for alpn_proto in $ALPN_PROTOs; do
@@ -10407,6 +10413,7 @@ certificate_info() {
      return $ret
 }
 
+
 run_server_defaults() {
      local ciph newhostcert sni
      local match_found
@@ -10421,6 +10428,7 @@ run_server_defaults() {
      local -a -i success
      local cn_nosni cn_sni sans_nosni sans_sni san tls_extensions extn client_auth_ca
      local using_sockets=true
+     local spaces="                              "
 
      "$SSL_NATIVE" && using_sockets=false
 
@@ -10677,7 +10685,7 @@ run_server_defaults() {
      pr_headlineln " Testing server defaults (Server Hello) "
      outln
 
-     pr_bold " TLS extensions (standard)    "
+     pr_bold " TLS extensions               "
      if [[ ${#TLS_EXTENSIONS[*]} -eq 0 ]]; then
           outln "(none)"
           fileout "TLS_extensions" "INFO" "(none)"
@@ -10700,6 +10708,28 @@ run_server_defaults() {
           tls_extensions="$(out_row_aligned_max_width "$tls_extensions" "                              " $TERM_WIDTH)"
           tls_extensions="${tls_extensions//{/ }"
           outln "$tls_extensions"
+     fi
+
+     # We want to check whether the (for >=TLS 1.2) mandatory "extended master secret" extension is supported by
+     # the server. Otherwise it would violate RFC 9325 https://www.rfc-editor.org/rfc/rfc9325#section-3.5
+     # and cause connection problems.
+     jsonID="TLS_misses_extension_23"
+     if [[ $(has_server_protocol "tls1_2") -eq 1 ]] && [[ $(has_server_protocol "tls1_3") -eq 1 ]] ; then
+          :
+     elif [[ $tls_extensions =~ \#23 ]]; then
+          # Was the last handshake >= TLS 1.2 ?
+          if grep -qE 'Protocol.*(TLSv1.3|TLSv1.2)' $TEMPDIR/$NODEIP.parse_tls_serverhello.txt ; then
+               fileout "$jsonID" "INFO" "Extended master secret extension detected"
+               debugme outln "${spaces}Extended master secret extension detected"
+          else
+               out "$spaces"
+               prln_warning "Fixme: Server supports TLS 1.2 or 1.3 but last ServerHello was < TLS 1.2"
+               fileout "$jsonID" "WARN" "Server supports TLS 1.2 or 1.3 but last ServerHello was < TLS 1.2"
+          fi
+     else
+          out "$spaces"
+          prln_svrty_medium "No extended master secret extension, violates RFC 9325 & may cause connection problems"
+          fileout "$jsonID" "MEDIUM" "No extended master secret extension, violates RFC 9325 & may cause connection problems"
      fi
 
      pr_bold " Session Ticket RFC 5077 hint "
@@ -10922,6 +10952,7 @@ run_server_defaults() {
      done
      return $ret
 }
+
 
 get_session_ticket_lifetime_from_serverhello() {
      awk '/session ticket.*lifetime/ { print $(NF-1) "$1" }'
