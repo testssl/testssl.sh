@@ -20690,7 +20690,7 @@ run_robot() {
      local -i i subret len iteration testnum pubkeybytes
      local pubkeybits
      local vulnerable=false send_ccs_finished=true
-     local -i start_time end_time robottimeout=$ROBOT_TIMEOUT
+     local -i start_time end_time robot_timeout=$ROBOT_TIMEOUT
      local cve="CVE-2017-17382 CVE-2017-17427 CVE-2017-17428 CVE-2017-13098 CVE-2017-1000385 CVE-2017-13099 CVE-2016-6883 CVE-2012-5081 CVE-2017-6168"
      local cwe="CWE-203"
      local jsonID="ROBOT"
@@ -20854,7 +20854,7 @@ run_robot() {
                fi
                debugme echo "reading server error response..."
                start_time=$(LC_ALL=C date "+%s")
-               sockread 32768 $robottimeout
+               sockread 32768 $robot_timeout
                subret=$?
                if [[ $subret -eq 0 ]]; then
                     end_time=$(LC_ALL=C date "+%s")
@@ -20869,9 +20869,9 @@ run_robot() {
                     # exchange message, measure the amount of time it took to
                     # receive a response and set the timeout value for future
                     # tests to 2 seconds longer than it took to receive a response.
-                    [[ $iteration -ne 2 ]] && [[ $robottimeout -eq $MAX_WAITSOCK ]] && \
-                         [[ $((end_time-start_time)) -lt $((MAX_WAITSOCK-2)) ]] && \
-                         robottimeout=$((end_time-start_time+2))
+                    [[ $iteration -ne 2 ]] && [[ $robot_timeout -eq $ROBOT_TIMEOUT ]] && \
+                         [[ $((end_time-start_time)) -lt $((ROBOT_TIMEOUT-2)) ]] && \
+                         robot_timeout=$((end_time-start_time+2))
                else
                     response[testnum]="Timeout waiting for alert"
                fi
@@ -20910,14 +20910,15 @@ run_robot() {
                # If the test was run with a short timeout and was found to be
                # potentially vulnerable due to some tests timing out, then
                # verify the results by rerunning with a longer timeout.
-               if [[ $robottimeout -eq $MAX_WAITSOCK ]]; then
+               if [[ $robot_timeout -eq $ROBOT_TIMEOUT ]]; then
                     break
                elif [[ "${response[0]}" == "Timeout waiting for alert" ]] || \
                     [[ "${response[1]}" == "Timeout waiting for alert" ]] || \
                     [[ "${response[2]}" == "Timeout waiting for alert" ]] || \
                     [[ "${response[3]}" == "Timeout waiting for alert" ]] || \
                     [[ "${response[4]}" == "Timeout waiting for alert" ]]; then
-                    robottimeout=10
+                    [[ "$DEBUG" -ge 3 ]] && echo "5x Timeout waiting for alert, $robot_timeout increasing to 8"
+                    robot_timeout=8
                else
                     break
                fi
@@ -21795,6 +21796,7 @@ IPv6_OK: $IPv6_OK
 MAX_WAITSOCK: $MAX_WAITSOCK
 HEARTBLEED_MAX_WAITSOCK: $HEARTBLEED_MAX_WAITSOCK
 CCS_MAX_WAITSOCK: $CCS_MAX_WAITSOCK
+ROBOT_TIMEOUT: $ROBOT_TIMEOUT
 USLEEP_SND $USLEEP_SND
 USLEEP_REC $USLEEP_REC
 HEADER_MAXSLEEP: $HEADER_MAXSLEEP
