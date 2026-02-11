@@ -82,6 +82,10 @@ $cat_csvfile2 =~ s/HTTP_headerTime.*\n//g;
 $cat_csvfile  =~  s/"engine_problem.*\n//g;
 $cat_csvfile2  =~ s/"engine_problem.*\n//g;
 
+# Google has KEMs for TLS 1.3 which the local openssl has not - yet
+$cat_csvfile  =~  s/MLKEM1024  AESGCM/ECDH 253   AESGCM/g;
+$cat_csvfile  =~  s/MLKEM1024  ChaCha20/ECDH 253   ChaCha20/g;
+
 # PR #2628. TL:DR; make the kx between tls_sockets() and openssl the same for this CI run
 $cat_csvfile  =~  s/ECDH 256/ECDH 253/g;
 $cat_csvfile  =~  s/ECDH\/MLKEM/ECDH 253  /g;
