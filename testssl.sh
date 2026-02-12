@@ -122,10 +122,10 @@ trap "child_error" USR1
 
 ########### Internal definitions
 #
-declare -r VERSION="3.3dev"
+declare -r VERSION="3.3-snapshot-2602"
 # shellcheck disable=SC2034
 declare -r SWCONTACT="dirk aet testssl dot sh"
-[[ "$VERSION" =~ dev|rc|beta ]] && \
+[[ "$VERSION" =~ dev|rc|beta|snapshot ]] && \
      SWURL="https://testssl.sh/dev/" ||
      SWURL="https://testssl.sh/"
 if git rev-parse --is-inside-work-tree &>/dev/null; then
