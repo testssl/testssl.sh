@@ -122,7 +122,7 @@ trap "child_error" USR1
 
 ########### Internal definitions
 #
-declare -r VERSION="3.3-snapshot-2602"
+declare -r VERSION="3.3dev-snapshot-2602"
 # shellcheck disable=SC2034
 declare -r SWCONTACT="dirk aet testssl dot sh"
 [[ "$VERSION" =~ dev|rc|beta|snapshot ]] && \
@@ -21851,14 +21851,16 @@ prepare_arrays() {
 mybanner() {
      local bb1 bb2 bb3
      local spaces="  "
+     local add=""
      local full="$1"                         # we have a short version and a longer one (two liner vs 4 liner)
      local short_built_date=""               # a reduced version of the build date in the short banner
 
      "$QUIET" && return
      "$CHILD_MASS_TESTING" && return
+     [[ $VERSION =~ snapshot ]] && add="###"
      bb1=$(cat <<EOF
 
-#####################################################################
+#####################################################################${add}
 EOF
 )
    bb2=$(cat <<EOF
@@ -21869,7 +21871,7 @@ EOF
 EOF
 )
    bb3=$(cat <<EOF
-#####################################################################
+#####################################################################${add}
 EOF
 )
      prln_bold "$bb1"; out "$spaces" ; pr_bold "$PROG_NAME"; out " version " ; pr_bold "$VERSION" ; out " from "
