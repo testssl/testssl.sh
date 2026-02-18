@@ -122,7 +122,7 @@ trap "child_error" USR1
 
 ########### Internal definitions
 #
-declare -r VERSION="3.3dev-snapshot-2602"
+declare -r VERSION="3.3dev"
 # shellcheck disable=SC2034
 declare -r SWCONTACT="dirk aet testssl dot sh"
 [[ "$VERSION" =~ dev|rc|beta|snapshot ]] && \
