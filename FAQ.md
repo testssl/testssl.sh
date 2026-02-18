@@ -11,8 +11,7 @@ This is a collection of frequently asked questions which should help to answer s
 * I get inconsistent results from testssl.sh when testing through (Cloudflare|CDN XYZ|OnPrem Loadbalancer). 
     * testssl.sh in general is deterministic and provides reproducible results. However the nature of its testing is that it opens a good amount of connections. Thus you might hit rate limits on the server side. Depending on how your testing is performed (terminal or automated) you may or may not see connection errors. If you can't allow-listing your IP you test from you may want to try just to run a restricted test like 'testssl.sh -P' / 'testssl.sh -S' or a series of that.
 * I am scanning an IPv6 address or a dual stacked host via the testssl.sh docker image but IPv6 doesn't work.
-    * That is a docker "feature" and is not testssl.sh related: docker doesn't hand out per default IPv6 addresses to the container and maybe routing on the host might need additional configuration, see the [docker documentation](https://docs.docker.com/engine/daemon/ipv6/#use-ipv6-for-the-default-bridge-network).
-  
+    * That is is not testssl.sh related but a docker "feature": docker on the host doesn't hand out per default IPv6 addresses to the container, also routing on the host might need additional configuration, see the [docker documentation](https://docs.docker.com/engine/daemon/ipv6/#use-ipv6-for-the-default-bridge-network). The fastest "fix" is just to use [host networking](https://docs.docker.com/engine/network/drivers/host/) like e.g. ``docker run --rm -ti  --net=host  drwetter/testssl.sh -6 ipv6.google.com``
 
 #### 2. Rating / Grading
 
