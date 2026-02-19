@@ -3,7 +3,7 @@
 Run the image with `testssl.sh` options appended (default is `--help`). The container entrypoint is already set to `testsl.sh` for convenience.
 
 ```bash
-docker run --rm -it ghcr.io/testssl/testssl.sh:3.2 --fs github.com
+docker run --rm -it ghcr.io/testssl/testssl.sh:3.2  github.com
 ```
 
 ### Output files
@@ -31,7 +31,6 @@ You can pull the image from either of these registries:
 
 Supported tags:
 - `3.2` / `latest`
-- `3.0` is the old stable version ([soon to become EOL][testssl::v3p0-eol])
 
 ### Building the `testssl.sh` container image
 
