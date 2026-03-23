@@ -9206,9 +9206,9 @@ certificate_info() {
      case "$cert_key_algo" in
           1.3.101.112|E[Dd]25519) cert_key_algo="Ed25519"; cert_keysize=253 ;;
           1.3.101.113|E[Dd]448)   cert_key_algo="Ed448"; cert_keysize=456 ;;
-          2.16.840.1.101.3.4.3.17) cert_key_algo="ML-DSA-44"; cert_keysize=2560 ;;
-          2.16.840.1.101.3.4.3.18) cert_key_algo="ML-DSA-65"; cert_keysize=4032 ;;
-          2.16.840.1.101.3.4.3.19) cert_key_algo="ML-DSA-87"; cert_keysize=4896 ;;
+          2.16.840.1.101.3.4.3.17|ML-DSA-44) cert_key_algo="ML-DSA-44"; cert_keysize=2560 ;;
+          2.16.840.1.101.3.4.3.18|ML-DSA-65) cert_key_algo="ML-DSA-65"; cert_keysize=4032 ;;
+          2.16.840.1.101.3.4.3.19|ML-DSA-87) cert_key_algo="ML-DSA-87"; cert_keysize=4896 ;;
      esac
 
      out "$indent" ; pr_bold " Signature Algorithm          "
@@ -12300,6 +12300,7 @@ get_pub_key_size() {
      if [[ -n $pubkeybits ]]; then
           # remainder e.g. "256 bit)"
           pubkeybits="${pubkeybits//\)/}"
+          pubkeybits="${pubkeybits%% field, *}"
           echo "Server public key is $pubkeybits" >> $TMPFILE
      else
           # This extracts the public key for DSA, DH, and GOST
