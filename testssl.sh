@@ -478,14 +478,17 @@ HAS_FREEBSDDATE=false
 HAS_OPENBSDDATE=false
 
 if date -d @735275209 >/dev/null 2>&1; then
+     # FreeBSD's / MacOS' date doesn't reach this
      if date -r @735275209 >/dev/null 2>&1; then
           # Ubuntu >= 25.10
           HAS_GNUDATE=true
-     elif LC_ALL=C date -r 735275209 2>&1 | grep -q "No such file"; then
+     # need to make sure we end up in a directory with read permission (see #3009)
+     elif (cd /; LC_ALL=C date -r 735275209 2>&1 | grep -q "No such file"); then
           # e.g. Debian 24.04, Debian 11-13
           HAS_GNUDATE=true
+     # OpenBSD treats this as a reference (as FreeBSD would do it)
      elif date -r 735275209 >/dev/null 2>&1; then
-          # It can't do any conversion from a plain date output.
+          # OpenBSD date can't do any conversion from a plain date output
           HAS_OPENBSDDATE=true
      fi
 fi
