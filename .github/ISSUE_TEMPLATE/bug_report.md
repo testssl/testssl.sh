@@ -40,7 +40,7 @@ A clear and concise description of what you would expect to happen instead.
 **Your system (please complete the following information):**
  - OS: ``awk -F\" '/PRETTY_NAME/ { print $2 }' /etc/os-release``
  - Platform: ``uname -srm``
- - OpenSSL + bash: ``testssl.sh -b 2>/dev/null | grep Using '``
+ - OpenSSL + bash: ``testssl.sh -b 2>/dev/null | grep Using``
 
 **Additional context**
 
