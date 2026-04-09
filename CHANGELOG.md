@@ -5,6 +5,7 @@
 
 * QUIC protocol check
 * TLS 1.3 early data (0-RTT)
+* Support for RFC 8998 and draft-yang-tls-hybrid-sm2-mlkem (TLS_SM4_GCM_SM3, TLS_SM4_CCM_SM3 ciphers, kx groups curveSM2, curveSM2MLKEM768; SM2 pub keys + signatures)
 * Adds a check for mandatory extended master secret TLS extension
 * Bump SSLlabs rating guide to 2009r
 * Check for Opossum vulnerability
