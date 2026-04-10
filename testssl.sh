@@ -348,6 +348,7 @@ HAS2_EARLYDATA=false
 HAS_X448=false
 HAS_X25519=false
 HAS_SIGALGS=false
+OSSL_SUPPORTED_SIGALGS=""
 HAS_PKUTIL=false
 HAS_PKEY=false
 HAS_NO_SSL2=false
@@ -8464,6 +8465,7 @@ extract_stapled_ocsp() {
 # arg2 is a list of protocols to try (tls1_2, tls1_1, tls1, ssl3) or empty (if all should be tried)
 get_server_certificate() {
      local protocols_to_try proto
+     local s sigalg sigalgs=""
      local success ret
      local npn_params="" line
      local ciphers_to_test=""
@@ -8499,12 +8501,20 @@ get_server_certificate() {
      CERTIFICATE_LIST_ORDERING_PROBLEM=false
      if [[ "$1" =~ tls1_3 ]]; then
           [[ $(has_server_protocol "tls1_3") -eq 1 ]] && return 1
-          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ "$1" =~ tls1_3_RSA || "$1" =~ tls1_3_ECDSA ]]; then
-               if [[ "$1" =~ tls1_3_RSA ]]; then
-                    $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs PSS+SHA256:PSS+SHA384:PSS+SHA512:rsa_pss_pss_sha256:rsa_pss_pss_sha384:rsa_pss_pss_sha512") </dev/null 2>$ERRFILE >$TMPFILE
+          sigalg="$(tolower "${1#tls1_3_}")"
+          [[ "$sigalg" == eddsa ]] && sigalg="ed"
+          if "$HAS_TLS13" && "$HAS_SIGALGS" && [[ "$OSSL_SUPPORTED_SIGALGS" =~ $sigalg || "$1" =~ tls1_3_RSA || "$1" =~ tls1_3_ECDSA ]]; then
+               if [[ "$OSSL_SUPPORTED_SIGALGS" =~ $sigalg ]]; then
+                    for s in $OSSL_SUPPORTED_SIGALGS; do
+                         [[ "$s" =~ $sigalg ]] && sigalgs+=":$s"
+                    done
+                    sigalgs="${sigalgs:1}"
+               elif [[ "$1" =~ tls1_3_RSA ]]; then
+                    sigalgs="PSS+SHA256:PSS+SHA384:PSS+SHA512:rsa_pss_pss_sha256:rsa_pss_pss_sha384:rsa_pss_pss_sha512"
                else
-                    $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs ECDSA+SHA256:ECDSA+SHA384:ECDSA+SHA512") </dev/null 2>$ERRFILE >$TMPFILE
+                    sigalgs="ECDSA+SHA256:ECDSA+SHA384:ECDSA+SHA512"
                fi
+               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs $sigalgs") </dev/null 2>$ERRFILE >$TMPFILE
                sclient_connect_successful $? $TMPFILE || return 1
                DETECTED_TLS_VERSION="0304"
                extract_certificates "tls1_3"
@@ -21245,6 +21255,7 @@ find_openssl_binary() {
      HAS_NO_COMP=false
      HAS_CURVES=false
      OSSL_SUPPORTED_CURVES=""
+     OSSL_SUPPORTED_SIGALGS=""
      HAS_PKEY=false
      HAS_PKUTIL=false
      HAS_ALPN=false
@@ -21344,6 +21355,8 @@ find_openssl_binary() {
                OSSL_SUPPORTED_CURVES="${OSSL_SUPPORTED_CURVES//x25519/X25519}"
                OSSL_SUPPORTED_CURVES="${OSSL_SUPPORTED_CURVES//x448/X448}"
           fi
+          OSSL_SUPPORTED_SIGALGS="$($OPENSSL list -tls-signature-algorithms)"
+          OSSL_SUPPORTED_SIGALGS=" ${OSSL_SUPPORTED_SIGALGS//:/ } "
      fi
      if [[ -z "$OSSL_SUPPORTED_CURVES" ]]; then
           if $OPENSSL s_client -curves </dev/null 2>&1 | grep -aiq "unknown option"; then
@@ -21790,6 +21803,7 @@ HAS2_QUIC: $HAS2_QUIC
 HAS_X448: $HAS_X448
 HAS_X25519: $HAS_X25519
 HAS_SIGALGS: $HAS_SIGALGS
+OSSL_SUPPORTED_SIGALGS: $OSSL_SUPPORTED_SIGALGS
 HAS_NO_SSL2: $HAS_NO_SSL2
 HAS_SPDY: $HAS_SPDY
 HAS_ALPN: $HAS_ALPN
