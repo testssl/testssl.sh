@@ -8517,7 +8517,7 @@ get_server_certificate() {
                elif [[ "$1" =~ tls1_3_RSA ]]; then
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b"
                elif [[ "$1" =~ tls1_3_ECDSA ]]; then
-                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,0a,00,08,04,03,05,03,06,03,02,03"
+                    tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c"
                elif [[ "$1" =~ tls1_3_EdDSA ]]; then
                     tls_sockets "04" "$TLS13_CIPHER" "all+" "00,12,00,00, 00,05,00,05,01,00,00,00,00, 00,0d,00,06,00,04,08,07,08,08"
                elif [[ "$1" =~ tls1_3_MLDSA ]]; then
@@ -9209,11 +9209,15 @@ certificate_transparency() {
           if [[ "$tls_version" == 0304 ]]; then
                ciphers=", 00,c6, 00,c7, 13,01, 13,02, 13,03, 13,04, 13,05, c0,b4, c0,b5"
                if [[ "$cipher" == tls1_3_RSA ]]; then
-                    extra_extns=", 00,0d,00,10,00,0e,08,04,08,05,08,06,04,01,05,01,06,01,02,01"
+                    extra_extns=", 00,0d,00,16,00,14,08,04,08,05,08,06,04,01,05,01,06,01,02,01,08,09,08,0a,08,0b"
                elif [[ "$cipher" == tls1_3_ECDSA ]]; then
-                    extra_extns=", 00,0d,00,0a,00,08,04,03,05,03,06,03,02,03"
+                    extra_extns=", 00,0d,00,10,00,0e,04,03,05,03,06,03,02,03,08,1a,08,1b,08,1c"
                elif [[ "$cipher" == tls1_3_SM2 ]]; then
                     extra_extns=", 00,0d,00,04,00,02,07,08"
+               elif [[ "$cipher" == tls1_3_EdDSA ]]; then
+                    extra_extns=", 00,0d,00,06,00,04,08,07,08,08"
+               elif [[ "$cipher" == tls1_3_MLDSA ]]; then
+                    extra_extns=", 00,0d,00,08,00,06,09,04,09,05,09,06"
                else
                     return 1
                fi
@@ -16458,10 +16462,10 @@ prepare_tls_clienthello() {
           else
                extension_signature_algorithms="
                00, 0d,                    # Type: signature_algorithms , see RFC 8446
-               00, 2a, 00, 28,            # lengths
+               00, 30, 00, 2e,            # lengths
                04,03, 05,03, 06,03, 08,04, 08,05, 08,06, 04,01, 05,01,
                06,01, 08,09, 08,0a, 08,0b, 08,07, 08,08, 02,01, 02,03,
-               07,08, 09,04, 09,05, 09,06"
+               07,08, 09,04, 09,05, 09,06, 08,1a, 08,1b, 08,1c"
           fi
 
           extension_heartbeat="
