@@ -10002,7 +10002,7 @@ certificate_info() {
 
      out "$indent"; pr_bold " OCSP stapling                "
      jsonID="OCSP_stapling"
-     if grep -a "OCSP response" <<< "$ocsp_response" | grep -q "no response sent" ; then
+     if grep -a "OCSP response" <<< "$ocsp_response" | grep -Eq "no response[s]? sent" ; then
           if [[ -n "$ocsp_uri" ]]; then
                pr_svrty_low "not offered"
                fileout "${jsonID}${json_postfix}" "LOW" "not offered"
@@ -10418,10 +10418,10 @@ run_server_defaults() {
                          # response so that certificate_info() can determine
                          # whether it includes a certificate transparency extension.
                          ocsp_response_binary[certs_found]="$STAPLED_OCSP_RESPONSE"
-                         if grep -a "OCSP response:" $TMPFILE | grep -q "no response sent"; then
+                         if grep -aE "OCSP response[s]?:" $TMPFILE | grep -Eq "no response[s]? sent"; then
                               ocsp_response[certs_found]="$(grep -a "OCSP response" $TMPFILE)"
                          else
-                              ocsp_response[certs_found]="$(awk -v n=2 '/OCSP response:/ {start=1; inc=2} /======================================/ { if (start) {inc--} } inc' $TMPFILE)"
+                              ocsp_response[certs_found]="$(awk -v n=2 '/OCSP response[s]?:/ {start=1; inc=2} /======================================/ { if (start) {inc--} } inc' $TMPFILE)"
                          fi
                          ocsp_response_status[certs_found]=$(grep -a "OCSP Response Status" $TMPFILE)
                          previous_hostcert[certs_found]=$newhostcert
