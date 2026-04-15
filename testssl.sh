@@ -15255,6 +15255,9 @@ parse_tls_serverhello() {
                                          "0019") echo -n "secp521r1" >> $TMPFILE ;;
                                          "001D") echo -n "X25519" >> $TMPFILE ;;
                                          "001E") echo -n "X448" >> $TMPFILE ;;
+                                         "001F") echo -n "brainpoolP256r1tls13" >> $TMPFILE ;;
+                                         "0020") echo -n "brainpoolP384r1tls13" >> $TMPFILE ;;
+                                         "0021") echo -n "brainpoolP512r1tls13" >> $TMPFILE ;;
                                          "0029") echo -n "curveSM2" >> $TMPFILE ;;
                                          "0100") echo -n "ffdhe2048" >> $TMPFILE ;;
                                          "0101") echo -n "ffdhe3072" >> $TMPFILE ;;
