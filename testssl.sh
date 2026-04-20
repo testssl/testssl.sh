@@ -22888,7 +22888,7 @@ print_dn() {
      fi
      # Use the LDAP String Representation of Distinguished Names (RFC 2253),
      # The current specification is in RFC 4514.
-     name="$(hex2binary "$cert" | $OPENSSL x509 -issuer -noout -inform DER -nameopt RFC2253 2>/dev/null)"
+     name="$(hex2binary "$cert" | $OPENSSL x509 -issuer -noout -inform DER -nameopt RFC2253,-esc_msb 2>/dev/null)"
      name="${name#issuer=}"
      tm_out "$(strip_leading_space "$name")"
      return 0
