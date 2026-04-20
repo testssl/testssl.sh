@@ -10726,8 +10726,9 @@ run_server_defaults() {
           outln "(none)"
           fileout "TLS_extensions" "INFO" "(none)"
      else
-#FIXME: we rather want to have the chance to print each ext in italics or another format.
-# Atm is a string of quoted strings -- that needs to be fixed at the root then
+          #FIXME: we rather want to print each ext in italics or another format.
+          # Atm it's a string of quoted strings -- that needs to be fixed at the
+          # the root then.
           # out_row_aligned_max_width() places line breaks at space characters.
           # So, in order to prevent the text for an extension from being broken
           # across lines, temporarily replace space characters within the text
@@ -10740,32 +10741,36 @@ run_server_defaults() {
           tls_extensions="${tls_extensions:1}"
           fileout "TLS_extensions" "INFO" "$tls_extensions"
           tls_extensions="${tls_extensions// /{}"
-          tls_extensions="${tls_extensions//\"{\"/\" \"}"
-          tls_extensions="$(out_row_aligned_max_width "$tls_extensions" "                              " $TERM_WIDTH)"
-          tls_extensions="${tls_extensions//{/ }"
+          tls_extensions="${tls_extensions//'{\"'/'" "'}"
+          #tls_extensions="${tls_extensions//\"{\"/\" \"}"   #  blank command for deconfusing vim's syntax hiliting
+          tls_extensions="$(out_row_aligned_max_width "$tls_extensions" '                              ' $TERM_WIDTH)"
+          tls_extensions="${tls_extensions//\{/ }"
           outln "$tls_extensions"
      fi
 
-     # We want to check whether the (for >=TLS 1.2) mandatory "extended master secret" extension is supported by
-     # the server. Otherwise it would violate RFC 9325 https://www.rfc-editor.org/rfc/rfc9325#section-3.5
-     # and cause connection problems.
+     # We want to check whether the (for <=TLS 1.2) mandatory "extended master secret" extension is supported by
+     # the server. Otherwise it would violate RFC 9325 https://www.rfc-editor.org/rfc/rfc9325#section-3.5. Also:
+     # "If a server implementing this document receives the "extended_master_secret" extension, it MUST
+     # include the extension in its ServerHello message". (https://www.rfc-editor.org/rfc/rfc7627.html#section-5.2).
+
      jsonID="TLS_misses_extension_23"
-     if [[ $(has_server_protocol "tls1_2") -eq 1 ]] && [[ $(has_server_protocol "tls1_3") -eq 1 ]] ; then
-          :
-     elif [[ $tls_extensions =~ \#23 ]]; then
-          # Was the last handshake >= TLS 1.2 ?
-          if grep -qE 'Protocol.*(TLSv1.3|TLSv1.2)' $TEMPDIR/$NODEIP.parse_tls_serverhello.txt ; then
-               fileout "$jsonID" "INFO" "Extended master secret extension detected"
-               debugme outln "${spaces}Extended master secret extension detected"
+     if [[ $tls_extensions =~ \#23 ]]; then
+          if "$TLS13_ONLY"; then
+               # this shouldn't happen
+               fileout "$jsonID" "LOW" "Misconfiguration: Extended master secret extension detected for TLS 1.3 only"
+               debugme outln "${spaces}Misconfiguration: Extended master secret extension detected for TLS 1.3 only"
           else
-               out "$spaces"
-               prln_warning "Fixme: Server supports TLS 1.2 or 1.3 but last ServerHello was < TLS 1.2"
-               fileout "$jsonID" "WARN" "Server supports TLS 1.2 or 1.3 but last ServerHello was < TLS 1.2"
+               if grep -qE 'Protocol.*(TLSv1.)' $TEMPDIR/$NODEIP.parse_tls_serverhello.txt ; then
+                    fileout "$jsonID" "INFO" "Extended master secret extension detected"
+                    debugme outln "${spaces}Extended master secret extension detected"
+               fi
+               # We don't worry about SSL3.0 here. It should have been tested before withg testssl.sh --
+               #  though it's mentioned in https://www.rfc-editor.org/rfc/rfc7627.html#section-6.4
           fi
-     else
+     elif ! "$TLS13_ONLY"; then
           out "$spaces"
-          prln_svrty_medium "No extended master secret extension, violates RFC 9325 & may cause connection problems"
-          fileout "$jsonID" "MEDIUM" "No extended master secret extension, violates RFC 9325 & may cause connection problems"
+          prln_svrty_medium "No extended master secret extension, violates RFC 7627/9325 & may cause connection problems"
+          fileout "$jsonID" "MEDIUM" "No extended master secret extension, violates RFC 7627/9325 & may cause connection problems"
      fi
 
      pr_bold " Session Ticket RFC 5077 hint "
