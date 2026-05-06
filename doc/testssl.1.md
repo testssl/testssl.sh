@@ -202,6 +202,7 @@ Any single check switch supplied as an argument prevents testssl.sh from doing a
     - validity: start + end time, how many days to go (warning for certificate lifetime >=5 years)
     - revocation info (CRL, OCSP, OCSP stapling + must staple). When `--phone-out` supplied it checks against the certificate issuer whether the host certificate has been revoked (plain OCSP, CRL).
     - displaying DNS Certification Authority Authorization resource record
+    - DNSSEC status of the host name, if the BIND `delv` validating lookup utility is installed (otherwise a hint is shown). The check is skipped when `--nodns` is set or when `--ip=proxy` is in use.
     - Certificate Transparency info (if provided by server).
 
 For the trust chain check 5 certificate stores are provided. If the test against one of the trust stores failed, the one is being identified and the reason for the failure is displayed - in addition the ones which succeeded are displayed too.

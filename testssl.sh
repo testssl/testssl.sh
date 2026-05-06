@@ -387,6 +387,7 @@ HAS_IDN2=false
 HAS_AVAHIRESOLVE=false
 HAS_DSCACHEUTIL=false
 HAS_DIG_NOIDNOUT=false
+HAS_DELV=false
 HAS_XXD=false
 
 OSSL_CIPHERS_S=""
@@ -9383,6 +9384,7 @@ certificate_info() {
      local days2warn1=$DAYS2WARN1
      local provides_stapling=false
      local caa_node="" all_caa="" caa_property_name="" caa_property_value=""
+     local dnssec_status=""
      local response=""
      local yearstart
      local gt_398=false gt_398warn=false
@@ -10301,6 +10303,34 @@ certificate_info() {
      else
           pr_svrty_low "not offered"
           fileout "${jsonID}${json_postfix}" "LOW" "--"
+     fi
+     outln
+
+     out "$indent"; pr_bold " DNSSEC"; out " (experimental)        "
+     jsonID="DNSSEC"
+     if [[ -n "$NODNS" ]]; then
+          out "(instructed to minimize/skip DNS queries)"
+          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed"
+     elif "$DNS_VIA_PROXY"; then
+          out "(instructed to use the proxy for DNS only)"
+          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed (proxy)"
+     elif ! "$HAS_DELV"; then
+          out "(no \"delv\" binary, install bind9 / bind-utils)"
+          fileout "${jsonID}${json_postfix}" "INFO" "check skipped, delv not installed"
+     else
+          dnssec_status="$(get_dnssec_status "$NODE")"
+          tmp=$?
+          [[ $DEBUG -ge 4 ]] && echo "get_dnssec_status: $tmp"
+          case $tmp in
+               0)   pr_svrty_good "$dnssec_status"
+                    fileout "${jsonID}${json_postfix}" "OK" "$dnssec_status" ;;
+               1)   pr_svrty_low "not signed"
+                    fileout "${jsonID}${json_postfix}" "LOW" "domain not DNSSEC-signed" ;;
+               2)   pr_svrty_high "$dnssec_status"
+                    fileout "${jsonID}${json_postfix}" "HIGH" "DNSSEC $dnssec_status" ;;
+               3)   pr_warning "$dnssec_status"
+                    fileout "${jsonID}${json_postfix}" "WARN" "$dnssec_status" ;;
+          esac
      fi
      outln
 
@@ -21842,6 +21872,7 @@ HAS_DIG: $HAS_DIG
 HAS_HOST: $HAS_HOST
 HAS_DRILL: $HAS_DRILL
 HAS_NSLOOKUP: $HAS_NSLOOKUP
+HAS_DELV: $HAS_DELV
 HAS_IDN: $HAS_IDN
 HAS_IDN2: $HAS_IDN2
 HAS_AVAHIRESOLVE: $HAS_AVAHIRESOLVE
@@ -22349,6 +22380,7 @@ check_resolver_bins() {
      type -p host  &> /dev/null &&  HAS_HOST=true
      type -p drill &> /dev/null &&  HAS_DRILL=true
      type -p nslookup &> /dev/null && HAS_NSLOOKUP=true
+     type -p delv &> /dev/null && HAS_DELV=true
      type -p avahi-resolve &>/dev/null && HAS_AVAHIRESOLVE=true
      type -p idn  &>/dev/null && HAS_IDN=true
      type -p idn2 &>/dev/null && HAS_IDN2=true
@@ -22556,6 +22588,71 @@ get_caa_rr_record() {
 # to do:
 #    4: check whether $1 is a CNAME and take this
      return 0
+}
+
+# Validates whether the supplied domain is DNSSEC-secured by calling delv,
+# the BIND DNSSEC validating lookup utility. delv performs validation locally
+# instead of trusting the AD bit of the configured resolver, which is the
+# right primitive for an authenticity check.
+#
+# arg1: domain to check
+# stdout: a short status string, only set on validated/unsigned answers
+# return: 0 secured (fully validated)
+#         1 unsigned (no DNSSEC)
+#         2 bogus / validation failed
+#         3 transient resolution problem (timeout, network, etc.)
+#         4 delv not present
+#         5 NODNS / DNS_VIA_PROXY: skipped on purpose
+get_dnssec_status() {
+     local domain="$1"
+     local raw_delv=""
+     local line=""
+     local last_failure=""
+     local saved_openssl_conf="$OPENSSL_CONF"
+
+     ! "$HAS_DELV" && return 4
+     [[ -n "$NODNS" ]] && return 5
+     "$DNS_VIA_PROXY" && return 5
+
+     OPENSSL_CONF=""                         # see https://github.com/testssl/testssl.sh/issues/134
+     # delv exits 0 in every case we care about and signals the verdict via
+     # comment lines: status lines start with a single ";" while trace and
+     # error lines start with ";;". Resolver failures land on stderr.
+     raw_delv="$(delv "$domain" 2>&1)"
+     OPENSSL_CONF="$saved_openssl_conf"
+     debugme echo "delv: $raw_delv"
+
+     # Scan the comment lines top-down. Status lines beat trace lines, so the
+     # first ";" line wins. Otherwise we surface the last ";; resolution failed:"
+     # message, which is delv's terminal verdict for problem cases.
+     while IFS= read -r line; do
+          case "$line" in
+               "; fully validated"*)        echo "fully validated";    return 0 ;;
+               "; partially validated"*)    echo "partially validated"; return 0 ;;
+               "; unsigned answer"*)        echo "unsigned";           return 1 ;;
+               ";; resolution failed:"*)
+                    last_failure="${line#;; resolution failed: }"
+                    ;;
+          esac
+     done <<< "$raw_delv"
+
+     if [[ -n "$last_failure" ]]; then
+          # "broken trust chain" / "no valid signature found" / "ncache nxdomain"
+          # are genuine validation failures; everything else (network, timeout,
+          # SERVFAIL from resolver) is a transient resolver problem and should
+          # not be reported as a domain-level DNSSEC failure.
+          case "$last_failure" in
+               *"trust chain"*|*"no valid signature"*|*"insecure"*|\
+               *"bogus"*|*"DNSKEY"*|*"NSEC"*)
+                    echo "$last_failure"
+                    return 2 ;;
+               *)
+                    echo "$last_failure"
+                    return 3 ;;
+          esac
+     fi
+     echo "no verdict from delv"
+     return 3
 }
 
 # arg1: domain to check for. Returned will be the MX record as a string
