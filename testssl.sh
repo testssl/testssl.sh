@@ -5272,23 +5272,23 @@ run_client_simulation() {
           pr_headlineln "via sockets "
      else
           pr_headline "via openssl "
-          prln_warning " -- pls note \"--ssl-native\" will return some false results"
-          fileout "$jsonID" "WARN" "You shouldn't run this with \"--ssl-native\" as you will get false results"
+          prln_warning " -- pls note \"--ssl-native\" will likely return false results"
+          fileout "$jsonID" "WARN" "You shouldn't run this with \"--ssl-native\" as you will likely get false results"
           ret=1
      fi
      outln
      debugme echo
 
      if [[ "$DISPLAY_CIPHERNAMES" =~ openssl ]]; then
-          out " Browser                      Protocol  Cipher Suite Name (OpenSSL)       "
+          out " Browser/Client                     Protocol  Cipher Suite Name (OpenSSL)       "
           { "$using_sockets" || "$HAS_DH_BITS"; } && out "Forward Secrecy"
           outln
-          out "--------------------------------------------------------------------------"
+          out "--------------------------------------------------------------------------------"
      else
-          out " Browser                      Protocol  Cipher Suite Name (IANA/RFC)                      "
+          out " Browser/Client                     Protocol  Cipher Suite Name (IANA/RFC)                      "
           { "$using_sockets" || "$HAS_DH_BITS"; } && out "Forward Secrecy"
           outln
-          out "------------------------------------------------------------------------------------------"
+          out "------------------------------------------------------------------------------------------------"
      fi
      { "$using_sockets" || "$HAS_DH_BITS"; } && out "----------------------"
      outln
@@ -5302,7 +5302,7 @@ run_client_simulation() {
           if "${current[i]}" || "$ALL_CLIENTS" ; then
                # for ANY we test this service or if the service we determined from STARTTLS matches
                if [[ "${service[i]}" == ANY ]] || [[ "${service[i]}" =~ $client_service ]]; then
-                    out " $(printf -- "%-29s" "${names[i]}")"
+                    out " $(printf -- "%-35s" "${names[i]}")"
                     if "$using_sockets" && [[ -n "${handshakebytes[i]}" ]]; then
                          client_simulation_sockets "${handshakebytes[i]}"
                          sclient_success=$?
