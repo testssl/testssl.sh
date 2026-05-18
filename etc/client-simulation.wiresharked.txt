@@ -1124,6 +1124,7 @@
      ja3+=("ecdf4f49dd59effc439639da29186671")
      ja4+=("t13d2013h2_a09f3c656075_7f0f34a4126d")
      current+=(true)
+     # iOS/iPadOS is the same, see ja4
 
      names+=("Safari 12.1 (macOS 10.13.6)")
      short+=("safari_121_osx_10136")

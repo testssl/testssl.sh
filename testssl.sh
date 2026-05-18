@@ -5280,17 +5280,17 @@ run_client_simulation() {
      debugme echo
 
      if [[ "$DISPLAY_CIPHERNAMES" =~ openssl ]]; then
-          out " Browser/Client                     Protocol  Cipher Suite Name (OpenSSL)       "
+          out " Browser/Client                      Protocol  Cipher Suite Name (OpenSSL)       "
           { "$using_sockets" || "$HAS_DH_BITS"; } && out "Forward Secrecy"
           outln
-          out "--------------------------------------------------------------------------------"
+          out "---------------------------------------------------------------------------------"
      else
-          out " Browser/Client                     Protocol  Cipher Suite Name (IANA/RFC)                      "
+          out " Browser/Client                      Protocol  Cipher Suite Name (IANA/RFC)                      "
           { "$using_sockets" || "$HAS_DH_BITS"; } && out "Forward Secrecy"
           outln
-          out "------------------------------------------------------------------------------------------------"
+          out "-------------------------------------------------------------------------------------------------"
      fi
-     { "$using_sockets" || "$HAS_DH_BITS"; } && out "----------------------"
+     { "$using_sockets" || "$HAS_DH_BITS"; } && out "-----------------------"
      outln
      if ! "$using_sockets"; then
           # We can't use the connectivity checker here as of now the openssl reply is always empty (reason??)
@@ -5302,7 +5302,7 @@ run_client_simulation() {
           if "${current[i]}" || "$ALL_CLIENTS" ; then
                # for ANY we test this service or if the service we determined from STARTTLS matches
                if [[ "${service[i]}" == ANY ]] || [[ "${service[i]}" =~ $client_service ]]; then
-                    out " $(printf -- "%-35s" "${names[i]}")"
+                    out " $(printf -- "%-36s" "${names[i]}")"
                     if "$using_sockets" && [[ -n "${handshakebytes[i]}" ]]; then
                          client_simulation_sockets "${handshakebytes[i]}"
                          sclient_success=$?

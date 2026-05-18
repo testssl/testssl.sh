@@ -2636,7 +2636,8 @@ names+=("Opera 66 (Win 10)")
      requiresSha2+=(false)
      ja3+=("ecdf4f49dd59effc439639da29186671")
      ja4+=("t13d2013h2_a09f3c656075_7f0f34a4126d")
-     current+=(true)
+     current+=(false)
+     # identical to MaCOS Safari 26.4, see ja4
 
      names+=("Safari 12.1 (macOS 10.13.6)")
      short+=("safari_121_osx_10136")
@@ -2728,7 +2729,7 @@ names+=("Opera 66 (Win 10)")
      ja4+=("t13d2014h2_a09f3c656075_e42f34c56612")
      current+=(true)
 
-     names+=("Safari 26.4 (macOS 26.4)")
+     names+=("Safari 26.4 (macOS/iOS/iPadOS 26.4)")
      short+=("safari_264_osx_264")
      ch_ciphers+=("ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:DES-CBC3-SHA")
      ciphersuites+=("TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256")
