@@ -213,8 +213,8 @@
      minEcdsaBits+=(-1)
      curves+=("X25519MLKEM768:x25519:secp256r1:secp384r1")
      requiresSha2+=(true)
-     ja3+=("78c89591bc3fffbc6aa884cc7ebbbdb5")
-     ja4+=("t13d1517h2_8daaf6152771_b6f405a00624")
+     ja3+=("a04f2226447ea413dd5bf057ca4a4bdf")
+     ja4+=("t13d1516h2_8daaf6152771_d8a2da3f94cd")
      current+=(true)
 
      names+=("Android 16 (native)")
@@ -241,6 +241,7 @@
      ja4+=("t13d1516h2_8daaf6152771_d8a2da3f94cd")
      # careful! ja3 is is not unique here, probably because of GREASE. It's difficult to find to matching ja3 at all. ja4 seems more consistent here.
      current+=(true)
+     # Same as above
 
      names+=("Edge 17 Win 10")
      short+=("edge_17_win10")
@@ -284,6 +285,8 @@
      minEcdsaBits+=(-1)
      curves+=("X25519:secp256r1:secp384r1")
      requiresSha2+=(true)
+     ja3+=("cd08e31494f9531f560d64c695473da9")
+     ja4+=("t13d1516h2_8daaf6152771_e5627efa2ab1")
      current+=(true)
 
      names+=("Edge 133 Win 11 23H2")
@@ -418,6 +421,8 @@
      minEcdsaBits+=(-1)
      curves+=("X25519:secp256r1:secp384r1")
      requiresSha2+=(true)
+     ja3+=("cd08e31494f9531f560d64c695473da9")
+     ja4+=("t13d1516h2_8daaf6152771_e5627efa2ab1")
      current+=(true)
 
      names+=("Chromium 137 (Win 11)")
@@ -618,6 +623,8 @@
      minEcdsaBits+=(224)
      curves+=("x25519:secp256r1:secp384r1:secp521r1:x448:ffdhe2048:ffdhe3072:ffdhe4096:ffdhe6144:ffdhe8192")
      requiresSha2+=(true)
+     ja3+=("60f3e2285bc991c380f822c6ac51f947")
+     ja4+=("t13d311200_e8f1e7e78f70_6077d120928a")
      current+=(true)
 
      names+=("Java 21.0.6 (OpenJDK)")
@@ -979,6 +986,8 @@
      minEcdsaBits+=(-1)
      curves+=("secp256r1:secp384r1:secp521r1")
      requiresSha2+=(false)
+     ja3+=("e4d448cdfe06dc1243c1eb026c74ac9a")
+     ja4+=("t12d220700_0d4ca5d4ec72_3304d8368043")
      current+=(true)
 
      names+=("Thunderbird (60.6)")
@@ -1045,6 +1054,8 @@
      minEcdsaBits+=(-1)
      curves+=("X25519:secp256r1:secp384r1:secp521r1:ffdhe2048:ffdhe3072")
      requiresSha2+=(false)
+     ja3+=("490dba4384bdcf3fb9f1682374dd4afc")
+     ja4+=("t13d181400_e8a523a41297_3d5424432f57")
      current+=(true)
 
      names+=("Safari 12.1 (iOS 12.2)")
