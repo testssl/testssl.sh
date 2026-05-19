@@ -180,3 +180,6 @@ Please address questions not specifically to the code of testssl.sh to the respe
 
 #### GitHub Actions
 * https://github.com/marketplace/actions/testssl-sh-scan
+
+#### php-ssl Certificate scanning integration
+* https://github.com/phpipam/php-ssl
