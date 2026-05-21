@@ -10268,39 +10268,44 @@ certificate_info() {
 
      out "$indent"; pr_bold " DNS CAA RR"; out " (experimental)    "
      jsonID="DNS_CAArecord"
-     caa_node="$NODE"
-     caa=""
-     while [[ -z "$caa" ]] &&  [[ -n "$caa_node" ]]; do
-          caa="$(get_caa_rr_record $caa_node)"
-          tmp=${PIPESTATUS[@]}
-          [[ $DEBUG -ge 4 ]] && echo "get_caa_rr_record: $tmp"
-          [[ $caa_node =~ '.'$ ]] || caa_node+="."
-          caa_node=${caa_node#*.}
-     done
-     if [[ -n "$caa" ]]; then
-          pr_svrty_good "available"; out " - please check for match with \"Issuer\" below"
-          if [[ $(count_lines "$caa") -eq 1 ]]; then
-               out ": "
-          else
-               outln; out "$spaces"
-          fi
-          while read caa; do
-               if [[ -n "$caa" ]]; then
-                    all_caa+="$caa, "
-               fi
-          done <<< "$caa"
-          all_caa=${all_caa%, }                 # strip trailing comma
-          pr_italic "$(out_row_aligned_max_width "$all_caa" "$indent                              " $TERM_WIDTH)"
-          fileout "${jsonID}${json_postfix}" "OK" "$all_caa"
-     elif [[ -n "$NODNS" ]]; then
-          out "(instructed to minimize/skip DNS queries)"
-          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed"
-     elif "$DNS_VIA_PROXY"; then
-          out "(instructed to use the proxy for DNS only)"
-          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed (proxy)"
+     if is_ipv4addr "$NODE" || is_ipv6addr "$NODE"; then
+          out "not checked (IP address scan -- no domain to query)"
+          fileout "${jsonID}${json_postfix}" "INFO" "not checked (IP address scan)"
      else
-          pr_svrty_low "not offered"
-          fileout "${jsonID}${json_postfix}" "LOW" "--"
+          caa_node="$NODE"
+          [[ $caa_node =~ '.'$ ]] || caa_node+="."     # force FQDN to prevent dig search-domain expansion
+          caa=""
+          while [[ -z "$caa" ]] &&  [[ -n "$caa_node" ]]; do
+               caa="$(get_caa_rr_record $caa_node)"
+               tmp=${PIPESTATUS[@]}
+               [[ $DEBUG -ge 4 ]] && echo "get_caa_rr_record: $tmp"
+               caa_node=${caa_node#*.}
+          done
+          if [[ -n "$caa" ]]; then
+               pr_svrty_good "available"; out " - please check for match with \"Issuer\" below"
+               if [[ $(count_lines "$caa") -eq 1 ]]; then
+                    out ": "
+               else
+                    outln; out "$spaces"
+               fi
+               while read caa; do
+                    if [[ -n "$caa" ]]; then
+                         all_caa+="$caa, "
+                    fi
+               done <<< "$caa"
+               all_caa=${all_caa%, }                 # strip trailing comma
+               pr_italic "$(out_row_aligned_max_width "$all_caa" "$indent                              " $TERM_WIDTH)"
+               fileout "${jsonID}${json_postfix}" "OK" "$all_caa"
+          elif [[ -n "$NODNS" ]]; then
+               out "(instructed to minimize/skip DNS queries)"
+               fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed"
+          elif "$DNS_VIA_PROXY"; then
+               out "(instructed to use the proxy for DNS only)"
+               fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed (proxy)"
+          else
+               pr_svrty_low "not offered"
+               fileout "${jsonID}${json_postfix}" "LOW" "--"
+          fi
      fi
      outln
 
@@ -23605,6 +23610,10 @@ display_rdns_etc() {
           else
                outln " A record via:          $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
           fi
+     fi
+     if is_ipv4addr "$NODE" || is_ipv6addr "$NODE"; then
+          prln_warning " Warning: IP scan -- Trust, CAA and SNI-dependent checks may be unreliable. Rescan with hostname for accurate results."
+          fileout "ip_scan_warning" "WARN" "Scanning by IP address: Trust, CAA and SNI-dependent checks may be unreliable"
      fi
      if [[ "$rDNS" =~ instructed ]]; then
           out "$(printf " %-23s " "rDNS ($nodeip):")"
