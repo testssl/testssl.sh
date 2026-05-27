@@ -10268,39 +10268,44 @@ certificate_info() {
 
      out "$indent"; pr_bold " DNS CAA RR"; out " (experimental)    "
      jsonID="DNS_CAArecord"
-     caa_node="$NODE"
-     caa=""
-     while [[ -z "$caa" ]] &&  [[ -n "$caa_node" ]]; do
-          caa="$(get_caa_rr_record $caa_node)"
-          tmp=${PIPESTATUS[@]}
-          [[ $DEBUG -ge 4 ]] && echo "get_caa_rr_record: $tmp"
-          [[ $caa_node =~ '.'$ ]] || caa_node+="."
-          caa_node=${caa_node#*.}
-     done
-     if [[ -n "$caa" ]]; then
-          pr_svrty_good "available"; out " - please check for match with \"Issuer\" below"
-          if [[ $(count_lines "$caa") -eq 1 ]]; then
-               out ": "
-          else
-               outln; out "$spaces"
-          fi
-          while read caa; do
-               if [[ -n "$caa" ]]; then
-                    all_caa+="$caa, "
-               fi
-          done <<< "$caa"
-          all_caa=${all_caa%, }                 # strip trailing comma
-          pr_italic "$(out_row_aligned_max_width "$all_caa" "$indent                              " $TERM_WIDTH)"
-          fileout "${jsonID}${json_postfix}" "OK" "$all_caa"
-     elif [[ -n "$NODNS" ]]; then
-          out "(instructed to minimize/skip DNS queries)"
-          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed"
-     elif "$DNS_VIA_PROXY"; then
-          out "(instructed to use the proxy for DNS only)"
-          fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed (proxy)"
+     if is_ipv4addr "$NODE" || is_ipv6addr "$NODE"; then
+          out "not checked (IP address scan -- no domain to query)"
+          fileout "${jsonID}${json_postfix}" "INFO" "not checked (IP address scan)"
      else
-          pr_svrty_low "not offered"
-          fileout "${jsonID}${json_postfix}" "LOW" "--"
+          caa_node="$NODE"
+          caa=""
+          while [[ -z "$caa" ]] &&  [[ -n "$caa_node" ]]; do
+               [[ $caa_node =~ '.'$ ]] || caa_node+="."     # force FQDN to prevent dig search-domain expansion
+               caa="$(get_caa_rr_record $caa_node)"
+               tmp=${PIPESTATUS[@]}
+               [[ $DEBUG -ge 4 ]] && echo "get_caa_rr_record: $tmp"
+               caa_node=${caa_node#*.}
+          done
+          if [[ -n "$caa" ]]; then
+               pr_svrty_good "available"; out " - please check for match with \"Issuer\" below"
+               if [[ $(count_lines "$caa") -eq 1 ]]; then
+                    out ": "
+               else
+                    outln; out "$spaces"
+               fi
+               while read caa; do
+                    if [[ -n "$caa" ]]; then
+                         all_caa+="$caa, "
+                    fi
+               done <<< "$caa"
+               all_caa=${all_caa%, }                 # strip trailing comma
+               pr_italic "$(out_row_aligned_max_width "$all_caa" "$indent                              " $TERM_WIDTH)"
+               fileout "${jsonID}${json_postfix}" "OK" "$all_caa"
+          elif [[ -n "$NODNS" ]]; then
+               out "(instructed to minimize/skip DNS queries)"
+               fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed"
+          elif "$DNS_VIA_PROXY"; then
+               out "(instructed to use the proxy for DNS only)"
+               fileout "${jsonID}${json_postfix}" "INFO" "check skipped as instructed (proxy)"
+          else
+               pr_svrty_low "not offered"
+               fileout "${jsonID}${json_postfix}" "LOW" "--"
+          fi
      fi
      outln
 
@@ -24673,6 +24678,7 @@ parse_cmd_line() {
      local outfile_arg=""
      local cipher_mapping
      local -i subret=0
+     local tmp=""
 
      CMDLINE="$(create_cmd_line_string "${CMDLINE_ARRAY[@]}")"
      CMDLINE_PARSED=false
@@ -25350,6 +25356,14 @@ parse_cmd_line() {
      # Should be called after set_scanning_defaults() and set_skip_tests()
      if [[ ! ${SKIP_TESTS[*]} =~ rating ]] ; then
           set_rating_state
+     fi
+
+     tmp=${URI#*//}      # remove https://
+     if [[ ! $tmp =~ [a-zA-Z] ]]; then
+          # No letters indicate it's not a name
+          outln
+          pr_warning " Warning: Target is not a server name: results may be completely wrong, at minimum trust may show false results."
+          fileout "ip_scan_warning" "WARN" "Target is not a server name: results may be completely wrong, at minimum trust may show false results."
      fi
 
      CMDLINE_PARSED=true
