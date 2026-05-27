@@ -10273,9 +10273,9 @@ certificate_info() {
           fileout "${jsonID}${json_postfix}" "INFO" "not checked (IP address scan)"
      else
           caa_node="$NODE"
-          [[ $caa_node =~ '.'$ ]] || caa_node+="."     # force FQDN to prevent dig search-domain expansion
           caa=""
           while [[ -z "$caa" ]] &&  [[ -n "$caa_node" ]]; do
+               [[ $caa_node =~ '.'$ ]] || caa_node+="."     # force FQDN to prevent dig search-domain expansion
                caa="$(get_caa_rr_record $caa_node)"
                tmp=${PIPESTATUS[@]}
                [[ $DEBUG -ge 4 ]] && echo "get_caa_rr_record: $tmp"
@@ -23611,10 +23611,6 @@ display_rdns_etc() {
                outln " A record via:          $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
           fi
      fi
-     if is_ipv4addr "$NODE" || is_ipv6addr "$NODE"; then
-          prln_warning " Warning: IP scan -- Trust, CAA and SNI-dependent checks may be unreliable. Rescan with hostname for accurate results."
-          fileout "ip_scan_warning" "WARN" "Scanning by IP address: Trust, CAA and SNI-dependent checks may be unreliable"
-     fi
      if [[ "$rDNS" =~ instructed ]]; then
           out "$(printf " %-23s " "rDNS ($nodeip):")"
           out "$rDNS"
@@ -24682,6 +24678,7 @@ parse_cmd_line() {
      local outfile_arg=""
      local cipher_mapping
      local -i subret=0
+     local tmp=""
 
      CMDLINE="$(create_cmd_line_string "${CMDLINE_ARRAY[@]}")"
      CMDLINE_PARSED=false
@@ -25359,6 +25356,14 @@ parse_cmd_line() {
      # Should be called after set_scanning_defaults() and set_skip_tests()
      if [[ ! ${SKIP_TESTS[*]} =~ rating ]] ; then
           set_rating_state
+     fi
+
+     tmp=${URI#*//}      # remove https://
+     if [[ ! $tmp =~ [a-zA-Z] ]]; then
+          # No letters indicate it's not a name
+          outln
+          pr_warning " Warning: Target is not a server name: results may be completely wrong, at minimum trust may show false results."
+          fileout "ip_scan_warning" "WARN" "Target is not a server name: results may be completely wrong, at minimum trust may show false results."
      fi
 
      CMDLINE_PARSED=true
