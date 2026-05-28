@@ -5244,6 +5244,7 @@ run_client_simulation() {
      local -i ret=0
      local jsonID="clientsimulation"
      local client_service=""
+     local appendfile=""
 
      # source the external file
      . "$TESTSSL_INSTALL_DIR/etc/client-simulation.txt" 2>/dev/null
@@ -5441,29 +5442,32 @@ run_client_simulation() {
                          fi
                          if [[ "$DISPLAY_CIPHERNAMES" =~ openssl ]]; then
                               print_n_spaces "$((34-${#cipher}))"
+                              appendfile="$(print_n_spaces $((34-${#cipher})))"
                          else
                               print_n_spaces "$((50-${#cipher}))"
+                              appendfile="$(print_n_spaces $((50-${#cipher})))"
                          fi
                          if [[ -n "$what_dh" ]]; then
                               [[ -n "$curve" ]] && curve="($curve)"
                               if [[ "$what_dh" =~ MLKEM ]] || [[ "$what_dh" =~ Kyber ]]; then
                                    pr_kem_quality "$bits" "$(printf -- "%-12s" "$what_dh")"
+                                   appendfile+="$what_dh"
                               elif [[ "$what_dh" == ECDH ]]; then
                                    pr_ecdh_quality "$bits" "$(printf -- "%-12s" "$bits bit $what_dh") $curve"
+                                   appendfile+="$what_dh $bits $curve"
                               else
                                    pr_dh_quality "$bits" "$(printf -- "%-12s" "$bits bit $what_dh") $curve"
+                                   appendfile+="$what_dh $bits $curve"
                               fi
                          else
                               if "$HAS_DH_BITS" || { "$using_sockets" && [[ -n "${handshakebytes[i]}" ]]; }; then
                                    out "No FS"
+                                   appendfile+="no FS"
                               fi
                          fi
                          outln
-                         if [[ -n "${warning[i]}" ]]; then
-                              out "                            "
-                              outln "${warning[i]}"
-                         fi
-                         fileout "${jsonID}-${short[i]}" "INFO" "$proto $cipher  ${warning[i]}"
+                         fileout "${jsonID}-${short[i]}" "INFO" "$proto $cipher $appendfile"
+                         # Just one "finding" with all the data has space for improvements
                          debugme cat $TMPFILE
                     fi
                fi   # correct service?
