@@ -24574,9 +24574,6 @@ set_scanning_defaults() {
           VULN_COUNT=14
      fi
      do_rating=true
-
-     do_ipv6_only=false
-     do_ipv4_only=false
 }
 
 # returns number of $do variables set = number of run_funcs() to perform
