@@ -24678,7 +24678,6 @@ parse_cmd_line() {
      local outfile_arg=""
      local cipher_mapping
      local -i subret=0
-     local tmp=""
 
      CMDLINE="$(create_cmd_line_string "${CMDLINE_ARRAY[@]}")"
      CMDLINE_PARSED=false
@@ -25338,9 +25337,6 @@ parse_cmd_line() {
           fi
      fi
 
-     "$FAST" && pr_warning "\n'--fast' can have some undesired side effects thus it is not recommended to use anymore\n"
-     "$SSL_NATIVE" && pr_warning "\nusage of '--ssl-native' is not recommended as it will return incomplete and may even return incorrect results\n"
-
      if "$do_starttls_injection" && [[ "$STARTTLS_PROTOCOL" =~ smtp ]]; then
           ((VULN_COUNT++))
      fi
@@ -25358,15 +25354,36 @@ parse_cmd_line() {
           set_rating_state
      fi
 
-     tmp=${URI#*//}      # remove https://
-     if [[ ! $tmp =~ [a-zA-Z] ]]; then
-          # No letters indicate it's not a name
-          outln
-          pr_warning " Warning: Target is not a server name: results may be completely wrong, at minimum trust may show false results."
-          fileout "ip_scan_warning" "WARN" "Target is not a server name: results may be completely wrong, at minimum trust may show false results."
-     fi
-
      CMDLINE_PARSED=true
+     # This function is amended later w issue_cmdline_warnings() when fileout() functions, specifically
+     # the pre-fileout function fileout_insert_warning*(, work. Here we only can use fatal_cmd_line().
+}
+
+# This serves as a warning function when the user does something which is not recommended.
+# Parts of that have been in parse_cmd_line(), however that is too early for warning messages
+# which also need to go into files.
+#
+issue_cmdline_warnings() {
+     local tmp=""
+     local avoid_complaints="^(1\.1\.1\.1|1\.0\.0\.1|8\.8\.8\.8|8\.8\.4\.4|9\.9\.9\.9)$"
+     # yeah, I know there are more. But these are the most common where we avoid warnings
+
+     if "$FAST" ; then
+          outln
+          prln_warning "'--fast' can have some undesired side effects thus it is not recommended to use anymore"
+          fileout_insert_warning "cmdline_fast_depreciation" "WARN" "'--fast' can have some undesired side effects thus it is not recommended to use anymore"
+     fi
+     if "$SSL_NATIVE"; then
+          outln
+          prln_warning "usage of '--ssl-native' is not recommended as it will return incomplete and maybe even incorrect results"
+          fileout_insert_warning "cmdline_ssl-native" "WARN" "Usage of '--ssl-native' is not recommended as it will return incomplete and maybe even incorrect results"
+     fi
+     tmp=${URI#*//}      # remove https:// and (future) friends
+     if [[ ! $tmp =~ [a-zA-Z] ]] && [[ ! $tmp =~ $avoid_complaints ]]; then
+          # No letters indicate it's not a name
+          prln_warning " Warning: Target is not a server name: results may be completely wrong, at minimum trust may show false results."
+          fileout_insert_warning "cmdline_ip-target" "WARN" "Target is not a server name: results may be completely wrong, at minimum trust may show false results."
+     fi
 }
 
 
@@ -25588,7 +25605,6 @@ lets_roll() {
 }
 
 
-
 ################# main #################
 
 
@@ -25616,6 +25632,7 @@ lets_roll() {
      maketempf
      find_openssl_binary
      find_socat
+     issue_cmdline_warnings
      choose_printf
      check_resolver_bins
      prepare_debug  ; stopwatch parse
