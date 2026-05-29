@@ -5451,13 +5451,13 @@ run_client_simulation() {
                               [[ -n "$curve" ]] && curve="($curve)"
                               if [[ "$what_dh" =~ MLKEM ]] || [[ "$what_dh" =~ Kyber ]]; then
                                    pr_kem_quality "$bits" "$(printf -- "%-12s" "$what_dh")"
-                                   appendfile+="$what_dh"
+                                   appendfile+="$(printf -- "%-12s" "$what_dh")"
                               elif [[ "$what_dh" == ECDH ]]; then
                                    pr_ecdh_quality "$bits" "$(printf -- "%-12s" "$bits bit $what_dh") $curve"
-                                   appendfile+="$what_dh $bits $curve"
+                                   appendfile+="$(printf -- "%-12s" "$bits bit $what_dh") $curve"
                               else
                                    pr_dh_quality "$bits" "$(printf -- "%-12s" "$bits bit $what_dh") $curve"
-                                   appendfile+="$what_dh $bits $curve"
+                                   appendfile+="$(printf -- "%-12s" "$bits bit $what_dh") $curve"
                               fi
                          else
                               if "$HAS_DH_BITS" || { "$using_sockets" && [[ -n "${handshakebytes[i]}" ]]; }; then
