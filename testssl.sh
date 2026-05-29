@@ -5440,12 +5440,13 @@ run_client_simulation() {
                          else
                               pr_cipher_quality "$cipher"
                          fi
+                         # attention: print_n_spaces() should only be used once, otherwise HTML output will be doubled
                          if [[ "$DISPLAY_CIPHERNAMES" =~ openssl ]]; then
                               print_n_spaces "$((34-${#cipher}))"
-                              append_fileout="$(print_n_spaces $((34-${#cipher})))"
+                              append_fileout="     "
                          else
                               print_n_spaces "$((50-${#cipher}))"
-                              append_fileout="$(print_n_spaces $((50-${#cipher})))"
+                              append_fileout="          "
                          fi
                          if [[ -n "$what_dh" ]]; then
                               [[ -n "$curve" ]] && curve="($curve)"
