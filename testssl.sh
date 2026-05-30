@@ -387,6 +387,11 @@ HAS_IDN2=false
 HAS_AVAHIRESOLVE=false
 HAS_DSCACHEUTIL=false
 HAS_DIG_NOIDNOUT=false
+HAS_DIG_HTTPS=false                     # *_HTTPS: whether the binaries support HTTPS RR directly
+HAS_DRILL_HTTPS=false
+HAS_HOST_HTTPS=false
+HAS_NSLOOKUP_HTTPS=false
+
 HAS_XXD=false
 
 OSSL_CIPHERS_S=""
@@ -2501,6 +2506,7 @@ s_client_options() {
 
 # determines whether the port has an HTTP service running or not (plain TLS, no STARTTLS)
 # arg1 could be the protocol determined as "working". IIS6 needs that.
+# sets global $SERVICE
 #
 service_detection() {
      local -i was_killed
@@ -2545,24 +2551,29 @@ service_detection() {
           debugme head -50 $TMPFILE | sed -e '/<HTML>/,$d' -e '/<html>/,$d' -e '/<XML/,$d' -e '/<xml/,$d' -e '/<\?XML/,$d' -e '/<\?xml/,$d' -e '/<\!DOCTYPE/,$d' -e '/<\!doctype/,$d'
      fi
 
-     out " Service detected:      $CORRECT_SPACES"
      jsonID="service"
      case $SERVICE in
           HTTP)
-               out " $SERVICE"
+               if [[ $SERVICE == HTTP ]]; then
+                    dns_https_rr
+               fi
+               pr_bold " Service detected"
+               out ":      $CORRECT_SPACES $SERVICE"
                fileout "${jsonID}" "INFO" "$SERVICE"
                ;;
           IMAP|POP|SMTP|NNTP|MongoDB)
-               out " $SERVICE, thus skipping HTTP specific checks"
+               pr_bold " Service detected"
+               out ":     $CORRECT_SPACES $SERVICE, thus skipping HTTP specific checks"
                fileout "${jsonID}" "INFO" "$SERVICE, thus skipping HTTP specific checks"
                ;;
-          *)   if [[ ! -z $MTLS ]]; then
+#FIXME:        \/     \/  dns_https_rr
+          *)   pr_bold " Service detected:"; out "      $CORRECT_SPACES"
+               if [[ ! -z $MTLS ]]; then
                     out " not identified, but mTLS authentication is set ==> trying HTTP checks"
                     SERVICE=HTTP
                     fileout "${jsonID}" "DEBUG" "Couldn't determine service -- ASSUME_HTTP set"
                elif [[ "$CLIENT_AUTH" == required ]] && [[ -z $MTLS ]]; then
-                    out " certificate-based authentication without providing client certificate and private key => skipping all HTTP checks"
-                    echo "certificate-based authentication without providing client certificate and private key  => skipping all HTTP checks" >$TMPFILE
+                    out " certificate-based authentication without providing client certificate and private key => skipping all HTTP checks" | tee $TMPFILE
                     fileout "${jsonID}" "INFO" "certificate-based authentication without providing client certificate and private key  => skipping all HTTP checks"
                else
                     out " Couldn't determine what's running on port $PORT"
@@ -9396,6 +9407,7 @@ certificate_info() {
      local first=true
      local badocsp=1
      local len_cert_serial=0
+     local avoid_complaints="^(1\.1\.1\.1|1\.0\.0\.1|8\.8\.8\.8|8\.8\.4\.4|9\.9\.9\.9)$"
 
      if [[ $number_of_certificates -gt 1 ]]; then
           [[ $certificate_number -eq 1 ]] && outln
@@ -10273,9 +10285,9 @@ certificate_info() {
 
      out "$indent"; pr_bold " DNS CAA RR"; out " (experimental)    "
      jsonID="DNS_CAArecord"
-     if is_ipv4addr "$NODE" || is_ipv6addr "$NODE"; then
-          out "not checked (IP address scan -- no domain to query)"
-          fileout "${jsonID}${json_postfix}" "INFO" "not checked (IP address scan)"
+     if [[ ! $tmp =~ [a-zA-Z] ]] && [[ ! $tmp =~ $avoid_complaints ]]; then
+          out "not checked: IP address scan, no domain to query"
+          fileout "${jsonID}${json_postfix}" "INFO" "not checked IP address scan, no domain to query"
      else
           caa_node="$NODE"
           caa=""
@@ -17732,7 +17744,7 @@ run_ticketbleed() {
      local hint=""
 
      [[ -n "$STARTTLS" ]] && return 0
-     pr_bold " Ticketbleed"; out " ($cve), experiment.  "
+     pr_bold " Ticketbleed"; out " ($cve), experimental "
 
      if [[ "$SERVICE" != HTTP ]] && [[ "$CLIENT_AUTH" != required ]]; then
           outln "(applicable only for HTTP service)"
@@ -22353,6 +22365,8 @@ get_local_a() {
 #
 check_resolver_bins() {
      local saved_openssl_conf="$OPENSSL_CONF"
+     local testhost=localhost
+     local str=""
 
      OPENSSL_CONF=""                         # see https://github.com/testssl/testssl.sh/issues/134
      type -p dig   &> /dev/null &&  HAS_DIG=true
@@ -22377,12 +22391,36 @@ check_resolver_bins() {
                HAS_DIG_NOIDNOUT=true
           fi
      fi
+
+     # Pre-checking the following for HTTPS RR, see get_https_rrecord()
+     if "$HAS_DIG"; then
+          str=$(dig +short $testhost HTTPS)
+          if [[ -z "$str" ]] && [[ ! "$str" =~ 127.0.0.1 ]] ; then
+               HAS_DIG_HTTPS=true
+          fi
+     elif "$HAS_DRILL"; then
+          if drill $testhost HTTPS | grep -Eq 'IN.*HTTPS'; then
+               HAS_DRILL_HTTPS=true
+          fi
+     elif "$HAS_HOST"; then
+          host -t HTTPS $testhost 2>&1 | grep -q 'invalid type'
+          if [[ $? -ne 0 ]]; then
+               HAS_HOST_HTTPS=true
+          fi
+     elif "$HAS_NSLOOKUP"; then
+          nslookup -type=HTTPS $testhost | grep -q 'unknown query type'
+          if [[ $? -ne 0 ]]; then
+               HAS_NSLOOKUP_HTTPS=true
+          fi
+     fi
+
      OPENSSL_CONF="$saved_openssl_conf"      # see https://github.com/testssl/testssl.sh/issues/134
      return 0
 }
 
 # arg1: a host name. Returned will be 0-n IPv4 addresses
 # watch out: $1 can also be a cname! --> all checked
+#
 get_a_record() {
      local ip4=""
      local saved_openssl_conf="$OPENSSL_CONF"
@@ -22436,6 +22474,7 @@ get_a_record() {
 
 # arg1: a host name. Returned will be 0-n IPv6 addresses
 # watch out: $1 can also be a cname! --> all checked
+#
 get_aaaa_record() {
      local ip6=""
      local saved_openssl_conf="$OPENSSL_CONF"
@@ -22485,9 +22524,12 @@ get_aaaa_record() {
      echo "$ip6"
 }
 
+
 # RFC6844: DNS Certification Authority Authorization (CAA) Resource Record
 # arg1: domain to check for
-get_caa_rr_record() {
+#FIXME: should be refactored, see get_https_rrecord()
+#
+get_caa_rrecord() {
      local raw_caa=""
      local hash len line
      local -i len_caa_property
@@ -22515,12 +22557,16 @@ get_caa_rr_record() {
           raw_caa="$(drill $1 type257 | awk '/'"^${1}"'.*CAA/ { print $5,$6,$7 }')"
      elif "$HAS_HOST"; then
           raw_caa="$(host -t type257 $1)"
-          if grep -Ewvq "has no CAA|has no TYPE257" <<< "$raw_caa"; then
-               raw_caa="$(sed -e 's/^.*has CAA record //' -e 's/^.*has TYPE257 record //' <<< "$raw_caa")"
+          if [[ "$raw_caa" =~ "has no CAA|has no TYPE257" ]]; then
+               raw_caa=""
+          else
+               raw_caa="${raw_caa/$1 has CAA record /}"
+               raw_caa="${raw_caa/$1 has TYPE257 record /}"
           fi
      elif "$HAS_NSLOOKUP"; then
           raw_caa="$(strip_lf "$(nslookup -type=type257 $1 | grep -w rdata_257)")"
           if [[ -n "$raw_caa" ]]; then
+               #FIXME: modernize here  or see HTTPS RR
                raw_caa="$(sed 's/^.*rdata_257 = //' <<< "$raw_caa")"
           fi
      else
@@ -22563,10 +22609,170 @@ get_caa_rr_record() {
           return 1
      fi
 
-# to do:
+#TODO:
 #    4: check whether $1 is a CNAME and take this
      return 0
 }
+
+
+# Service Binding and Parameter Specification via the DNS (SVCB and HTTPS Resource Records).
+# https://www.rfc-editor.org/rfc/rfc9460.html
+#    arg1: domain to check for
+#    returns: string for record
+#
+get_https_rrecord() {
+     local raw_https=""
+     local hash="" len line=""
+     local len_alpnID=""
+     local alpnID=""
+     local alpnID_wire=""
+     local saved_openssl_conf="$OPENSSL_CONF"
+     local all_https=""
+     local noidnout=""
+     local svc_priority=""
+
+     [[ -n "$NODNS" ]] && return 2          # if minimum DNS lookup was instructed, leave here
+     "$HAS_DIG_NOIDNOUT" && noidnout="+noidnout"
+
+     # There's a) the possibility to query HTTPS RR records directly like "dig +short HTTPS dev.testssl.sh",
+     # "drill HTTPS FQDN" or "nslookup -type=HTTPS FQDN". This works for newer binaries only, unfortunately.
+     # On top of that b) there's also an extended format which e.g. cloudflare uses:
+     #    $ host -t type65 testssl.net
+     #      testssl.net has TYPE65 record \# 136 00010000010006026833026832000400086815229AAC43CDE7000500 470045FE0D0041A70020002057F87361C7B5A3B8CD3C028892690D35 2863623DAD4E03D33B231A4C3C8BB02B0004000100010012636C6F75 64666C6172652D6563682E636F6D0000000600202606470030310000 00000000AC43CDE72606470030360000000000006815229A
+     #    $ host -t HTTPS testssl.net
+     #      testssl.net has HTTPS record 1 . alpn="h3,h2" ipv4hint=104.21.34.154,172.67.205.231 ech=AEX+DQBBpwAgACBX+HNhx7WjuM08AoiSaQ01KGNiPa1OA9M7IxpMPIuwKwAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:3031::ac43:cde7,2606:4700:3036::6815:229a
+     # ECH is the encrypted client hello --> for esni (https://datatracker.ietf.org/doc/draft-ietf-tls-esni/)
+     # Nice description: https://www.netmeister.org/blog/https-rrs.html
+
+     # Thus we try first whether we can query the HTTPS records directly as this gives us that already
+     # in clear text and also we can avoid to parse the encoded format. We'll do that as a fallback but
+     # at this moment we're trying to scrape only the values alpn from it, if they come first.
+
+     OPENSSL_CONF=""
+     if "$HAS_DIG_HTTPS"; then
+          text_httpsrr=$(dig +short +search +timeout=3 +tries=3 $noidnout HTTPS "$1" 2>/dev/null)
+     elif "$HAS_DRILL_HTTPS"; then
+          text_httpsrr=$(drill -Q  HTTPS $1 2>/dev/null)
+     elif "$HAS_HOST_HTTPS"; then
+          text_httpsrr=$(host -t HTTPS $1 2>/dev/null)
+          text_httpsrr=${text_httpsrr#*record }
+     elif "$HAS_NSLOOKUP_HTTPS"; then                                            # from 4th field onwards \/
+          text_httpsrr=$(nslookup -type=HTTPS $1 | awk '/'"^${1}"'.*rdata_65// { print substr($0,index($0,$4)) }')
+     fi
+
+     if [[ -n "$text_httpsrr" ]]; then
+          safe_echo "$text_httpsrr"
+          return 0
+     fi
+
+     # Now we need to try parsing the raw output
+     # Format probably: https://www.rfc-editor.org/rfc/rfc3597 (plus updates)
+
+     # If there's a type65 record there are 2x3 output formats, mostly depending on age of distribution
+     # -- roughly that's the difference between text and binary format -- and the type of DNS client
+
+     # for host:
+     # 1) 'google.com has HTTPS record 1 . alpn="h2,h3" '
+     # 2) 'google.com has TYPE65 record  \# 13 0001000001000602683202683 '
+
+     # for drill and dig it's like
+     #1) google.com.	18665	IN	TYPE65	\# 13 00010000010006026832026833
+     #2) google.com.	18301	IN	HTTPS	1 . alpn="h2,h3"
+
+     # nslookup:
+     # 1) dev.testssl.sh	rdata_65 = 1 . alpn="h2"
+     # 2) dev.testssl.sh	rdata_65 = \# 10 00010000010003026832
+
+     if "$HAS_DIG"; then
+          raw_https="$(dig $DIG_R +short +search +timeout=3 +tries=3 $noidnout type65 "$1" 2>/dev/null)"
+          # empty if there's no such record
+     elif "$HAS_DRILL"; then
+          raw_https="$(drill $1 type65 | grep -v '^;;' | awk '/'"^${1}"'.*TYPE65/ { print substr($0,index($0,$5)) }' )" # from 5th field onwards
+          # empty if there's no such record
+     elif "$HAS_HOST"; then
+          raw_https="$(host -t type65 $1)"
+          if [[ "$raw_https" =~ "has no HTTPS|has no TYPE65" ]]; then
+               raw_https=""
+          else
+               raw_https="${raw_https/$1 has HTTPS record /}"
+               raw_https="${raw_https/$1 has TYPE65 record /}"
+          fi
+     elif "$HAS_NSLOOKUP"; then
+          raw_https="$(strip_lf "$(nslookup -type=type65 $1 | awk '/'"^${1}"'.*rdata_65/ { print substr($0,index($0,$4)) }' )")"
+          # empty if there's no such record
+     else
+          return 1
+          # No dig, drill, host, or nslookup --> complaint was elsewhere already
+     fi
+     OPENSSL_CONF="$saved_openssl_conf"      # see https://github.com/drwetter/testssl.sh/issues/134
+
+# dig +short HTTPS dev.testssl.sh / dig +short type65 dev.testssl.sh
+# 1 . alpn="h2" port=443 ipv6hint=2a01:238:4308:a920:1000:0:b:1337
+#
+# 36 000100000100030268320003000201BB000600102A0102384308A920 10000000000B1337
+#         alpn|   L  h 2           443       2a010238...                               L=len
+#
+# -----------------
+# testssl.net  (split over a couple of lines)
+#
+# 1. alpn="h3,h2" ipv4hint=104.21.34.154,172.67.205.231
+# 136 00010000010006026833026832000400086815229AAC43CDE7000500 470045FE0D0041F3002000202BD0935ED66980C1862F2570C0D6014D
+#          alpn|    L  h 3 L h 2        |IPv4#1||IPv4#2|
+
+# ech=AEX+DQBBzgAgACBQGA9EFbz+PkJAXSXtcqJluxLlhxIgzhJ+GhTtRd4nJQAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:3031::ac43:cde7,2606:4700:3036::6815:229a
+# 733A7CFAAEA5E4DD9CA43D4C24199E330004000100010012636C6F75 64666C6172652D6563682E636F6D0000000600202606470030310000 00000000AC43CDE72606470030360000000000006815229A
+#                                                 | cloudflare-ech.com                |            IPv6#1                           #IPv6#2
+
+
+# Now comes the last straw, decoding og the stream. It only works for short entries like 1. alpn=h2,h3
+     if [[ -z "$raw_https" ]]; then
+          return 1
+     elif [[ "$raw_https" =~ \#\ [0-9][0-9] ]]; then
+          while read hash len line ;do
+          #           \# 10 00010000010003026832
+          #           \# 36 000100000100030268320003000201BB000600102A01023842816755 10000000000B1337
+          [[ $DEBUG -eq 1 ]] && echo "$hash $len $line"
+               if [[ "${line:0:4}" == 0001 ]]; then                             # marker to proceed, belongs to SvcPriority, see rfc9460, 2.4.3
+                    svc_priority=$(printf "%0d" "$((10#${line:2:2}))")          # 1 is most often, 0 is alias
+                    if [[ $svc_priority == 1 ]]; then
+                         # mock text representation
+                         svc_priority="$svc_priority . "
+                         alpnID="${alpnID}${svc_priority}"
+                    fi
+                    if [[ ${line:8:2} == 01 ]]; then                            # Then comes SvcParamKeys, see rfc 14.3.2 which should be alpn=1
+                          alpnID="${alpnID}alpn=\""                             # double quote for clear text
+                    else
+                         continue                                               # If the 1st element is not alpn, next iteration of loop will fail.
+                    fi                                                          # Should we care as SvcParamKey!=alpn doesn't seems not very common?
+                    len_alpnID=${line:12:2}                                     # length of alpn entries (1st?)
+                    alpnID_wire=${line:16:4}                                    # value of first entry
+                    alpnID=${alpnID}$(hex2ascii $alpnID_wire)
+# from here it only works for one simple entry (like h2 or h2,h3)
+                    if [[ "$len_alpnID" != "03" ]]; then                        # 06 would be another entry e.g. h3, quote the rhs!
+                         alpnID_wire=${line:22:4}                               #FIXME: we can't cope with three entries yet
+                         alpnID="${alpnID},$(hex2ascii $alpnID_wire)"
+                    fi
+                    [[ ${line:8:2} == 01 ]] && alpnID="${alpnID}\""             # if alpn add trailing double quote
+
+# best is to check len and then stop now
+                    if [[ $len -eq 10 ]]; then
+                         [[ $DEBUG -eq 1 ]] && echo "end 10"
+                         break
+                    fi
+
+#                   len_alpnID=$((len_alpnID*2))                                # =>word! Now get name from 4th and value from 4th+len position...
+#                   alpnID="$(hex2ascii ${line:4:$len_alpnID})"
+#                   alpnID_wire="$(hex2ascii "${line:$((4+len_alpnID)):100}")"
+               else
+                    out "please report unknown HTTPS RR $line with flag @ $NODE"
+                    return 7
+               fi
+          done <<< "$raw_https"
+         safe_echo "$alpnID"
+     fi
+     return 0
+}
+
 
 # arg1: domain to check for. Returned will be the MX record as a string
 get_mx_record() {
@@ -23392,6 +23598,33 @@ determine_optimal_proto() {
 }
 
 
+dns_https_rr () {
+     local jsonID="DNS_HTTPS_rrecord"
+     local https_rr=""
+     local indent=""
+
+     out "$indent"; pr_bold " DNS HTTPS RR"; out " (expt.):   "
+     if [[ -n "$NODNS" ]]; then
+          out "(instructed to minimize/skip DNS queries)"
+          fileout "${jsonID}" "INFO" "check skipped as instructed"
+     elif "$DNS_VIA_PROXY"; then
+          out "(instructed to use the proxy for DNS only)"
+          fileout "${jsonID}" "INFO" "check skipped as instructed (proxy)"
+     else
+          https_rr="$(get_https_rrecord $NODE)"
+          if [[ -n "$https_rr" ]]; then
+               pr_svrty_good "yes" ; out ":  "
+               prln_italic "$(out_row_aligned_max_width "$https_rr" "$indent                              " $TERM_WIDTH)"
+               fileout "${jsonID}" "OK" "$https_rr"
+          else
+               outln "--"
+               fileout "${jsonID}" "INFO" " no resource record found"
+          fi
+     fi
+}
+
+
+
 # Check messages which needed to be processed. I.e. those which would have destroyed the nice
 # screen output and thus havve been postponed. This is just an idea and is only used once
 # but can be extended in the future. An array might be more handy
@@ -23442,7 +23675,7 @@ determine_service() {
           fi
           GET_REQ11="GET $URL_PATH HTTP/1.1\r\nHost: $NODE\r\nUser-Agent: $ua\r\n${basicauth_header}${reqheader}Accept-Encoding: identity\r\nAccept: */*\r\nConnection: Close\r\n\r\n"
           determine_optimal_proto
-          # returns always 0:
+          # returns always 0 and sets $SERVICE
           service_detection $OPTIMAL_PROTO
           check_msg
      else # STARTTLS
@@ -23515,7 +23748,7 @@ determine_service() {
                     determine_optimal_sockets_params
                     determine_optimal_proto "$1"
 
-                    out " Service set:$CORRECT_SPACES            STARTTLS via "
+                    pr_bold " Service set"; out ":$CORRECT_SPACES            STARTTLS via "
                     out "$(toupper "$protocol")"
                     [[ "$protocol" == mysql ]] && out " (experimental)"
                     fileout "service" "INFO" "$protocol"
@@ -23529,7 +23762,6 @@ determine_service() {
           # It comes handy later also for STARTTLS injection to define this global. When we do banner grabbing
           # or replace service_detection() we might not need that anymore
           SERVICE=$protocol
-
      fi
 
      tmpfile_handle ${FUNCNAME[0]}.txt
@@ -23595,7 +23827,7 @@ display_rdns_etc() {
           outln "$PROXYIP:$PROXYPORT "
      fi
      if [[ $(count_words "$IPADDRs2SHOW") -gt 1 ]]; then
-          out " Further IP addresses:   $CORRECT_SPACES"
+          pr_bold " Further IP addresses"; out ":   $CORRECT_SPACES"
           for ip in $IPADDRs2SHOW; do
                if [[ "$ip" == $NODEIP ]] || [[ "[$ip]" == $NODEIP ]]; then
                     continue
@@ -23616,11 +23848,11 @@ display_rdns_etc() {
                outln " A record via:          $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
           fi
      fi
+     pr_bold " rDNS "
+     out "$(printf "%-19s" "($nodeip):")"
      if [[ "$rDNS" =~ instructed ]]; then
-          out "$(printf " %-23s " "rDNS ($nodeip):")"
           out "$rDNS"
      elif [[ -n "$rDNS" ]]; then
-          out "$(printf " %-23s " "rDNS ($nodeip):")"
           out "$(out_row_aligned_max_width "$rDNS" "                         $CORRECT_SPACES" $TERM_WIDTH)"
      fi
 }
