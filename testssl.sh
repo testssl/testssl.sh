@@ -3604,7 +3604,6 @@ run_security_headers() {
                              "X-XSS-Protection INFO" \
                              "Access-Control-Allow-Origin INFO" \
                              "Access-Control-Allow-Credentials INFO" \
-                             "Permissions-Policy INFO" \
                              "Upgrade INFO" \
                              "X-Served-By INFO" \
                              "Referrer-Policy INFO" \
