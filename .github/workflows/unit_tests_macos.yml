@@ -45,6 +45,8 @@ jobs:
           printf "%s\n" "----------"
           bash --version
           printf "%s\n" "----------"
+          echo $PATH
+          printf "%s\n" "----------"
 
       - name: Install perl modules
         run: |
