@@ -22744,9 +22744,7 @@ get_https_rrecord() {
                     fi
                     if [[ ${line:8:2} == "01" ]]; then                          # Then comes SvcParamKeys, see rfc 14.3.2 which should be alpn=1
                           alpnID+="\""                                          # double quote for clear text
-                    else
-                         continue                                               # If the 1st element is not alpn, next iteration of loop will fail for now
-                    fi                                                          # Should we care as SvcParamKey!=alpn doesn't seems not very common?
+                    fi
                     len_alpnID="${line:12:2}"                                   # length of alpn entries, e.g. 03 or 06
                     alpnID_wire="${line:16:4}"                                  # value of first entry
                     alpnID="${alpnID}$(hex2ascii "$alpnID_wire")"
