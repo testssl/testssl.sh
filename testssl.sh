@@ -22726,6 +22726,9 @@ get_https_rrecord() {
 
      # Be aware that all variables are strings here! Therefore we use double quotes so that e.g. 03 won't become 3
      # For now the following only works for short entries like 1. alpn=h2,h3
+
+local text=""
+
      if [[ -z "$raw_https" ]]; then
           return 1
      elif [[ "$raw_https" =~ \#\ [0-9][0-9] ]]; then
@@ -22733,43 +22736,67 @@ get_https_rrecord() {
           read hash len line <<< "$raw_https"
           #           \# 10 00010000010003026832
           #           \# 36 000100000100030268320003000201BB000600102A01023842816755 10000000000B1337
-          [[ $DEBUG -eq 1 ]] && echo "$hash $len $line"
 
+               len=${len// /}                                                   # remove spaces
                if [[ "${line:0:4}" == 0001 ]]; then                             # marker to proceed, belongs to SvcPriority, see rfc9460, 2.4.3
                     svc_priority=$(printf "%0d" "$((10#${line:2:2}))")          # 1 is most often, 0 is alias
                     if [[ $svc_priority == "1" ]]; then
                          # mock text representation
-                         svc_priority+=" . "
-                         alpnID="${alpnID}${svc_priority}"
+                         svc_priority+=" . "                                    #FIXME? needs more testing
+                         text="${text}${svc_priority}"
                     fi
-                    if [[ ${line:8:2} == "01" ]]; then                          # Then comes SvcParamKeys, see rfc 14.3.2 which should be alpn=1
-                          alpnID+="\""                                          # double quote for clear text
-                    fi
-                    len_alpnID="${line:12:2}"                                   # length of alpn entries, e.g. 03 or 06
-                    alpnID_wire="${line:16:4}"                                  # value of first entry
-                    alpnID="${alpnID}$(hex2ascii "$alpnID_wire")"
-                    localPTR=20
-                    if [[ "$len_alpnID" == "06" ]]; then                        # 06 would be another entry e.g. h3, quote the rhs!
-                         alpnID_wire="${line:22:4}"                             #FIXME: we can't cope with three entries yet
-                         alpnID="${alpnID},$(hex2ascii "$alpnID_wire")"
-                         localPTR=26
-                    fi
-                    [[ ${line:8:2} == "01" ]] && alpnID+="\""                   # if alpn and we're done add trailing double quote
+                    len_entry=${line:12:2}
+                    len_entry=$(( ((10#$len_entry)) * 2 ))                      # make sure we count in the right system
+                    entry=${line:14:$len_entry}
 
-                    # done if localPTR / 2 = len or localPTR not empty
-                    echo "key: ${line:localPTR:4}"
-                    # key=1: alpn
-                    # key=3: port
-                    # key=4: IPv4
-                    # key=6: IPv6
-
+                    # Service Parameter Keys https://www.rfc-editor.org/info/rfc9460/#name-initial-contents
+                    case ${line:8:2} in
+                         00)  # "mandatory"
+                              ;;
+                         01)  # "alpn"
+                              text+=$(decode_https_rr_alpn $entry) ;;
+                         02)  # "no-default-alpn"
+                              ;;
+                         03)  # "port"
+                              ;;
+                         04)  # "ipv4hint"
+                              ;;
+                         05)  # "ech"
+                              ;;
+                         06)  # "ipv6hint"
+                              ;;
+                    esac
                else
                     out "please report unknown HTTPS RR $line with flag @ $NODE"
                     return 7
                fi
-         safe_echo "$alpnID"
+         safe_echo "$text"
+         [[ $DEBUG -eq 1 ]] && echo "$hash $len $line" >&2
+         [[ $DEBUG -eq 1 ]] && echo "key: ${line:localPTR:4}" >&2
      fi
      return 0
+}
+
+decode_https_rr_alpn() {
+     local entry="$1"
+     local -i len="${#entry}"
+     local -i ptr=0
+     local alpn_wire="" str=""
+     local alpn_len=""
+
+     ptr=0
+     while (( ptr < len )); do
+          [[ -n "$alpn_str" ]] && alpn_str+=","        # add a comma in the >=2 round
+          alpn_len=${entry:$ptr:2}
+          alpn_len=$(( ((10#$alpn_len)) * 2 ))         # conversion, make sure it's the right format
+
+          ptr=$((ptr + 2))                              # len field is always 2 bytes
+          alpn_wire=${entry:$ptr:$alpn_len}
+          str=$(hex2ascii $alpn_wire)
+          ptr=$((ptr + alpn_len))
+          alpn_str+="$str"
+     done
+     safe_echo "alpn=\"$alpn_str\""
 }
 
 
