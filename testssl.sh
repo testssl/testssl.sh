@@ -3609,7 +3609,14 @@ run_security_headers() {
                              "Referrer-Policy INFO" \
                              "X-UA-Compatible INFO" \
                              "Cache-Control INFO" \
-                             "Pragma INFO"; do
+                             "Pragma INFO" \
+                             "X-Permitted-Cross-Domain-Policies INFO" \
+                             "Origin-Agent-Cluster INFO" \
+                             "Document-Policy INFO" \
+                             "Clear-Site-Data INFO" \
+                             "Reporting-Endpoints INFO" \
+                             "Report-To INFO" \
+                             "NEL INFO"; do
           read header svrty <<< "${header_and_svrty}"
           [[ "$DEBUG" -ge 5 ]] &&  echo "testing \"$header\" (severity \"$svrty\")"
           match_httpheader_key "$header" "$header" "$spaces" "$first"
