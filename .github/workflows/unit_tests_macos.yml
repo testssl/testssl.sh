@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
 
     name: PoC unit test on MacOS
     steps:
