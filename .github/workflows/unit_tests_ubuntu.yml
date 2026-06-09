@@ -4,7 +4,7 @@
 name: CI run Ubuntu
 
 on:
-  pull_request: [3.3dev]
+  pull_request:
     paths-ignore:
       - 'utils/**'
       - 'doc/**'
