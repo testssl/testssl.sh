@@ -22393,8 +22393,10 @@ check_resolver_bins() {
 
      # Pre-checking the following for HTTPS RR, see get_https_rrecord()
      if "$HAS_DIG"; then
-          str=$(dig +short $testhost HTTPS)
-          if [[ -z "$str" ]] && [[ ! "$str" =~ 127.0.0.1 ]] ; then
+          str=$(dig $DIG_R +short $testhost HTTPS)
+          if [[ -z "$str" ]] && [[ ! "$str" =~ 127.0.0.1 ]] && \
+               # MacOS runners are problematic otherwise:
+               dig $DIG_R +nocomments $testhost HTTPS | grep -q 'IN.*HTTPS'; then
                HAS_DIG_HTTPS=true
           fi
      elif "$HAS_DRILL"; then
@@ -22642,7 +22644,7 @@ get_https_rrecord() {
      # "tail -1" and the awk commands make sure we use the right lines when we encounter a CNAME
      OPENSSL_CONF=""
      if "$HAS_DIG_HTTPS"; then
-          text_httpsrr="$(dig +short +search +timeout=3 +tries=3 $noidnout HTTPS "$1" 2>/dev/null | tail -1)"
+          text_httpsrr="$(dig $DIG_R +short +search +timeout=3 +tries=3 $noidnout HTTPS "$1" 2>/dev/null | tail -1)"
      elif "$HAS_DRILL_HTTPS"; then
           text_httpsrr="$(drill -Q HTTPS "$1" 2>/dev/null | tail -1)"
      elif "$HAS_HOST_HTTPS"; then
@@ -22707,7 +22709,7 @@ get_https_rrecord() {
      # 1 . alpn="h2" port=443 ipv6hint=2a01:238:4308:a920:1000:0:b:1337
      #
      # 36 000100000100030268320003000201BB000600102A0102384308A920 10000000000B1337
-     # TL      alpn|   L  h 2           443       2a010238...                               L=len of alpn entries, TL=total length of the following by, excluding spaces
+     # TL      alpn|   L  h 2    |<port 443       2a010238...                               L=len of alpn entries, TL=total length of the following by, excluding spaces
      #
      # -----------------
      # testssl.net (here hown over a couple of lines):
@@ -22750,20 +22752,22 @@ local text=""
 
                     # Service Parameter Keys https://www.rfc-editor.org/info/rfc9460/#name-initial-contents
                     case ${line:8:2} in
-                         00)  # "mandatory"
+                         00)  # = "mandatory", skipping that
                               ;;
-                         01)  # "alpn"
+                         01)  # = "alpn"
                               text+=$(decode_https_rr_alpn $entry) ;;
-                         02)  # "no-default-alpn"
+                         02)  # = "no-default-alpn", skipping that
                               ;;
-                         03)  # "port"
-                              ;;
-                         04)  # "ipv4hint"
-                              ;;
-                         05)  # "ech"
-                              ;;
-                         06)  # "ipv6hint"
-                              ;;
+                         03)  # = "port"
+                              text+=$(decode_https_rr_port $entry) ;;
+                         04)  # = "ipv4hint"
+                              text+=$(decode_https_rr_ipv4hint $entry) ;;
+                         05)  # = "ech"
+                              text+=$(decode_https_rr_ech $entry) ;;
+                         06)  # = "ipv6hint"
+                              text+=$(decode_https_rr_ipv6hint $entry) ;;
+                         07)  # = "dohpath"
+                              text+=$(decode_https_rr_dohpath $entry) ;;
                     esac
                else
                     out "please report unknown HTTPS RR $line with flag @ $NODE"
@@ -22776,6 +22780,8 @@ local text=""
      return 0
 }
 
+# key 1 — alpn: one or more length-prefixed protocol strings
+#
 decode_https_rr_alpn() {
      local entry="$1"
      local -i len="${#entry}"
@@ -22783,13 +22789,12 @@ decode_https_rr_alpn() {
      local alpn_wire="" str=""
      local alpn_len=""
 
-     ptr=0
      while (( ptr < len )); do
           [[ -n "$alpn_str" ]] && alpn_str+=","        # add a comma in the >=2 round
           alpn_len=${entry:$ptr:2}
           alpn_len=$(( ((10#$alpn_len)) * 2 ))         # conversion, make sure it's the right format
 
-          ptr=$((ptr + 2))                              # len field is always 2 bytes
+          ptr=$((ptr + 2))                             # len field is always 2 bytes
           alpn_wire=${entry:$ptr:$alpn_len}
           str=$(hex2ascii $alpn_wire)
           ptr=$((ptr + alpn_len))
@@ -22797,6 +22802,109 @@ decode_https_rr_alpn() {
      done
      safe_echo "alpn=\"$alpn_str\""
 }
+
+# key 3 — port: single u16 override port
+#
+decode_https_rr_port() {
+     local entry="$1"
+     local -i len="${#entry}"
+     local -i ptr=2
+     local port_wire="" str=""
+
+     # we assume it's one port only and it starts at $ptr and is $len-$ptr long
+     port_wire=${entry:$ptr:$((len - ptr))}
+     str=$((16#$port_wire))                            # hex2dec
+     port_str+="$str"
+     safe_echo "port=\"$port_str\""
+}
+
+# key 4 — ipv4hint: one or more 4-byte IPv4 addresse
+#
+decode_https_rr_ipv4() {
+     local entry="$1"
+     local -i len="${#entry}"
+     local -i ptr=2
+     local ipv4_wire="" str=""
+     # we currently don't need that:
+     # local nr_ips="${1:0:2}"
+
+     while (( ptr < len )); do
+          ipv4_wire=${entry:$ptr:2}
+          str=$((16#$ipv4_wire))                       # hex2dec
+          ipv4_str+="$str"
+
+          # if the end is not reached yet
+          #    after address 2,4,6, 10,12,14, ... we need a dot
+          #    after address 18,    16,       ... we need a comma
+
+          if [[ $len -ne $((ptr + 2)) ]]; then
+               if [[ $((ptr % 8 )) -eq 0 ]] ; then
+                    ipv4_str+=","
+               else
+                    ipv4_str+="."
+               fi
+          fi
+          ptr=$((ptr + 2))                             # two bytes per octet
+     done
+     safe_echo "ipv4hint=\"$ipv4_str\""
+}
+
+
+# key 5 — ech: opaque ECHConfigList blob, show as truncated hex
+#
+decode_https_rr_ech() {
+     echo
+}
+
+
+# key 6 — ipv6hint: one or more 16-byte IPv6 addresses
+#FIXME: doesn't do IPv6 compression yet
+decode_https_rr_ipv6() {
+     local entry="$1"
+     local -i len="${#entry}"
+     local -i ptr=2                                    # we start at pos 2
+     local ipv6_wire="" str=""
+     # local nr_ips="${1:0:2}"
+
+     while (( ptr < len )); do
+          ipv6_wire=${entry:$ptr:4}
+          ipv6_str+="$ipv6_wire"
+
+          # We have 8 octets filled with zero if needed --> 32 chars
+
+          if [[ $len -ne $((ptr + 4)) ]]; then
+               if [[ $((ptr % 30 )) -eq 0 ]] ; then    # we have two bytes pointer 30+2=32
+                    ipv6_str+=","
+               else
+                    ipv6_str+=":"
+               fi
+          fi
+          ptr=$((ptr + 4))                             # two byte per octett
+     done
+
+     ipv6_str="$(tolower "$ipv6_str")"
+
+     safe_echo "ipv6hint=\"$ipv6_str\""
+}
+
+
+# key 7 — dohpath: UTF-8 URI template for DNS-over-HTTPS
+#FIXME --> to test!
+#
+decode_dohpath() {
+     local entry="$1"
+     local -i len="${#entry}"
+    # local len=$1
+     local path=""
+     local -i i
+
+     for (( i = 0; i < len; i++ )); do
+         path+=$(printf "\\$(printf '%03o' "${PARAM_VALUE_BYTES[$i]}")")
+     done
+     safe_echo "$path"
+}
+
+
 
 
 # arg1: domain to check for. Returned will be the MX record as a string
