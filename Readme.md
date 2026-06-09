@@ -20,7 +20,7 @@ This would display the latest tag which is from the 3.2 branch. Here we don't ha
 [![CI test Ubuntu](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml/badge.svg??branch=3.3dev)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml)
 [![CI test MacOS](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml/badge.svg?branch=3.3dev)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml)
 
-At least as long as we're experiementing with PRs this should be not presented as it leaves the impression, the current brnach is broken, see #2794
+At least as long as we're experimenting with PRs this should be not presented as it looks like the current branch is broken, see #2794
 
 -->
 ![Mastodon Follow](https://img.shields.io/mastodon/follow/109319848143024146?domain=infosec.exchange)
