@@ -22707,12 +22707,16 @@ get_https_rrecord() {
      # https_rr_raw_parser() takes care of that. Format is like: https://www.rfc-editor.org/rfc/rfc3597 (plus updates)
 
      local -i i=0
+     local -i nr_lines=$(grep -c '^' <<< "$raw_https")
+     # In rare cases there can be two lines (sodiao.cc) or more
      while IFS= read -r line; do
           https_rr_raw_parser "$line" || return 1
+          [[ $nr_lines -eq 1 ]] && break               # return here for a one liner, otherwise next time we hit return 1
           ((i++))
-          # in rare cases there can be two lines (sodiao.cc) or more, #FIXME: output formatting is wrong
-          [[ "$raw_https" == *$'\n'* ]] && [[ $i -ge 1 ]] && outln
+          [[ $i -eq $nr_lines ]] && break              # we hit the last line
+          [[ $i -ge 1 ]] && out " / "                  # hack: two lines are merged into one output line and separated by "/"
      done <<< "$raw_https"
+     return 0
 }
 
 
