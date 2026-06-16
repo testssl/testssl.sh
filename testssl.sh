@@ -22623,15 +22623,10 @@ get_caa_rrecord() {
 #
 get_https_rrecord() {
      local raw_https=""
-     local hash="" line=""
-     local len           # better fix as integer?
-     local len_alpnID=""
-     local alpnID=""
-     local alpnID_wire=""
+     local line=""
      local saved_openssl_conf="$OPENSSL_CONF"
      local all_https=""
      local noidnout=""
-     local svc_priority=""
 
      [[ -n "$NODNS" ]] && return 2          # if minimum DNS lookup was instructed, leave here
      "$HAS_DIG_NOIDNOUT" && noidnout="+noidnout"
@@ -22642,6 +22637,8 @@ get_https_rrecord() {
      # in clear text and also we can avoid to parse the encoded formats.
 
      # "tail -1" and the awk commands make sure we use the right lines when we encounter a CNAME
+     #FIXME: likely causes a problem with mulitline RR
+
      OPENSSL_CONF=""
      if "$HAS_DIG_HTTPS"; then
           text_httpsrr="$(dig $DIG_R +short +search +timeout=3 +tries=3 $noidnout HTTPS "$1" 2>/dev/null | tail -1)"
@@ -22702,80 +22699,100 @@ get_https_rrecord() {
      fi
      OPENSSL_CONF="$saved_openssl_conf"      # We're done now with openssl, see https://github.com/drwetter/testssl.sh/issues/134
 
-     # Now comes the third, more tricky part and the last straw --> parsing the hex stream which was returned if it was returned.
-     # Format is like: https://www.rfc-editor.org/rfc/rfc3597 (plus updates)
-
-     # dev.testssl.sh:
-     # 1 . alpn="h2" port=443 ipv6hint=2a01:238:4308:a920:1000:0:b:1337
-     #
-     # 36 000100000100030268320003000201BB000600102A0102384308A920 10000000000B1337
-     # TL      alpn|   L  h 2    |<port 443       2a010238...                               L=len of alpn entries, TL=total length of the following by, excluding spaces
-     #
-     # -----------------
-     # testssl.net (here hown over a couple of lines):
-     # 1 . alpn="h3,h2" ipv4hint=104.21.34.154,172.67.205.231 ech=AEX+DQBBpwAgACBX+HNhx7WjuM08AoiSaQ01KGNiPa1OA9M7IxpMPIuwKwAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:3031::ac43:cde7,2606:4700:3036::6815:229a
-     # ECH is the encrypted client hello --> for esni (https://datatracker.ietf.org/doc/draft-ietf-tls-esni/)
-     # Nice description: https://www.netmeister.org/blog/https-rrs.html
-     #
-     # 1. alpn="h3,h2" ipv4hint=104.21.34.154,172.67.205.231
-     # 136 00010000010006026833026832000400086815229AAC43CDE7000500 470045FE0D0041F3002000202BD0935ED66980C1862F2570C0D6014D
-     # TL       alpn|    L  h 3 L h 2        |IPv4#1||IPv4#2|
-     #
-     # ech=AEX+DQBBzgAgACBQGA9EFbz+PkJAXSXtcqJluxLlhxIgzhJ+GhTtRd4nJQAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:3031::ac43:cde7,2606:4700:3036::6815:229a
-     # 733A7CFAAEA5E4DD9CA43D4C24199E330004000100010012636C6F75 64666C6172652D6563682E636F6D0000000600202606470030310000 00000000AC43CDE72606470030360000000000006815229A
-     #                                                 | cloudflare-ech.com                |            IPv6#1                           #IPv6#2
-
-     # Be aware that all variables are strings here! Therefore we use double quotes so that e.g. 03 won't become 3
-     # For now the following only works for short entries like 1. alpn=h2,h3
-
-local text=""
-
      if [[ -z "$raw_https" ]]; then
           return 1
-     elif [[ "$raw_https" =~ \#\ [0-9][0-9] ]]; then
-          # signals that we're on the right track with type65 interpretation
-          read hash len line <<< "$raw_https"
-          #           \# 10 00010000010003026832
-          #           \# 36 000100000100030268320003000201BB000600102A01023842816755 10000000000B1337
+     fi
 
-               len=${len// /}                                                   # remove spaces
-               if [[ "${line:0:4}" == 0001 ]]; then                             # marker to proceed, belongs to SvcPriority, see rfc9460, 2.4.3
-                    svc_priority=$(printf "%0d" "$((10#${line:2:2}))")          # 1 is most often, 0 is alias
-                    if [[ $svc_priority == "1" ]]; then
-                         # mock text representation
-                         svc_priority+=" . "                                    #FIXME? needs more testing
-                         text="${text}${svc_priority}"
+     # Now comes the third, tricky part (old dig for Macs e.g.) --> parsing the hex stream which was returned if it was returned.
+     # https_rr_raw_parser() takes care of that. Format is like: https://www.rfc-editor.org/rfc/rfc3597 (plus updates)
+
+     local -i i=0
+     while IFS= read -r line; do
+          https_rr_raw_parser "$line" || return 1
+          ((i++))
+          # in rare cases there can be two lines (sodiao.cc) or more, #FIXME: output formatting is wrong
+          [[ "$raw_https" == *$'\n'* ]] && [[ $i -ge 1 ]] && outln
+     done <<< "$raw_https"
+}
+
+
+https_rr_raw_parser () {
+     local raw_https="$1"
+     local hash="" line=""
+     local len=""  len_next_entry=""
+     local svc_priority="" svc_key=""
+     local text=""
+     local -i ptr=0
+     local first=true
+
+     if [[ "$raw_https" =~ \#\ [0-9][0-9] ]]; then                         # check we're on the right track with type65 interpretation
+          read hash len line <<< "$raw_https"
+
+          # testssl.sh       \# 10 00010000010003026832       --> 1. alpn="h2"
+          # dev.testssl.sh   \# 36 000100000100030268320003000201BB000600102A01023842816755 10000000000B1337 ----> 1. alpn="h2" port=443 ipv6hint=2a01:238:4281:6755:1000:0:b:1337
+          # google.com       \# 13 00010000010006026832026833 --> 1. alpn="h2,h3"
+          # b-cdn.net        \# 27 0001000001000C02683208687474702F312E3100040004A996F722 --> alpn="h2,http/1.1" ipv4hint=169,150.247.34
+          # testssl.net     \# 136 00010000010006026833026832000400086815229AAC43CDE7000500 470045FE0D0041F3002000202BD0935ED66980C1862F2570C0D6014D 733A7CFAAEA5E4DD9CA43D4C24199E330004000100010012636C6F75 64666C6172652D6563682E636F6D0000000600202606470030310000 00000000AC43CDE72606470030360000000000006815229A
+          #               --> 1. alpn="h3,h2" ipv4hint=104.21.34.154,172.67.205.231 ech=AEX+DQBB1gAgACDasOut8j3EAZ6Rc04Wy0Vm+fj/SiHZWUZIeH3bRtoyAQAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA= ipv6hint=2606:4700:3031::ac43:cde7,2606:4700:3036::6815:229a
+          # more @ https://github.com/yzzhn/imc2024dnshttps
+
+          line=${line// /}                                                 # remove spaces
+          if [[ $((len * 2)) -ne ${#line} ]]; then                         # again a consistency check
+               echo "inconsistent length for type65 hex stream parsing"
+               return 1
+          fi
+          if [[ "${line:0:4}" =~ ^(0001|0002)$ ]]; then                    # marker to proceed, belongs to SvcPriority, see rfc9460, 2.4.3
+               svc_priority=$(printf "%0d" "$((10#${line:2:2}))")          # 1 is most often, 2 is possible, 0 is alias (to be tested)
+               if [[ $svc_priority =~ ^(1|2)$ ]]; then
+                    # mock text representation
+                    svc_priority+=" . "                                    #FIXME: what about 0?
+                    text="${text}${svc_priority}"
+                    ptr=6                                                  # This is at the start
+               fi
+               while (( ptr < ${#line} )); do
+                    if "$first"; then
+                         first=false
+                    else
+                         text+=" "
                     fi
-                    len_entry=${line:12:2}
-                    len_entry=$(( ((10#$len_entry)) * 2 ))                      # make sure we count in the right system
-                    entry=${line:14:$len_entry}
+                    ptr=$(( ptr + 2 ))
+                    svc_key=${line:$ptr:2}
+                    ptr=$(( ptr + 4 ))
+
+                    len_next_entry=${line:$ptr:2}
+                    len_next_entry=$((16#${len_next_entry}))                # it's a hex number
+                    len_next_entry=$((len_next_entry * 2 ))
+                    ptr=$(( ptr + 2 ))
+                    entry=${line:$ptr:$len_next_entry}
+
+                    debugme echo "-- $svc_key : $entry ($len_next_entry) --"
 
                     # Service Parameter Keys https://www.rfc-editor.org/info/rfc9460/#name-initial-contents
-                    case ${line:8:2} in
+                    case $svc_key in
                          00)  # = "mandatory", skipping that
                               ;;
-                         01)  # = "alpn"
-                              text+=$(decode_https_rr_alpn $entry) ;;
-                         02)  # = "no-default-alpn", skipping that
+                         01)  text+=$(decode_https_rr_alpn $entry)
                               ;;
-                         03)  # = "port"
-                              text+=$(decode_https_rr_port $entry) ;;
-                         04)  # = "ipv4hint"
-                              text+=$(decode_https_rr_ipv4hint $entry) ;;
-                         05)  # = "ech"
-                              text+=$(decode_https_rr_ech $entry) ;;
-                         06)  # = "ipv6hint"
-                              text+=$(decode_https_rr_ipv6hint $entry) ;;
-                         07)  # = "dohpath"
-                              text+=$(decode_https_rr_dohpath $entry) ;;
-                    esac
-               else
-                    out "please report unknown HTTPS RR $line with flag @ $NODE"
-                    return 7
-               fi
-         safe_echo "$text"
-         [[ $DEBUG -eq 1 ]] && echo "$hash $len $line" >&2
-         [[ $DEBUG -eq 1 ]] && echo "key: ${line:localPTR:4}" >&2
+                         02)  text+="no-default-alpn"
+                              ;;
+                         03)  text+=$(decode_https_rr_port $entry)
+                              ;;
+                         04)  text+=$(decode_https_rr_ipv4 $entry)
+                              ;;
+                         05)  text+=$(decode_https_rr_ech $entry)
+                              ;;
+                         06)  text+=$(decode_https_rr_ipv6 $entry)
+                              ;;
+                         07)  text+=$(decode_https_rr_dohpath $entry)
+                              ;;
+                         esac
+                    ptr=$((10#${#entry} + ptr ))
+               done
+          else
+               safe_echo "please report unknown HTTPS RR $line from $NODE"
+               return 1
+          fi
+          safe_echo "$text"
      fi
      return 0
 }
@@ -22792,7 +22809,7 @@ decode_https_rr_alpn() {
      while (( ptr < len )); do
           [[ -n "$alpn_str" ]] && alpn_str+=","        # add a comma in the >=2 round
           alpn_len=${entry:$ptr:2}
-          alpn_len=$(( ((10#$alpn_len)) * 2 ))         # conversion, make sure it's the right format
+          alpn_len=$(( ((10#$alpn_len)) * 2 ))         # also make sure it's a number
 
           ptr=$((ptr + 2))                             # len field is always 2 bytes
           alpn_wire=${entry:$ptr:$alpn_len}
@@ -22803,30 +22820,27 @@ decode_https_rr_alpn() {
      safe_echo "alpn=\"$alpn_str\""
 }
 
-# key 3 — port: single u16 override port
+# key 3 — port: single one
 #
 decode_https_rr_port() {
      local entry="$1"
      local -i len="${#entry}"
-     local -i ptr=2
      local port_wire="" str=""
 
-     # we assume it's one port only and it starts at $ptr and is $len-$ptr long
-     port_wire=${entry:$ptr:$((len - ptr))}
-     str=$((16#$port_wire))                            # hex2dec
+     # we assume it's one port only and it starts at $ptr and is $len long
+     port_wire=${entry:0:$len}                         # we start @ pos=0 and assume, it's one port only, otherwise we need to extend this, see ipv6 func e.g.
+     str=$((16#$port_wire))                            # hex2dec. Works too: printf "%d\n" "0x$port_wire"
      port_str+="$str"
-     safe_echo "port=\"$port_str\""
+     safe_echo "port=${port_str}"
 }
 
-# key 4 — ipv4hint: one or more 4-byte IPv4 addresse
+# key 4 — ipv4hint: one or more 4-byte IPv4 addresses
 #
 decode_https_rr_ipv4() {
      local entry="$1"
      local -i len="${#entry}"
-     local -i ptr=2
+     local -i ptr=0                                    # we start @ pos=0
      local ipv4_wire="" str=""
-     # we currently don't need that:
-     # local nr_ips="${1:0:2}"
 
      while (( ptr < len )); do
           ipv4_wire=${entry:$ptr:2}
@@ -22838,7 +22852,7 @@ decode_https_rr_ipv4() {
           #    after address 18,    16,       ... we need a comma
 
           if [[ $len -ne $((ptr + 2)) ]]; then
-               if [[ $((ptr % 8 )) -eq 0 ]] ; then
+               if [[ $(( ((ptr + 2 )) % 8 )) -eq 0 ]] ; then
                     ipv4_str+=","
                else
                     ipv4_str+="."
@@ -22846,65 +22860,90 @@ decode_https_rr_ipv4() {
           fi
           ptr=$((ptr + 2))                             # two bytes per octet
      done
-     safe_echo "ipv4hint=\"$ipv4_str\""
+     safe_echo "ipv4hint=${ipv4_str}"
 }
 
 
-# key 5 — ech: opaque ECHConfigList blob, show as truncated hex
+# key 5 — encrypted client hello: pub key and more
 #
 decode_https_rr_ech() {
-     echo
+     # cloudflare-ech.com (base64 format conversion between the two):
+     #    text format: AEX+DQBB+QAgACD4885ZLoES1IllBXr15/nI6vPXjTcxfiM02O8nxfZgXwAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA=
+     #    wire format: 0045FE0D0041F900200020F8F3CE592E8112D48965057AF5E7F9C8EAF3D78D37317E2334D8EF27C5F6605F0004000100010012636C6F7564666C6172652D6563682E636F6D0000
+
+# interpretation from claude.ai, to be double checked:
+# 00 45                            ECHConfigList.length = 0x0045 = 69
+#   FE 0D                          ECHConfig.version    = 0xfe0d (ECH draft-13)
+#   00 41                          ECHConfig.length      = 0x0041 = 65
+#     F9                            config_id  = 0xF9 (249)
+#     00 20                         kem_id     = 0x0020 = DHKEM(X25519, HKDF-SHA256)
+#     00 20                         public_key_len = 32
+#     F8 F3 CE 59 2E 81 12 D4
+#     89 65 05 7A F5 E7 F9 C8
+#     EA F3 D7 8D 37 31 7E 23
+#     34 D8 EF 27 C5 F6 60 5F      public_key (32 bytes, X25519 pubkey)
+#     00 04                         cipher_suites_len = 4
+#     00 01 00 01                   one suite: KDF=0x0001 (HKDF-SHA256), AEAD=0x0001 (AES-128-GCM)
+#     00                            maximum_name_length = 0
+#     12                            public_name_len = 18
+#     63 6C 6F 75 64 66 6C 61
+#     72 65 2D 65 63 68 2E 63
+#     6F 6D                         public_name = "cloudflare-ech.com"
+#     00 00                         extensions_len = 0
+
+     # for now we just encode the wire format to the base64 format
+     safe_echo "ech=$(hex2ascii "$1" | $OPENSSL base64 -A 2>/dev/null)"
 }
 
-
 # key 6 — ipv6hint: one or more 16-byte IPv6 addresses
-#FIXME: doesn't do IPv6 compression yet
+#
 decode_https_rr_ipv6() {
      local entry="$1"
      local -i len="${#entry}"
-     local -i ptr=2                                    # we start at pos 2
      local ipv6_wire="" str=""
-     # local nr_ips="${1:0:2}"
+     local -i ptr=0                                    # we start @ pos=0
 
      while (( ptr < len )); do
-          ipv6_wire=${entry:$ptr:4}
+          ipv6_wire=${entry:$ptr:4}                    # we have 8 hextets, length 4, filled with zero if needed --> 32 chars
           ipv6_str+="$ipv6_wire"
 
-          # We have 8 octets filled with zero if needed --> 32 chars
-
           if [[ $len -ne $((ptr + 4)) ]]; then
-               if [[ $((ptr % 30 )) -eq 0 ]] ; then    # we have two bytes pointer 30+2=32
+               if [[ $(( ((ptr + 4)) % 32 )) -eq 0 ]]; then    # we have two bytes pointer 30+2=32
                     ipv6_str+=","
                else
                     ipv6_str+=":"
                fi
           fi
-          ptr=$((ptr + 4))                             # two byte per octett
+          ptr=$((ptr + 4))                             # two byte per hextets
      done
 
      ipv6_str="$(tolower "$ipv6_str")"
 
-     safe_echo "ipv6hint=\"$ipv6_str\""
+     # poor man's compression, max 5 zero hextets
+     ipv6_str=${ipv6_str//:0000:0000:0000:0000:0000:/::}
+     ipv6_str=${ipv6_str//:0000:0000:0000:0000:/::}
+     ipv6_str=${ipv6_str//:0000:0000:0000:/::}
+     ipv6_str=${ipv6_str//:0000:0000:/::}
+     ipv6_str=${ipv6_str//:0000:/::}
+
+     # strip up to 3 leading zeros in a hextet
+     ipv6_str=${ipv6_str//:0/:}
+     ipv6_str=${ipv6_str//:0/:}
+     ipv6_str=${ipv6_str//:0/:}
+
+     safe_echo "ipv6hint=${ipv6_str}"
 }
 
-
 # key 7 — dohpath: UTF-8 URI template for DNS-over-HTTPS
-#FIXME --> to test!
+#FIXME: likely doesn't work, not tested
 #
 decode_dohpath() {
      local entry="$1"
      local -i len="${#entry}"
-    # local len=$1
-     local path=""
-     local -i i
+     local path=$( hex2ascii "$1" )
 
-     for (( i = 0; i < len; i++ )); do
-         path+=$(printf "\\$(printf '%03o' "${PARAM_VALUE_BYTES[$i]}")")
-     done
-     safe_echo "$path"
+     safe_echo "$path (please report this @ github)"
 }
-
-
 
 
 # arg1: domain to check for. Returned will be the MX record as a string
@@ -23748,7 +23787,10 @@ dns_https_rr () {
           # append a dot if there was none
           [[ $https_rr_node =~ '.'$ ]] || https_rr_node+="."
           https_rr="$(get_https_rrecord $https_rr_node)"
-          if [[ -n "$https_rr" ]]; then
+          if [[ $? -ne 0 ]]; then
+               prln_warning "$https_rr"
+               fileout "${jsonID}" "WARN" "$https_rr"
+          elif [[ -n "$https_rr" ]]; then
                pr_svrty_good "yes" ; out ": "
                prln_italic "$(out_row_aligned_max_width "$https_rr" "$indent                              " $TERM_WIDTH)"
                fileout "${jsonID}" "OK" "$https_rr"
