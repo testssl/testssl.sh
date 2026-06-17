@@ -35,7 +35,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No generated changes to commit"
           else
-            git commit -m "Auto-generate docs from NAME.md [skip ci]"
+            git commit -m "Auto-generate docs from testssl.1.md [skip ci]"
             git push
           fi
 
