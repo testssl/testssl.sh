@@ -1,7 +1,7 @@
 name: Build Documentation
 
 on:
-  push:
+  pull_request:
     paths:
       - "docs/testssl.1.md"
 
