@@ -1,0 +1,23 @@
+name: Build Documentation
+
+on:
+  push:
+    paths:
+      - "docs/testssl.1.md"
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc make
+
+      - name: Build documentation
+        working-directory: docs
+        run: make
