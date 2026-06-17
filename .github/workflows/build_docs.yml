@@ -25,7 +25,9 @@ jobs:
 
       - name: Build documentation
         working-directory: doc
-        run: make
+        run: make -B
+        # -B ensures build when doc/testssl.1.md changes. When checking out the md file
+        # it probably might have a time stamp which indicates nothing has changed
 
       - name: Commit and push generated doc files
         run: |
