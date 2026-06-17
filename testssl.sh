@@ -3078,8 +3078,8 @@ run_hsts() {
           case "$(check_hsts_preloadlist_value "$NODE" "status")" in
                "unknown") # Not found in the HSTS preload list
                     case "$preloadcombined" in
-                         "000" | "001" | "010" | "011") outln "unknown"; fileout "${jsonID}${json_postfix}" "INFO" "unknown" ;;
-                         "100" | "101" | "110" | "111") pr_svrty_low "unknown"; outln " -- submit to HSTS preload list"; fileout "${jsonID}${json_postfix}" "LOW" "unknown" ;;
+                         "000" | "001" | "010" | "011") outln "no entry"; fileout "${jsonID}${json_postfix}" "INFO" "no entry" ;;
+                         "100" | "101" | "110" | "111") pr_svrty_low "no entry"; outln " -- submit to HSTS preload list"; fileout "${jsonID}${json_postfix}" "LOW" "no entry" ;;
                     esac
                     ;;
                "pending") # Currently in the HSTS pending list

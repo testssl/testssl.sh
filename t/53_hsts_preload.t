@@ -41,7 +41,7 @@ system("@args") == 0
 $cat_csv=`cat $csv`;
 
 # example.com is not on the preload list
-like($cat_csv, qr/"HSTS_preloadlist".*"unknown"/,"\"$uri\" should not be on the HSTS preload list");
+like($cat_csv, qr/"HSTS_preloadlist".*"no entry"/,"\"$uri\" should not be on the HSTS preload list");
 $tests++;
 unlink $csv;
 
