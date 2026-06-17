@@ -3,15 +3,19 @@ name: Build Documentation
 on:
   pull_request:
     paths:
-      - "docs/testssl.1.md"
+      - "doc/testssl.1.md"
 
 jobs:
   build-docs:
     runs-on: ubuntu-26.04
+    # Skip fork PRs: GITHUB_TOKEN can't push to a fork's branch
+    if: github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Install dependencies
         run: |
@@ -19,5 +23,18 @@ jobs:
           sudo apt-get install -y pandoc make
 
       - name: Build documentation
-        working-directory: docs
+        working-directory: doc
         run: make
+
+      - name: Commit and push generated doc files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No generated changes to commit"
+          else
+            git commit -m "Auto-generate docs from NAME.md [skip ci]"
+            git push
+          fi
+
