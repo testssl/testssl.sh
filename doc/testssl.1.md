@@ -1,6 +1,6 @@
 
 ## NAME
-   testssl.sh -- check encryption of SSL/TLS servers
+   testssl.sh -- check TLS/SSL encryption of servers
 
 ## SYNOPSIS
 
@@ -36,7 +36,7 @@ linked OpenSSL binaries for major operating systems are supplied in `./bin/`.
 
 `testssl.sh URI` as the default invocation does the so-called default run which does a number of checks and puts out the results colorized (ANSI and termcap) on the screen. It does every check listed below except `-E` which are (order of appearance):
 
-0) displays a banner (see below), does a DNS lookup also for further IP addresses and does for the returned IP address a reverse lookup. Last but not least a service check is being done. 
+0) displays a banner (see below), does a DNS lookup also for further IP addresses and does for the returned IP address a reverse lookup. Last but not least a service check is being done.
 
 1) SSL/TLS protocol check
 
