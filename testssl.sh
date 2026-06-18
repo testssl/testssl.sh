@@ -10191,7 +10191,7 @@ certificate_info() {
           out " ($enddate). "
           # Match Subject/Issuer on next 5 lines, where the CN is (4 lines is fine in most cases, 5 should suffice for all certs)
           cn="$(awk '/Subject:/{stop=NR+5}; NR<=stop' <<< "${intermediate_certs_txt[i]}" | awk -F= '/CN/ { print $NF }')"
-          issuer_CN="$(awk '/Issuer:/{stop=NR+5}; NR<=stop' <<< "${intermediate_certs_txt[i]}" | awk -F= '/CN/ { print $NF }')"
+          issuer_CN="$(awk '/Issuer:/{stop=NR+7}; NR<=stop' <<< "${intermediate_certs_txt[i]}" | awk -F= '/CN/ { print $NF }')"
           # to catch errors like #2789 during unit test:
           [[ -z "$cn" ]] && cn="FIXME: cn error"
           [[ -z "$issuer_CN" ]] && issuer_CN="FIXME: issuer_CN error"
