@@ -242,7 +242,7 @@ SSL_RENEG_WAIT=${SSL_RENEG_WAIT:-0.25}   # time between SSL Renegotiation checks
 LC_COLLATE=""                           # ensures certain regex patterns work as expected and aren't localized, see setup_lc_collate()
 HAS_LOCALE=false
 SYSTEM2=""                              # currently only being used for WSL = bash on windows
-PRINTF=""                               # which external printf to use. Empty presets the internal one, see #1130
+PRINTF="${PRINTF:-''}"                  # which external printf to use. Empty presets the internal one, see #1130
 CIPHERS_BY_STRENGTH_FILE=""
 TLS_DATA_FILE=""                        # mandatory file for socket-based handshakes
 OPENSSL=""                              # ~/bin/openssl.$(uname).$(uname -m) if you run this from GitHub. Linux otherwise probably /usr/bin/openssl
@@ -21207,18 +21207,25 @@ setup_lc_collate() {
 choose_printf() {
      local p ptf
 
+     # external supplied PRINTF overrides everything
+     [[ -n "$PRINTF" ]] && [[ -x "$PRINTF" ]] && return 0
+
+     # This now (2025) works under Linux and saves time as opposed to /usr/bin/printf.
+     # This worked on MacOS also before
+     if type -t printf | grep -q builtin; then
+          if printf "\xc0\x14\x00\xc0\xff\xee" | hexdump -C | grep -q 'c0 14 00 c0 ff ee'; then
+               PRINTF=""
+               return 0
+          fi
+     fi
      ptf="$(type -aP printf)"
      if [[ -n "$ptf" ]]; then
           for p in $ptf; do
-               if $p "\xc0\x14\xc0\xff\xee" | hexdump -C | grep -q 'c0 14 c0 ff ee'; then
+               if $p "\xc0\x14\x00\xc0\xff\xee" | hexdump -C | grep -q 'c0 14 00 c0 ff ee'; then
                     PRINTF=$p
                     return 0
                fi
           done
-     fi
-     if type -t printf >/dev/null; then
-          PRINTF=""
-          return 0
      fi
      fatal "Neither external printf nor shell internal found. " $ERR_CLUELESS
 }
