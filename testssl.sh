@@ -21153,6 +21153,7 @@ find_openssl_binary() {
      local openssl_location="" cwd=""
      local curve="" ossl_tls13_supported_curves
      local ossl_line1="" yr=""
+     local ossl_probe_timeout=""
      # FIXME: At the moment curves_ossl does not include any post-quantum key-exchange
      # groups (e.g., MLKEM512, MLKEM768, MLKEM1024, SecP256r1MLKEM768, X25519MLKEM768,
      # SecP384r1MLKEM1024, curveSM2MLKEM768). They do not need to be included since they are only
@@ -21308,18 +21309,20 @@ find_openssl_binary() {
 
      $OPENSSL ciphers -s 2>&1 | grep -aiq "unknown option" || OSSL_CIPHERS_S="-s"
 
-     $OPENSSL s_client -ssl2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SSL2=true
-     $OPENSSL s_client -ssl3 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SSL3=true
-     $OPENSSL s_client -tls1 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS1=true
-     $OPENSSL s_client -tls1_1 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS11=true
-     $OPENSSL s_client -tls1_2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS12=true
-     $OPENSSL s_client -tls1_3 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS13=true
-     $OPENSSL s_client -no_ssl2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NO_SSL2=true
+     type -p timeout &>/dev/null && ossl_probe_timeout="timeout 1"
 
-     $OPENSSL genpkey -algorithm X448 2>&1 | grep -Eaq "not found|unsupported" || HAS_X448=true
-     $OPENSSL genpkey -algorithm X25519 2>&1 | grep -Eaq "not found|unsupported" || HAS_X25519=true
-     $OPENSSL pkey -help 2>&1 | grep -q Error || HAS_PKEY=true
-     $OPENSSL pkeyutl 2>&1 | grep -q Error ||  HAS_PKUTIL=true
+     $ossl_probe_timeout $OPENSSL s_client -ssl2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SSL2=true
+     $ossl_probe_timeout $OPENSSL s_client -ssl3 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SSL3=true
+     $ossl_probe_timeout $OPENSSL s_client -tls1 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS1=true
+     $ossl_probe_timeout $OPENSSL s_client -tls1_1 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS11=true
+     $ossl_probe_timeout $OPENSSL s_client -tls1_2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS12=true
+     $ossl_probe_timeout $OPENSSL s_client -tls1_3 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_TLS13=true
+     $ossl_probe_timeout $OPENSSL s_client -no_ssl2 </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NO_SSL2=true
+
+     $ossl_probe_timeout $OPENSSL genpkey -algorithm X448 2>&1 | grep -Eaq "not found|unsupported" || HAS_X448=true
+     $ossl_probe_timeout $OPENSSL genpkey -algorithm X25519 2>&1 | grep -Eaq "not found|unsupported" || HAS_X25519=true
+     $ossl_probe_timeout $OPENSSL pkey -help 2>&1 | grep -q Error || HAS_PKEY=true
+     $ossl_probe_timeout $OPENSSL pkeyutl 2>&1 | grep -q Error ||  HAS_PKUTIL=true
 
      # In order to avoid delays due to lookups of the hostname "invalid." we just try to avoid using "-connect invalid."
      # when possible. The following does a check fopr that. For WSL we stick for now to the old scheme. Not sure about Cygwin
@@ -21336,7 +21339,7 @@ find_openssl_binary() {
      fi
 
      if "$HAS_TLS13"; then
-          $OPENSSL s_client -tls1_3 -sigalgs PSS+SHA256:PSS+SHA384 $NXCONNECT </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SIGALGS=true
+          $ossl_probe_timeout $OPENSSL s_client -tls1_3 -sigalgs PSS+SHA256:PSS+SHA384 $NXCONNECT </dev/null 2>&1 | grep -aiq "unknown option" || HAS_SIGALGS=true
      fi
 
      #reminder: at some point of time we should check $OPENSSL first, then $OPENSSL2
@@ -21353,11 +21356,11 @@ find_openssl_binary() {
           HAS2_EARLYDATA=true
      fi
 
-     $OPENSSL s_client -noservername </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NOSERVERNAME=true
-     $OPENSSL s_client -ciphersuites </dev/null 2>&1 | grep -aiq "unknown option" || HAS_CIPHERSUITES=true
-     $OPENSSL s_client -comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_COMP=true
-     $OPENSSL s_client -no_comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NO_COMP=true
-     $OPENSSL ciphers @SECLEVEL=0:ALL > /dev/null 2> /dev/null && HAS_SECLEVEL=true
+     $ossl_probe_timeout $OPENSSL s_client -noservername </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NOSERVERNAME=true
+     $ossl_probe_timeout $OPENSSL s_client -ciphersuites </dev/null 2>&1 | grep -aiq "unknown option" || HAS_CIPHERSUITES=true
+     $ossl_probe_timeout $OPENSSL s_client -comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_COMP=true
+     $ossl_probe_timeout $OPENSSL s_client -no_comp </dev/null 2>&1 | grep -aiq "unknown option" || HAS_NO_COMP=true
+     ciphers @SECLEVEL=0:ALL > /dev/null 2> /dev/null && HAS_SECLEVEL=true
 
      OPENSSL_NR_CIPHERS=$(count_ciphers "$(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL' 'ALL')")
      if [[ $OPENSSL_NR_CIPHERS -le 140 ]]; then
@@ -21385,8 +21388,8 @@ find_openssl_binary() {
           OSSL_SUPPORTED_SIGALGS=" ${OSSL_SUPPORTED_SIGALGS//:/ } "
      fi
      if [[ -z "$OSSL_SUPPORTED_CURVES" ]]; then
-          if $OPENSSL s_client -curves </dev/null 2>&1 | grep -aiq "unknown option"; then
-               if $OPENSSL s_client -groups </dev/null 2>&1 | grep -aiq "unknown option"; then
+          if $ossl_probe_timeout $OPENSSL s_client -curves </dev/null 2>&1 | grep -aiq "unknown option"; then
+               if $ossl_probe_timeout $OPENSSL s_client -groups </dev/null 2>&1 | grep -aiq "unknown option"; then
                     # this is for openssl versions like 0.9.8, they do not have -groups or -curves -- just to be safe
                     :
                else
@@ -21394,7 +21397,7 @@ find_openssl_binary() {
                     # WSL users connect to "127.0.0.1:0", others to "invalid." or "invalid.:0"
                     # The $OPENSSL connect call deliberately fails: when the curve isn't available with the described error messages
                     for curve in "${curves_ossl[@]}"; do
-                         $OPENSSL s_client -groups $curve $NXCONNECT </dev/null 2>&1 | grep -Eiaq "Error with command|unknown option|Failed to set groups"
+                         $ossl_probe_timeout $OPENSSL s_client -groups $curve $NXCONNECT </dev/null 2>&1 | grep -Eiaq "Error with command|unknown option|Failed to set groups"
                          [[ $? -ne 0 ]] && OSSL_SUPPORTED_CURVES+=" $curve "
                     done
                fi
@@ -21402,7 +21405,7 @@ find_openssl_binary() {
                HAS_CURVES=true
                for curve in "${curves_ossl[@]}"; do
                     # Same as above, we just don't need a port for invalid.
-                    $OPENSSL s_client -curves $curve $NXCONNECT </dev/null 2>&1 | grep -Eiaq "Error with command|unknown option|Call to SSL_CONF_cmd(.*) failed|cannot be set"
+                    $ossl_probe_timeout $OPENSSL s_client -curves $curve $NXCONNECT </dev/null 2>&1 | grep -Eiaq "Error with command|unknown option|Call to SSL_CONF_cmd(.*) failed|cannot be set"
                     [[ $? -ne 0 ]] && OSSL_SUPPORTED_CURVES+=" $curve "
                done
           fi
