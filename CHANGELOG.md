@@ -5,10 +5,11 @@
 
 * QUIC protocol check
 * TLS 1.3 early data (0-RTT)
-* Support for RFC 8998 and draft-yang-tls-hybrid-sm2-mlkem (TLS_SM4_GCM_SM3, TLS_SM4_CCM_SM3 ciphers, kx groups curveSM2, curveSM2MLKEM768; SM2 pub keys + signatures)
+* Support for RFC 8998,  draft-yang-tls-hybrid-sm2-mlkem (TLS_SM4_GCM_SM3, TLS_SM4_CCM_SM3 ciphers, kx groups curveSM2, curveSM2MLKEM768; SM2 pub keys + signatures)
 * Adds a check for mandatory extended master secret TLS extension
 * Bump SSLlabs rating guide to 2009r
 * Check for Opossum vulnerability
+* `--phone-out` checks the HSTS preload list on https://hstspreload.org/
 * Enable IPv6 automagically, i.e. if target via IPv6 is reachable just (also) scan it
 * Provide an FAQ
 
@@ -71,7 +72,6 @@
 * DNS via proxy improvements, also IPv6 support for proxy
 * Client simulation runs in wide mode which is even better readable
 * Added --reqheader to support custom headers in HTTP requests
-* `--phone-out` checks the HSTS preload list on https://hstspreload.org/
 * Deprecating --fast and --ssl-native (warning only but still av)
 * Compatible to GNU grep >=3.8, bash 5.x
 * Don't use external pwd command anymore
