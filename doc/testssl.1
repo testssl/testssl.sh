@@ -417,7 +417,8 @@ can try to apply evasion techniques by changing the variables USLEEP_SND
 and / or USLEEP_REC and maybe MAX_WAITSOCK.
 .PP
 \f[CR]\-\-phone\-out\f[R] Checking for revoked certificates via CRL and
-OCSP is not done per default.
+OCSP, as well as the HSTS preload list status via hstspreload.org, is
+not done per default.
 This switch instructs testssl.sh to query external \(en in a sense of
 the current run \(en URIs.
 By using this switch you acknowledge that the check might have privacy
@@ -603,6 +604,10 @@ by detection or by enforcing via \f[CR]\-\-assume\-http\f[R].
 It tests several HTTP headers like
 .IP \(bu 2
 HTTP Strict Transport Security (HSTS)
+.RS 2
+.IP \(bu 2
+HSTS preload list status (when \f[CR]\-\-phone\-out\f[R] supplied)
+.RE
 .IP \(bu 2
 HTTP Public Key Pinning (HPKP)
 .IP \(bu 2
