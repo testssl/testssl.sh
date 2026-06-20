@@ -152,7 +152,7 @@ The same can be achieved by setting the environment variable `WARNINGS`.
 
 `--ids-friendly` is a switch which may help to get a scan finished which otherwise would be blocked by a server side IDS. This switch skips tests for the following vulnerabilities: Heartbleed, CCS Injection, Ticketbleed and ROBOT. The environment variable OFFENSIVE set to false will achieve the same result. Please be advised that as an alternative or as a general approach you can try to apply evasion techniques by changing the variables USLEEP_SND and / or USLEEP_REC and maybe MAX_WAITSOCK.
 
-`--phone-out` Checking for revoked certificates via CRL and OCSP is not done per default. This switch instructs testssl.sh to query external -- in a sense of the current run -- URIs. By using this switch you acknowledge that the check might have privacy issues, a download of several megabytes (CRL file) may happen and there may be network connectivity problems while contacting the endpoint which testssl.sh doesn't handle. PHONE_OUT is the environment variable for this which needs to be set to true if you want this.
+`--phone-out` Checking for revoked certificates via CRL and OCSP, as well as the HSTS preload list status via hstspreload.org, is not done per default. This switch instructs testssl.sh to query external -- in a sense of the current run -- URIs. By using this switch you acknowledge that the check might have privacy issues, a download of several megabytes (CRL file) may happen and there may be network connectivity problems while contacting the endpoint which testssl.sh doesn't handle. PHONE_OUT is the environment variable for this which needs to be set to true if you want this.
 
 `--add-ca <CAfile>` enables you to add your own CA(s) in PEM format for trust chain checks. `CAfile` can be a directory containing files with a \.pem extension, a single file or multiple files as a comma separated list of root CAs. Internally they will be added during runtime to all CA stores. This is (only) useful for internal hosts whose certificates are issued by internal CAs. Alternatively ADDTL_CA_FILES is the environment variable for this.
 
@@ -213,6 +213,7 @@ Also for multiple server certificates are being checked for as well as for the c
 `-h, --header, --headers`       if the service is HTTP (either by detection or by enforcing via `--assume-http`. It tests several HTTP headers like
 
 * HTTP Strict Transport Security (HSTS)
+    - HSTS preload list status (when `--phone-out` supplied)
 * HTTP Public Key Pinning (HPKP)
 * Server banner
 * HTTP date+time
