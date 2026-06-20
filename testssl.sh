@@ -2272,6 +2272,7 @@ check_revocation_ocsp() {
 #     10 - key matched the expected value
 #     20 - key present but value did not match
 #     21 - key not found in the response
+#
 check_hsts_preloadlist_match() {
      local domain="$1"
      local key="$2"
@@ -2304,6 +2305,7 @@ check_hsts_preloadlist_match() {
 # arg1: domain to check
 # arg2: key to resolve (status or bulk)
 # Echoes the matched value and returns 0, or returns 1 if no known value matched.
+#
 check_hsts_preloadlist_value() {
      local domain="$1"
      local key="$2"
@@ -2317,8 +2319,8 @@ check_hsts_preloadlist_value() {
      # so no untrusted input is reflected.
      case "$key" in
           status) values=("unknown" "pending" "rejected" "preloaded") ;;
-          bulk) values=("true" "false") ;;
-          *) return 1 ;;
+          bulk)   values=("true" "false") ;;
+          *)      return 1 ;;
      esac
 
      for value in "${values[@]}"; do
@@ -2326,7 +2328,7 @@ check_hsts_preloadlist_value() {
           [[ $? -eq 10 ]] && value_ret="$value" && break
      done
 
-     [[ -n "$value_ret" ]] && echo "$value_ret" && return 0
+     [[ -n "$value_ret" ]] && safe_echo "$value_ret" && return 0
      return 1
 }
 
@@ -3057,8 +3059,8 @@ run_hsts() {
      # Run this regardless of the served header: a domain may still be listed after the header
      # was removed, or be rejected because the served header does not meet the requirements.
      if "$PHONE_OUT"; then
-          json_postfix="_preloadlist"
-          pr_bold " HSTS preload list            "
+          json_postfix="_preloadAPI"
+          pr_bold " HSTS preload API             "
 
           # If the domain itself is the preloaded entry, it may be fine that the header omits 'preload'
           check_hsts_preloadlist_match "$NODE" "preloadedDomain" "$NODE"
@@ -3078,28 +3080,59 @@ run_hsts() {
           case "$(check_hsts_preloadlist_value "$NODE" "status")" in
                "unknown") # Not found in the HSTS preload list
                     case "$preloadcombined" in
-                         "000" | "001" | "010" | "011") outln "no entry"; fileout "${jsonID}${json_postfix}" "INFO" "no entry" ;;
-                         "100" | "101" | "110" | "111") pr_svrty_low "no entry"; outln " -- submit to HSTS preload list"; fileout "${jsonID}${json_postfix}" "LOW" "no entry" ;;
+                         "000"|"001"|"010"|"011")
+                              outln "no entry"
+                              fileout "${jsonID}${json_postfix}" "INFO" "no entry"
+                              ;;
+                         "100"|"101"|"110"|"111")
+                              pr_svrty_low "no entry"
+                              outln " -- submit to HSTS preload list"; fileout "${jsonID}${json_postfix}" "LOW" "no entry"
+                              ;;
                     esac
                     ;;
                "pending") # Currently in the HSTS pending list
                     case "$preloadcombined" in
-                         "000" | "001" | "010" | "100" | "101" | "110" | "111") outln "pending"; fileout "${jsonID}${json_postfix}" "INFO" "pending" ;;
-                         "011") pr_svrty_medium "pending"; outln " -- addition going to fail, add header"; fileout "${jsonID}${json_postfix}" "MEDIUM" "pending" ;;
+                         "000"|"001"|"010"|"100"|"101"|"110"|"111")
+                              outln "pending"
+                              fileout "${jsonID}${json_postfix}" "INFO" "pending"
+                              ;;
+                         "011") pr_svrty_medium "pending"
+                              outln " -- addition going to fail, add header"
+                              fileout "${jsonID}${json_postfix}" "MEDIUM" "pending"
+                              ;;
                     esac
                     ;;
                "rejected") # Entry is considered rejected by the HSTS list
                     case "$preloadcombined" in
-                         "000" | "001" | "010" | "011") outln "rejected"; fileout "${jsonID}${json_postfix}" "INFO" "rejected" ;;
-                         "100" | "101" | "110" | "111") pr_svrty_medium "rejected"; outln " -- check other requirements"; fileout "${jsonID}${json_postfix}" "MEDIUM" "rejected" ;;
+                         "000"|"001"|"010"|"011")
+                              outln "rejected"
+                              fileout "${jsonID}${json_postfix}" "INFO" "rejected"
+                              ;;
+                         "100"|"101"|"110"|"111")
+                              pr_svrty_medium "rejected" ; outln " -- check other requirements"
+                              fileout "${jsonID}${json_postfix}" "MEDIUM" "rejected"
+                              ;;
                     esac
                     ;;
                "preloaded") # Marked as 'preload' in the HSTS preload list
                     case "$preloadcombined" in
-                         "000" | "001") prln_svrty_good "preloaded"; fileout "${jsonID}${json_postfix}" "OK" "preloaded" ;;
-                         "010") outln "preloaded -- manual addition detected"; fileout "${jsonID}${json_postfix}" "INFO" "preloaded" ;;
-                         "011") pr_svrty_medium "preloaded"; outln " -- list may remove entry, add header"; fileout "${jsonID}${json_postfix}" "MEDIUM" "preloaded" ;;
-                         "100" | "101" | "110" | "111") prln_svrty_best "preloaded"; fileout "${jsonID}${json_postfix}" "OK" "preloaded" ;;
+                         "000"|"001")
+                              prln_svrty_good "preloaded"
+                              fileout "${jsonID}${json_postfix}" "OK" "preloaded"
+                              ;;
+                         "010")
+                              outln "preloaded -- manual addition detected"
+                              fileout "${jsonID}${json_postfix}" "INFO" "preloaded"
+                              ;;
+                         "011")
+                              pr_svrty_medium "preloaded"
+                              outln " -- list may remove entry, add header"
+                              fileout "${jsonID}${json_postfix}" "MEDIUM" "preloaded"
+                              ;;
+                         "100"|"101"|"110"|"111")
+                              prln_svrty_best "preloaded"
+                              fileout "${jsonID}${json_postfix}" "OK" "preloaded"
+                              ;;
                     esac
                     ;;
                *) # Empty: the hstspreload.org API was unreachable or returned an unexpected response
@@ -21834,7 +21867,7 @@ tuning / connect options (most also can be preset via environment variables):
      --sneaky                      leave less traces in target logs: user agent, referer
      --user-agent <user agent>     set a custom user agent instead of the standard user agent
      --ids-friendly                skips a few vulnerability checks which may cause IDSs to block the scanning IP
-     --phone-out                   allow to contact external servers for CRL download, querying OCSP responder and the HSTS preload list
+     --phone-out                   allow to contact external servers for CRL download, querying OCSP responder and the HSTS preload API
      --add-ca <CA files|CA dir>    path to <CAdir> with *.pem or a comma separated list of CA files to include in trust check
      --mtls <CLIENT CERT file>     path to <CLIENT CERT> file in PEM format containing unencrypted certificate key (beta)
      --basicauth <user:pass>       provide HTTP basic auth information
