@@ -71,6 +71,7 @@
 * DNS via proxy improvements, also IPv6 support for proxy
 * Client simulation runs in wide mode which is even better readable
 * Added --reqheader to support custom headers in HTTP requests
+* `--phone-out` checks the HSTS preload list on https://hstspreload.org/
 * Deprecating --fast and --ssl-native (warning only but still av)
 * Compatible to GNU grep >=3.8, bash 5.x
 * Don't use external pwd command anymore
