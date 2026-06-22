@@ -1,0 +1,39 @@
+#!/usr/bin/env perl
+
+# Example for debugging what the runners do, here MacOS only
+# (we used that before), To get output on the screen it's
+# needed to encapsulate the functions you want to debug with
+# set -x/+x and comment the last function @ 00_testssl_help.t
+
+use strict;
+use Test::More;
+use IPC::Run3;
+
+my $os="$^O";
+my $prg="./testssl.sh";
+my $check2run ="-p";
+my $uri="testssl.sh";
+my $stdout = '';
+my $stderr = '';
+
+# if ( $os eq "darwin" ){
+     printf "%s\n", "testing MacOS ";
+     run3(["/bin/bash", $prg, $check2run, $uri], \undef, \$stdout, \$stderr);
+     print STDERR $stderr;
+     print STDOUT $stdout;
+# } elsif ( $os eq "linux" ){
+#     printf "skipped check on Linux\n\n";
+#}
+
+
+# Use the following when you want to run everything below ~/t
+# done_testing();
+
+
+# This stops, no further checks within ~/t will run:
+BAIL_OUT("Fundamental check done, aborting");
+
+
+
+# vim:ts=5:sw=5:expandtab
+

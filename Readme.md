@@ -5,22 +5,26 @@
 This would display the latest tag which is from the 3.2 branch. Here we don't have tags yet
 -->
 ![GitHub forks](https://img.shields.io/github/forks/testssl/testssl.sh)
-![GitHub Repo stars](https://img.shields.io/github/stars/testssl/testssl.sh)
+![GitHub Repo stars](https://img.shields.io/github/stars/testssl/testssl.sh?style=flat)
 ![GitHub Created At](https://img.shields.io/github/created-at/testssl/testssl.sh)
 ![GitHub last commit](https://img.shields.io/github/last-commit/testssl/testssl.sh)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/testssl/testssl.sh)
 [![Docker](https://img.shields.io/docker/pulls/drwetter/testssl.sh)](https://github.com/testssl/testssl.sh/blob/3.3dev/Dockerfile.md)
-
 [![License](https://img.shields.io/github/license/testssl/testssl.sh)](https://github.com/testssl/testssl.sh/LICENSE)
 ![Static Badge](https://img.shields.io/badge/version-3.3dev-blue)
 ![Static Badge](https://img.shields.io/badge/%2Fbin%2Fbash_-blue)
 ![Static Badge](https://img.shields.io/badge/Libre+OpenSSL_-blue)
 [![Vim](https://img.shields.io/badge/Vim-%2311AB00.svg?logo=vim&logoColor=white)](#)
 [![Visual Studio Code](https://custom-icon-badges.demolab.com/badge/Visual%20Studio%20Code-0078d7.svg?logo=vsc&logoColor=white)](#)
-[![CI test Ubuntu](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml/badge.svg)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml?branch=3.3dev)
-[![CI test MacOS](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml/badge.svg)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml?branch=3.3dev)
+<!--
+[![CI test Ubuntu](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml/badge.svg??branch=3.3dev)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_ubuntu.yml)
+[![CI test MacOS](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml/badge.svg?branch=3.3dev)](https://github.com/testssl/testssl.sh/actions/workflows/unit_tests_macos.yml)
+
+At least as long as we're experimenting with PRs this should be not presented as it looks like the current branch is broken, see #2794
+
+-->
 ![Mastodon Follow](https://img.shields.io/mastodon/follow/109319848143024146?domain=infosec.exchange)
-[![Bluesky](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpublic.api.bsky.app%2Fxrpc%2Fapp.bsky.actor.getProfile%2F%3Factor%3Dtestssl.bsky.social&query=%24.followersCount&style=social&logo=bluesky&label=Follow%20%40testssl.sh)
+![Bluesky](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpublic.api.bsky.app%2Fxrpc%2Fapp.bsky.actor.getProfile%2F%3Factor%3Dtestssl.bsky.social&query=%24.followersCount&style=social&logo=bluesky&label=Follow%20%40testssl.sh)
 
 `testssl.sh` is a free command line tool which checks a server's service on
 any port for the support of TLS/SSL ciphers, protocols as well as some

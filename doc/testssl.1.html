@@ -43,7 +43,7 @@
     </head>
     <body>
         <h2 id="name">NAME</h2>
-        <p>testssl.sh – check encryption of SSL/TLS servers</p>
+        <p>testssl.sh – check TLS/SSL encryption of servers</p>
         <h2 id="synopsis">SYNOPSIS</h2>
         <p><code>testssl.sh [OPTIONS] &lt;URI&gt;</code>,
         <code>testssl.sh [OPTIONS] --file &lt;FILE&gt;</code></p>
@@ -396,7 +396,8 @@
         evasion techniques by changing the variables USLEEP_SND and / or
         USLEEP_REC and maybe MAX_WAITSOCK.</p>
         <p><code>--phone-out</code> Checking for revoked certificates
-        via CRL and OCSP is not done per default. This switch instructs
+        via CRL and OCSP, as well as the HSTS preload list status via
+        hstspreload.org, is not done per default. This switch instructs
         testssl.sh to query external – in a sense of the current run –
         URIs. By using this switch you acknowledge that the check might
         have privacy issues, a download of several megabytes (CRL file)
@@ -548,7 +549,11 @@
         <code>--assume-http</code>. It tests several HTTP headers
         like</p>
         <ul>
-        <li>HTTP Strict Transport Security (HSTS)</li>
+        <li>HTTP Strict Transport Security (HSTS)
+        <ul>
+        <li>HSTS preload list status (when <code>--phone-out</code>
+        supplied)</li>
+        </ul></li>
         <li>HTTP Public Key Pinning (HPKP)</li>
         <li>Server banner</li>
         <li>HTTP date+time</li>
@@ -921,11 +926,11 @@
         and when this is set to true, it generates a separate text file
         with epoch times in <code>/tmp/testssl-&lt;XX&gt;.time</code>.
         They need to be concatenated by
-        <code>paste /tmp/testssl-&lt;XX&gt;.{time,log}</code> <!---
-        * FAST_SOCKET
-        * SHOW_SIGALGO
-        * FAST
-        --></li>
+        <code>paste /tmp/testssl-&lt;XX&gt;.{time,log}</code>
+        &lt;!—</li>
+        <li>FAST_SOCKET</li>
+        <li>SHOW_SIGALGO</li>
+        <li>FAST –&gt;</li>
         <li>EXPERIMENTAL=true is an option which is sometimes used in
         the development process to make testing easier. In released
         versions this has no effect.</li>
@@ -965,10 +970,9 @@
         may be made larger on systems with faster processors.</li>
         <li>MAX_WAIT_TEST is the maximum time (in seconds) to wait for a
         single test in parallel mass testing mode to complete. The
-        default is 1200. <!---
-        * USLEEP_SND
-        * USLEEP_REC
-        --></li>
+        default is 1200. &lt;!—</li>
+        <li>USLEEP_SND</li>
+        <li>USLEEP_REC –&gt;</li>
         <li>HSTS_MIN is preset to 179 (days). If you want warnings
         sooner or later for HTTP Strict Transport Security you can
         change this.</li>

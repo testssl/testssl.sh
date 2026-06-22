@@ -30,7 +30,7 @@ jobs:
     env:
       LANG: C.UTF-8
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install shellcheck
         run: sudo apt update && sudo apt install -y shellcheck && shellcheck --version

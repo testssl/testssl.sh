@@ -11,7 +11,7 @@ Full contribution, see git log.
   - extended parsing of TLS ServerHello messages
   - TLS 1.3 support (final and pre-final) with needed en/decryption
   - add several TLS extensions
-  - Several ciphers and curves added 
+  - Several ciphers and curves added
   - Detection + output of multiple certificates
   - several cleanups of server certificate related stuff
   - testssl.sh -e/-E: testing with a mixture of openssl + sockets
@@ -55,6 +55,7 @@ Full contribution, see git log.
   - maximum certificate lifespan of 398 days
   - ssl renegotiation amount variable
   - custom http request headers
+  - HSTS preload list lookup (finalized: Mayank)
 
 * Frank Breedijk
   - Detection of insecure redirects

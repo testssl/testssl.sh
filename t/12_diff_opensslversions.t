@@ -98,6 +98,11 @@ $cat_csvfile2 =~ s/.nonce-.* //g;
 $cat_csvfile  =~ s/","google.com\/.*","443/","google.com","443/g;
 $cat_csvfile2 =~ s/","google.com\/.*","443/","google.com","443/g;
 
+# Address differences in QUIC: Ubuntu 24.04's openssl still doesn't support QUIC, MacOS 26 does
+# (Status 06/2026, should be checked later)
+$cat_csvfile  =~  s/"QUIC".*\n//g;
+$cat_csvfile2  =~ s/"QUIC".*\n//g;
+
 
 if ( $os eq "darwin" ){
      # Now address the differences for LibreSSL, see t/61_diff_testsslsh.t

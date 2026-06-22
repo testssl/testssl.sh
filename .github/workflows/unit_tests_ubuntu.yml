@@ -32,7 +32,7 @@ jobs:
         perl: ['5.38']
     name: Unit test on ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up perl
         uses: shogo82148/actions-setup-perl@v1
@@ -51,6 +51,8 @@ jobs:
           printf "%s\n" "----------"
           bash --version
           printf "%s\n" "----------"
+          echo $PATH
+          printf "%s\n" "----------"
 
       - name: Install perl modules
         run: |
@@ -58,6 +60,7 @@ jobs:
           cpanm --notest Data::Dumper
           cpanm --notest JSON
           cpanm --notest Text::Diff
+          cpanm --notest IPC::Run3
 
       - name: run it
         run: |
