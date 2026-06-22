@@ -84,9 +84,10 @@
         <ol start="0" type="1">
         <li><p>displays a banner (see below), does a DNS lookup also for
         further IP addresses and does for the returned IP address a
-        reverse lookup. Last but not least a service check is being
-        done.</p></li>
-        <li><p>SSL/TLS protocol check</p></li>
+        reverse lookup. Also the so called DNS HTTPS record is being
+        queried and displayed (for the first IP only). Last but not
+        least a service check is being done.</p></li>
+        <li><p>SSL/TLS protocol check plus QUIC and ALPN check</p></li>
         <li><p>standard cipher categories</p></li>
         <li><p>server’s cipher preferences (server order?)</p></li>
         <li><p>forward secrecy: ciphers and elliptical curves</p></li>
@@ -321,10 +322,11 @@
         <p><code>-4</code> scans only IPv4 addresses of the target, IPv6
         addresses of the target won’t be scanned.</p>
         <p><code>--ssl-native</code> Instead of using a mixture of bash
-        sockets and a few openssl s_client connects, testssl.sh uses the
-        latter (almost) only. This is faster but provides less accurate
-        results, especially for the client simulation and for cipher
-        support. For all checks you will see a warning if testssl.sh
+        sockets and a few <code>openssl s_client connect</code>s,
+        testssl.sh uses the latter (almost) only. This is faster but
+        doesn’t provides accurate results, especially for the client
+        simulation and for cipher support. Thus this is not recommended
+        anymore. For all checks you will see a warning if testssl.sh
         cannot tell if a particular check cannot be performed. For some
         checks however you might end up getting false negatives without
         a warning. Thus it is not recommended to use. It should only be
@@ -483,7 +485,9 @@
         the openssl-bad version is used testssl.sh will e.g. for HTTP
         header checks switch to <code>/usr/bin/openssl</code> (or when
         defined via ENV to OPENSSL2). Also this will be tried for the
-        QUIC check.</p>
+        QUIC check. You will get an additional message if the DNS HTTPS
+        Resource Record matches the QUIC finding. Also if there are
+        negative consequences (h3 advertised but not offered).</p>
         <p><code>-P, --server-preference, --preference</code> displays
         the servers preferences: cipher order, with used openssl client:
         negotiated protocol and cipher. If there’s a cipher order
@@ -1201,6 +1205,8 @@
         Extensibility (GREASE) to TLS Extensibility</li>
         <li>RFC 9000: QUIC: A UDP-Based Multiplexed and Secure
         Transport</li>
+        <li>RFC 9460: Service Binding and Parameter Specification via
+        the DNS (SVCB and HTTPS Resource Records)</li>
         <li>W3C CSP: Content Security Policy Level 1-3</li>
         <li>TLSWG Draft: The Transport Layer Security (TLS) Protocol
         Version 1.3</li>
