@@ -6293,11 +6293,16 @@ sub_quic() {
      local sclient_outfile="$TEMPDIR/$NODEIP.quic_connect.txt"
      local sclient_errfile="$TEMPDIR/$NODEIP.quic_connect_err.txt"
      local jsonID="QUIC"
+     local has_https_rr_h3=false
 
      [[ $DEBUG -ne 0 ]] && sclient_errfile=/dev/null
      [[ "$SERVICE" != HTTP ]] && return 0
 
      pr_bold " QUIC       ";
+
+     if [[ "$HTTPS_RR" == *"h3"* ]]; then
+          has_https_rr_h3=true
+     fi
 
      if "$HAS2_QUIC" || "$HAS_QUIC"; then
           # Proxying QUIC seems not supported
@@ -6306,6 +6311,12 @@ sub_quic() {
                use_openssl="$OPENSSL2"
           else
                use_openssl="$OPENSSL"
+          fi
+          if "$has_https_rr_h3"; then
+               if [[ $QUIC_WAIT -eq 3 ]]; then
+                    # change the default for QUIC testing to be a bit more conservative --unless not default value wasn't changed
+                    QUIC_WAIT=5
+               fi
           fi
           OPENSSL_CONF='' $use_openssl s_client -quic -alpn h3 -connect $NODEIP:$PORT -servername $NODE </dev/null \
                2>$sclient_errfile  >$sclient_outfile &
@@ -6322,17 +6333,34 @@ sub_quic() {
                # 0 would be process terminated before be killed. Now find out what happened...
                filter_printable $sclient_outfile
                if [[ $(< $sclient_outfile) =~ CERTIFICATE----- ]]; then
+                    "$has_https_rr_h3" || \
+                         fileout "$jsonID" "OK" "offered" && \
+                         fileout "$jsonID" "OK" "offered, as advertised in DNS HTTPS RR"
                     pr_svrty_best "offered (OK)"
-                    fileout "$jsonID" "OK" "offered"
                     alpn="$(awk -F':' '/^ALPN protocol/ { print $2 }' < $sclient_outfile)"
                     alpn="$(strip_spaces $alpn)"
-                    outln ": $(awk '/^Protocol:/ { print $2 }' 2>/dev/null  < $sclient_outfile) ($alpn)"
+                    out ": $(awk '/^Protocol:/ { print $2 }' 2>/dev/null  < $sclient_outfile) ($alpn)"
+                    "$has_https_rr_h3" && \
+                         out ", as advertised in DNS HTTPS RR"
+                    outln
                elif [[ $(< $sclient_outfile) =~ ^CONNECTED\( ]]; then
-                    outln "not offered (but UDP connection succeeded)"
-                    fileout "$jsonID" "INFO" "not offered (but UDP connection succeeded)"
+                    if [[ "$has_https_rr_h3" ]]; then
+                         out "not offered (but UDP connection succeeded), "
+                         prln_svrty_low "double check wrt HTTPS DNS RR entry"
+                         fileout "$jsonID" "LOW" "not offered (but UDP connection succeeded) but contradicts HTTPS DNS RR entry"
+                    else
+                         outln "not offered (but UDP connection succeeded)"
+                         fileout "$jsonID" "INFO" "not offered (but UDP connection succeeded)"
+                    fi
                else
-                    outln "not offered"
-                    fileout "$jsonID" "INFO" "not offered"
+                    if [[ "$has_https_rr_h3" ]]; then
+                         out "not offered, "
+                         prln_svrty_low "double check wrt HTTPS DNS RR entry"
+                         fileout "$jsonID" "INFO" "not offered but contradicts HTTPS DNS RR entry"
+                    else
+                         outln "not offered"
+                         fileout "$jsonID" "INFO" "not offered"
+                    fi
                fi
           fi
      else
@@ -24027,14 +24055,18 @@ display_rdns_etc() {
           outln "$(out_row_aligned_max_width "$further_ip_addrs" "                         $CORRECT_SPACES" $TERM_WIDTH)"
      fi
      if "$LOCAL_A"; then
-          outln " A record via:          $CORRECT_SPACES /etc/hosts "
+          pr_bold " A record via:"
+          outln "          $CORRECT_SPACES /etc/hosts "
      elif "$LOCAL_AAAA"; then
-          outln " AAAA record via:       $CORRECT_SPACES /etc/hosts "
+          pr_bold " AAAA record via:"
+          outln "       $CORRECT_SPACES /etc/hosts "
      elif  [[ -n "$CMDLINE_IP" ]]; then
           if is_ipv6addr $"$CMDLINE_IP"; then
-               outln " AAAA record via:       $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
+               pr_bold " AAAA record via:"
+               outln "       $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
           else
-               outln " A record via:          $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
+               pr_bold " A record via:"
+               outln "          $CORRECT_SPACES supplied IP \"$CMDLINE_IP\""
           fi
      fi
      pr_bold " rDNS "
