@@ -36,9 +36,9 @@ linked OpenSSL binaries for major operating systems are supplied in `./bin/`.
 
 `testssl.sh URI` as the default invocation does the so-called default run which does a number of checks and puts out the results colorized (ANSI and termcap) on the screen. It does every check listed below except `-E` which are (order of appearance):
 
-0) displays a banner (see below), does a DNS lookup also for further IP addresses and does for the returned IP address a reverse lookup. Last but not least a service check is being done.
+0) displays a banner (see below), does a DNS lookup also for further IP addresses and does for the returned IP address a reverse lookup. Also the so called DNS HTTPS record is being queried and displayed (for the first IP only). Last but not least a service check is being done.
 
-1) SSL/TLS protocol check
+1) SSL/TLS protocol check plus QUIC and ALPN check
 
 2) standard cipher categories
 
@@ -133,7 +133,7 @@ The same can be achieved by setting the environment variable `WARNINGS`.
 
 `-4` scans only IPv4 addresses of the target, IPv6 addresses of the target won't be scanned.
 
-`--ssl-native`  Instead of using a mixture of bash sockets and a few openssl s_client connects, testssl.sh uses the latter (almost) only. This is faster but provides less accurate results, especially for the client simulation and for cipher support. For all checks you will see a warning if testssl.sh cannot tell if a particular check cannot be performed. For some checks however you might end up getting false negatives without a warning. Thus it is not recommended to use. It should only be used if you prefer speed over accuracy or you know that your target has sufficient overlap with the protocols and cipher provided by your openssl binary.
+`--ssl-native`  Instead of using a mixture of bash sockets and a few `openssl s_client connect`s, testssl.sh uses the latter (almost) only. This is faster but doesn't provides accurate results, especially for the client simulation and for cipher support. Thus this is not recommended anymore. For all checks you will see a warning if testssl.sh cannot tell if a particular check cannot be performed. For some checks however you might end up getting false negatives without a warning. Thus it is not recommended to use. It should only be used if you prefer speed over accuracy or you know that your target has sufficient overlap with the protocols and cipher provided by your openssl binary.
 
 `--openssl <path_to_openssl>` testssl.sh tries first very hard to find the binary supplied (where the tree of testssl.sh resides, from the directory where testssl.sh has been started from, etc.). If all that doesn't work it falls back to openssl supplied from the OS (`$PATH`). With this option you can point testssl.sh to your binary of choice and override any internal magic to find the openssl binary. (Environment preset via `OPENSSL=<path_to_openssl>`). Depending on your test parameters it could be faster to pick the OpenSSL version which has a bigger overlap in terms of ciphers protocols with the target. Also, when testing a modern server, OpenSSL 3.X is faster than older OpenSSL versions, or on MacOS 18, as opposed to the provided LibreSSL version.
 
@@ -179,7 +179,7 @@ Any single check switch supplied as an argument prevents testssl.sh from doing a
 
 `-f, --fs, --nsa, --forward-secrecy` Checks robust forward secrecy key exchange. "Robust" means that ciphers having intrinsic severe weaknesses like Null Authentication or Encryption, 3DES and RC4 won't be considered here. There shouldn't be the wrong impression that a secure key exchange has been taking place and everything is fine when in reality the encryption sucks. Also this section lists the available elliptical curves and Diffie Hellman groups, as well as FFDHE groups (TLS 1.2 and TLS 1.3).
 
-`-p, --protocols` checks every SSL/TLS protocols: SSLv2, SSLv3, TLS 1.0 through TLS 1.3. And for HTTP also QUIC (HTTP/3), SPDY (NPN) and ALPN (HTTP/2). For TLS 1.3 the final version and several drafts (from 18 on) are tested. QUIC needs OpenSSL >= 3.2 which can be automatically picked up when in `/usr/bin/openssl` (or when defined environment variable OPENSSL2). If a TLS-1.3-only host is encountered and the openssl-bad version is used testssl.sh will e.g. for HTTP header checks switch to `/usr/bin/openssl` (or when defined via ENV to OPENSSL2). Also this will be tried for the QUIC check.
+`-p, --protocols` checks every SSL/TLS protocols: SSLv2, SSLv3, TLS 1.0 through TLS 1.3. And for HTTP also QUIC (HTTP/3), SPDY (NPN) and ALPN (HTTP/2). For TLS 1.3 the final version and several drafts (from 18 on) are tested. QUIC needs OpenSSL >= 3.2 which can be automatically picked up when in `/usr/bin/openssl` (or when defined environment variable OPENSSL2). If a TLS-1.3-only host is encountered and the openssl-bad version is used testssl.sh will e.g. for HTTP header checks switch to `/usr/bin/openssl` (or when defined via ENV to OPENSSL2). Also this will be tried for the QUIC check. You will get an additional message if the DNS HTTPS Resource Record matches the QUIC finding. Also if there are negative consequences (h3 advertised but not offered).
 
 `-P, --server-preference, --preference`  displays the servers preferences: cipher order, with used openssl client: negotiated protocol and cipher. If there's a cipher order enforced by the server it displays it for each protocol (openssl+sockets). If there's not, it displays instead which ciphers from the server were picked with each protocol.
 
@@ -532,6 +532,7 @@ Please note that for plain TLS-encrypted ports you must not specify the protocol
 * RFC 8470: Using Early Data in HTTP
 * RFC 8701: Applying Generate Random Extensions And Sustain Extensibility (GREASE) to TLS Extensibility
 * RFC 9000: QUIC: A UDP-Based Multiplexed and Secure Transport
+* RFC 9460: Service Binding and Parameter Specification via the DNS (SVCB and HTTPS Resource Records)
 * W3C CSP: Content Security Policy Level 1-3
 * TLSWG Draft: The Transport Layer Security (TLS) Protocol Version 1.3
 * FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard
