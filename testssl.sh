@@ -248,7 +248,7 @@ CIPHERS_BY_STRENGTH_FILE=""
 TLS_DATA_FILE=""                        # mandatory file for socket-based handshakes
 OPENSSL=""                              # ~/bin/openssl.$(uname).$(uname -m) if you run this from GitHub. Linux otherwise probably /usr/bin/openssl
 OPENSSL2=${OPENSSL2:-/usr/bin/openssl}  # This will be openssl version >=1.1.1 (auto determined) as opposed to openssl-bad (OPENSSL)
-HAS2_TLS13=false              # If we run with supplied binary AND $OPENSSL2 supports TLS 1.3 this will be set to true
+HAS2_TLS13=false                        # If we run with supplied binary AND $OPENSSL2 supports TLS 1.3 this will be set to true
 HAS2_CHACHA20=false
 HAS2_AES128_GCM=false
 HAS2_AES256_GCM=false
@@ -377,7 +377,7 @@ HAS_UDS=false
 HAS2_UDS=false
 HAS_ENABLE_PHA=false
 HAS_DIG=false
-HAS_DIG_R=true
+HAS_DIG_R=true                          # Variable for "do not read ~/.digrc"
 DIG_R="-r"
 HAS_HOST=false
 HAS_DRILL=false
@@ -404,6 +404,7 @@ IPADDRs2CHECK=""                        # Contains all IP addresses to test
 IPADDRs2SHOW=""                         # ... those are the ones to be displayed
 LOCAL_A=false                           # Does the $NODEIP come from /etc/hosts?
 LOCAL_AAAA=false                        # Does the IPv6 IP come from /etc/hosts?
+HTTPS_RR="init"                         # Keeps the HTTPS RR record. That is per $NODE/NODEIP identical. "init" signals not being tested yet
 XMPP_HOST=""
 PROXYIP=""                              # $PROXYIP:$PROXPORT is your proxy if --proxy is defined ...
 PROXYPORT=""                            # ... and openssl has proxy support
@@ -2572,6 +2573,7 @@ service_detection() {
                     out " not identified, but mTLS authentication is set ==> trying HTTP checks"
                     SERVICE=HTTP
                     fileout "${jsonID}" "DEBUG" "Couldn't determine service -- ASSUME_HTTP set"
+                    dns_https_rr
                elif [[ "$CLIENT_AUTH" == required ]] && [[ -z $MTLS ]]; then
                     out " certificate-based authentication without providing client certificate and private key => skipping all HTTP checks" | tee $TMPFILE
                     fileout "${jsonID}" "INFO" "certificate-based authentication without providing client certificate and private key  => skipping all HTTP checks"
@@ -2581,6 +2583,7 @@ service_detection() {
                          SERVICE=HTTP
                          out " -- ASSUME_HTTP set though"
                          fileout "${jsonID}" "DEBUG" "Couldn't determine service -- ASSUME_HTTP set"
+                         dns_https_rr
                     else
                          out ", assuming no HTTP service => skipping all HTTP checks"
                          fileout "${jsonID}" "DEBUG" "Couldn't determine service, skipping all HTTP checks"
@@ -23773,12 +23776,17 @@ determine_optimal_proto() {
      return 0
 }
 
-
+# High level function of getting the DNS HTTP RR and outputting them. The global variable
+# HTTPS_RR is initialized with "reset" to distinguish between not being tested yet and no value.
+# HTTPS_RR doesn't have to be reset in reset_hostdepended_vars()
+#
 dns_https_rr () {
      local jsonID="DNS_HTTPS_rrecord"
-     local https_rr=""
      local indent=""
      local https_rr_node="$NODE"
+
+     # see comment above. We only display the RR 1x per $NODE
+     [[ "$HTTPS_RR" != init ]] && return 0
 
      out "$indent"; pr_bold " DNS HTTPS RR"; out " (expt.):   "
      if [[ -n "$NODNS" ]]; then
@@ -23790,14 +23798,14 @@ dns_https_rr () {
      else
           # append a dot if there was none
           [[ $https_rr_node =~ '.'$ ]] || https_rr_node+="."
-          https_rr="$(get_https_rrecord $https_rr_node)"
+          HTTPS_RR="$(get_https_rrecord $https_rr_node)"
           if [[ $? -ne 0 ]]; then
-               prln_warning "$https_rr"
-               fileout "${jsonID}" "WARN" "$https_rr"
-          elif [[ -n "$https_rr" ]]; then
+               prln_warning "$HTTPS_RR"
+               fileout "${jsonID}" "WARN" "$HTTPS_RR"
+          elif [[ -n "$HTTPS_RR" ]]; then
                pr_svrty_good "yes" ; out ": "
-               prln_italic "$(out_row_aligned_max_width "$https_rr" "$indent                              " $TERM_WIDTH)"
-               fileout "${jsonID}" "OK" "$https_rr"
+               prln_italic "$(out_row_aligned_max_width "$HTTPS_RR" "$indent                              " $TERM_WIDTH)"
+               fileout "${jsonID}" "OK" "$HTTPS_RR"
           else
                outln "--"
                fileout "${jsonID}" "INFO" " no resource record found"
