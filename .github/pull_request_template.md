@@ -13,7 +13,7 @@ This includes:
 - [ ] Bug fix
 - [ ] Improvement
 - [ ] New feature (adds functionality)
-- [ ] Breaking change (bug fix, feature or improvement that would cause existing functionality to not work as expected)
+- [ ] Breaking change: bug fix, feature or improvement that would cause existing output (especially JSON, CSV) to not work as expected before
 - [ ] Typo / spelling fix
 - [ ] Documentation update
 - [ ] Update of other files
