@@ -5244,6 +5244,8 @@ modify_clienthello() {
      return 0
 }
 
+# arg1: handshake bytes from TESTSSL_INSTALL_DIR/etc/client-simulation.txt
+
 client_simulation_sockets() {
      local -i len i ret=0
      local -i save=0
@@ -5286,6 +5288,31 @@ client_simulation_sockets() {
           done
           code2network "$(tolower "${cipher_list_2send:2}")" # convert CIPHER_SUITES to a "standardized" format
      fi
+
+     # Now find whether there's ALPN in the handshake data. It needs to be removed for STARTTLS, see #2410
+     if [[ -n "$STARTTLS" ]]; then
+          # We need to find the proper hexcode string in the passed data. Proper way would be going from
+          # extension to extension with the top level length of each extension until we reach ALPN (0x10).
+          # That seemed to difficult. We do that differently which has a threoretic catch as we might also
+          # similar patterns -- but as we have the handshake data as hex we can make sure. What we do is
+          # finding the leading bytes of the ALPN extension and concatenate all byte string we know of,
+          # and match that. In addition we have the alpn+= text in the client simulation data to check against.
+          # Scheme is alpn_ext, then come three lengths. We know each length so we can concatenate
+          # all values and search for them, and additionally match the extensions with the text form
+          # in TESTSSL_INSTALL_DIR/etc/client-simulation.txt.
+          # The lengths are
+          # - #1: total length of extension
+          # - #2: same as above but minus 2
+          # - #3: the first extension length, i.e. 02 for h2 and 08 for http/1.1x"
+          # also: next one is always an h (0x68).
+# --> #FIXME: firefox_53_win7, firefox_59_win7, firefox_62_win7 have no alpn+=.. text entry
+# More??
+          alpn_ext=0010          # then length total of extension
+          len1=000e000c0268      # most OS:                h2,http/1.1 --> if alpn+=("h2,http/1.1")
+          len2=000b00090868      # Android 11:             alpn+=("http/1.1")
+          len3=0030002e0268      # safari_130_osx_10146:  alpn+=("h2,h2-16,h2-15,h2-14,spdy/3.1,spdy/3,http/1.1")
+     fi
+
      cipher_list_2send="$NW_STR"
 
      fd_socket 5 || return 6
