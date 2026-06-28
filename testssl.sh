@@ -10204,7 +10204,7 @@ certificate_info() {
           out "${spaces}"
           pr_svrty_low "wildcard certificate" ; outln " could be problematic, see other hosts at"
           outln "${spaces}https://search.censys.io/search?resource=hosts&virtual_hosts=INCLUDE&q=$cert_fingerprint_sha2"
-          fileout "cert_trust${json_postfix}_wildcard" "LOW" "trust is via wildcard"
+          fileout "cert_trust_wildcard${json_postfix}" "LOW" "trust is via wildcard"
      fi
 
 
