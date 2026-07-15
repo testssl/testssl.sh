@@ -26291,7 +26291,12 @@ lets_roll() {
           else
                run_mass_testing
           fi
-          exit $?
+          RET=$?
+          # START_TIME was set by "lets_roll init" above; compute the overall scan
+          # time here so fileout_json_footer() doesn't mistake it for an interrupted
+          # scan (SCAN_TIME==0) and report "Scan interrupted", see #1246
+          calc_scantime
+          exit $RET
      fi
      html_banner
 
