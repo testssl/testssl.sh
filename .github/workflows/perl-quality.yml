@@ -25,7 +25,7 @@ jobs:
         run: cpanm --notest Perl::Critic Perl::Tidy CPAN::Audit
       - name: Install dev modules
         # add all perl modules from other modules tool, otherwise the next run fails
-        run: cpanm --notest Data::Dumper IPC::Run3 JSON Test::More Text::Diff
+        run: cpanm --notest Data::Dumper IPC::Run3 IO::Socket::INET JSON Test::More Text::Diff File::Temp File::Basename
 
       - name: 'Syntax check #1 w Perl::Tidy'
         run: |
