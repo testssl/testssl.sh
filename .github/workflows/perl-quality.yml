@@ -4,8 +4,6 @@ on:
   pull_request:
     paths:
       - 't/**'
-      - 'cpanfile'
-      - '.perlcritic'
       - '.github/workflows/perl-quality.yml'
 
 permissions:
