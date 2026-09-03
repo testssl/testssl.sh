@@ -25912,7 +25912,7 @@ parse_cmd_line() {
                     MTLS="$(parse_opt_equal_sign "$1" "$2")"
                     [[ $? -eq 0 ]] && shift
                     ;;
-               --socket-timeout|--socket-timeout=*--connect-timeout|--connect-timeout=*)
+               --socket-timeout|--socket-timeout=*|--connect-timeout|--connect-timeout=*)
                     SOCKET_TIMEOUT="$(parse_opt_equal_sign "$1" "$2")"
                     [[ $? -eq 0 ]] && shift
                     ;;
