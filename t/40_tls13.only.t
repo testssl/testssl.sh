@@ -30,13 +30,13 @@ OPENSSL=/usr/bin/openssl
 # Generate self-signed cert and key if they don't exist
 if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
     echo "Generating self-signed certificate and key..."
-    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" 2>&1
+    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" >/dev/null 2>&1
 fi
 
 # Start OpenSSL server
 echo "Starting server on port $PORT..."
-# $OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE"
-$OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3
+# $OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE" -naccept 4242
+$OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
 HEREDOC
 
 
@@ -50,9 +50,11 @@ chmod 0755, $server_script;
 # Start the server in the background using fork/exec
 my $pid = fork();
 if ($pid == 0) {
-   # Exec the script in a child process
-   exec($server_script);
-   exit 0; # Should not reach here
+    chdir($temp_dir)                       or exit 1;
+    open(STDOUT, '>', "$temp_dir/server.log") or exit 1;
+    open(STDERR, '>&', STDOUT)               or exit 1;
+    exec($server_script);
+    exit 1;
 }
 elsif ($pid > 0) {
    # Parent process: Wait for server to be ready
@@ -90,10 +92,19 @@ elsif ($pid > 0) {
        # Check if TLS 1.2 is NOT found
        unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
 
-       diag("Test output:\n$testssl_output");
-   } else {
-       diag("Server failed to start");
-   }
+       # diag("Test output:\n$testssl_output");
+
+  } else {
+    my $log = '';
+    if (open my $lfh, '<', "$temp_dir/server.log") {
+        local $/;            # slurp mode
+        $log = <$lfh> // '';
+        close $lfh;
+    }
+    diag("Server failed to start. Log:\n$log");
+}
+
+
 
    # Cleanup: Kill the server process
    kill 9, $pid;
