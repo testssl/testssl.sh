@@ -30,7 +30,7 @@ OPENSSL=/usr/bin/openssl
 # Generate self-signed cert and key if they don't exist
 if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
     echo "Generating self-signed certificate and key..."
-    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost"
+    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" 2>&1
 fi
 
 # Start OpenSSL server
@@ -39,72 +39,69 @@ echo "Starting server on port $PORT..."
 $OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3
 HEREDOC
 
-# Write and execute the script
-subtest 'TLS 1.3 Only Server Setup', sub {
-    plan skip_all => "File::Temp not available" unless eval { require File::Temp; 1 };
 
-    # Write the script to the temp directory
-    open(my $fh, '>', $server_script) or die "Cannot write script: $!";
-    print $fh $shell_code;
-    close($fh);
+# Write the script to the temp directory
+open(my $fh, '>', $server_script) or die "Cannot write script: $!";
+print $fh $shell_code;
+close($fh);
 
-    chmod 0755, $server_script;
+chmod 0755, $server_script;
 
-    # Start the server in the background using fork/exec
-    my $pid = fork();
-    if ($pid == 0) {
-        # Exec the script in a child process
-        exec($server_script);
-        exit 0; # Should not reach here
-    }
-    elsif ($pid > 0) {
-        # Parent process: Wait for server to be ready
+# Start the server in the background using fork/exec
+my $pid = fork();
+if ($pid == 0) {
+   # Exec the script in a child process
+   exec($server_script);
+   exit 0; # Should not reach here
+}
+elsif ($pid > 0) {
+   # Parent process: Wait for server to be ready
 
-        # Wait for the server to be listening on the port
-        my $socket;
-        my $ready = 0;
+   # Wait for the server to be listening on the port
+   my $socket;
+   my $ready = 0;
 
-        for my $i (1..30) {
-            $socket = IO::Socket::INET->new(
-                PeerAddr => 'localhost',
-                PeerPort => $port,
-                Proto    => 'tcp',
-                Timeout  => 2,
-            );
+   for my $i (1..30) {
+       $socket = IO::Socket::INET->new(
+           PeerAddr => 'localhost',
+           PeerPort => $port,
+           Proto    => 'tcp',
+           Timeout  => 2,
+       );
 
-            if ($socket) {
-                $ready = 1;
-                last;
-            }
-            sleep 1;
-        }
+       if ($socket) {
+           $ready = 1;
+           close($socket);
+           last;
+       }
+       sleep 1;
+   }
 
-        ok($ready, "Server is listening on port $port");
+   ok($ready, "Server is listening on port $port");
 
-        if ($ready) {
-            # Run testssl.sh
-            # capture both stdout and stderr
-            my $testssl_output = `./testssl.sh --protocols localhost:$port 2>&1`;
+   if ($ready) {
+       # Run testssl.sh, capture both stdout and stderr.
+       # We're using the OpenSSL version testssl.sh picks up
+       my $testssl_output = `./testssl.sh --protocols localhost:$port 2>&1`;
 
-            # Check if TLS 1.3 is found
-            like($testssl_output, qr/TLS 1\.3/, "TLS 1.3 is supported");
+       # Check if TLS 1.3 is found
+       like($testssl_output, qr/TLS 1\.3/, "TLS 1.3 is supported");
 
-            # Check if TLS 1.2 is NOT found
-            unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
+       # Check if TLS 1.2 is NOT found
+       unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
 
-            diag("Test output:\n$testssl_output");
-        } else {
-            diag("Server failed to start");
-        }
+       diag("Test output:\n$testssl_output");
+   } else {
+       diag("Server failed to start");
+   }
 
-        # Cleanup: Kill the server process
-        kill 9, $pid;
-        waitpid($pid, 0);
-    }
-    else {
-        die "Fork failed: $!";
-    }
-};
+   # Cleanup: Kill the server process
+   kill 9, $pid;
+   waitpid($pid, 0);
+}
+else {
+   die "Fork failed: $!";
+}
 
 done_testing();
 
