@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# As the name indicates: Check for TLS 1.3 only hosts. It just run the protocol section, there
+# As the name indicates: Check for TLS 1.3 only hosts. It just runs the protocol section, there
 # it checks for TLS 1.2 (disabled) and TLS 1.3 (enabled)
 
 use strict;
@@ -14,15 +14,25 @@ my $port = 1443;
 my $temp_dir = tempdir(CLEANUP => 1);
 my $server_script = "$temp_dir/start_server.sh";
 
-# 1. The Shell Script as HEREDOC
+
+# Shell script as HEREDOC - aim is reusability
 my $shell_code = <<'HEREDOC';
 #!/bin/bash
 # Configuration
 PORT=1443
+IP=127.0.0.1
 CERT="server.pem"
 KEY="server.key"
 # This OpenSSL version will support TLS 1.3
 OPENSSL=/usr/bin/openssl
+
+if [[ $(openssl version) =~ LibreSSL ]]; then               # MacOS. LibreSSL doesn't know "-naccept"
+     if [[ -x /opt/homebrew/bin/openssl.NOPE ]]; then
+          OPENSSL=/opt/homebrew/bin/openssl.NOPE            # We hid that during GHA CI checks
+     elif [[ -x /opt/homebrew/bin/openssl ]]; then
+          OPENSSL=/opt/homebrew/bin/openssl                 # If you intend this to run
+     fi
+fi
 
 # Force a specific TLS 1.3 cipher suite when needed
 # CIPHER_SUITE="TLS_AES_256_GCM_SHA384"
@@ -35,8 +45,9 @@ fi
 
 # Start OpenSSL server
 echo "Starting server on port $PORT..."
-# $OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE" -naccept 4242
-$OPENSSL s_server -accept "$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
+# $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE" -naccept 4242
+$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
+
 HEREDOC
 
 
@@ -62,10 +73,11 @@ elsif ($pid > 0) {
    # Wait for the server to be listening on the port
    my $socket;
    my $ready = 0;
+   my $listenip = '127.0.0.1';
 
    for my $i (1..30) {
        $socket = IO::Socket::INET->new(
-           PeerAddr => 'localhost',
+           PeerAddr => $listenip,
            PeerPort => $port,
            Proto    => 'tcp',
            Timeout  => 2,
@@ -79,12 +91,12 @@ elsif ($pid > 0) {
        sleep 1;
    }
 
-   ok($ready, "Server is listening on port $port");
+   ok($ready, "Server is listening on $listenip:$port");
 
    if ($ready) {
        # Run testssl.sh, capture both stdout and stderr.
        # We're using the OpenSSL version testssl.sh picks up
-       my $testssl_output = `./testssl.sh --protocols localhost:$port 2>&1`;
+       my $testssl_output = `./testssl.sh --protocols $listenip:$port 2>&1`;
 
        # Check if TLS 1.3 is found
        like($testssl_output, qr/TLS 1\.3/, "TLS 1.3 is supported");
@@ -92,20 +104,15 @@ elsif ($pid > 0) {
        # Check if TLS 1.2 is NOT found
        unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
 
-       # diag("Test output:\n$testssl_output");
-
-  } else {
-    my $log = '';
-    if (open my $lfh, '<', "$temp_dir/server.log") {
-        local $/;            # slurp mode
-        $log = <$lfh> // '';
-        close $lfh;
-    }
-    diag("Server failed to start. Log:\n$log");
-}
-
-
-
+   } else {
+     my $log = '';
+     if (open my $lfh, '<', "$temp_dir/server.log") {
+          local $/;            # slurp mode
+          $log = <$lfh> // '';
+          close $lfh;
+     }
+     diag("Server failed to start. Log:\n$log");
+   }
    # Cleanup: Kill the server process
    kill 9, $pid;
    waitpid($pid, 0);
@@ -116,4 +123,4 @@ else {
 
 done_testing();
 
-#  vim:ts=5:sw=5:expandtab
+# vim:ts=5:sw=5:expandtab
