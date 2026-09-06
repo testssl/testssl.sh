@@ -66,7 +66,7 @@ fi
 # Start OpenSSL server
 echo "Starting server on port $PORT..."
 # $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE"
-$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3
+$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
 
 HEREDOC
 
@@ -84,8 +84,6 @@ if ($pid == 0) {
     chdir($temp_dir)                       or exit 1;
     open(STDOUT, '>', "$temp_dir/server.log") or exit 1;
     open(STDERR, '>&', STDOUT)               or exit 1;
-    pipe(my $r, my $w) or exit 1;            # <-- new
-    open(STDIN,  '<&', $r) or exit 1;        # <-- new
     exec($server_script);
     exit 1;
 }
@@ -150,13 +148,13 @@ elsif ($pid > 0) {
        $log = <$lfh> // '';
        close $lfh;
    }
-   diag("Server Log:\n$log");
+#   diag("Server Log:\n$log");
 }
 
 # Cleanup: Kill the server process. When running locally this is needed
 my $openssl_pid = `lsof -i -Pn | grep \$USER | grep openssl | awk '{ print \$2 }'`;
-kill 9, $openssl_pid;
-waitpid($openssl_pid, 0);
+chomp $openssl_pid;
+if ($openssl_pid) { kill 9, $openssl_pid; waitpid($openssl_pid, 0); }
 
 done_testing();
 
