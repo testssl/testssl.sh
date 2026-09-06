@@ -60,7 +60,7 @@ fi
 # Generate self-signed cert and key if they don't exist
 if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
     echo "Generating self-signed certificate and key..."
-    $OPENSSL req -quiet -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null
+    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null
 fi
 
 # Start OpenSSL server
