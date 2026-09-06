@@ -84,12 +84,12 @@ if ($pid == 0) {
     chdir($temp_dir)                       or exit 1;
     open(STDOUT, '>', "$temp_dir/server.log") or exit 1;
     open(STDERR, '>&', STDOUT)               or exit 1;
+    pipe(my $r, my $w) or exit 1;            # <-- new
+    open(STDIN,  '<&', $r) or exit 1;        # <-- new
     exec($server_script);
     exit 1;
 }
 elsif ($pid > 0) {
-   # Parent process: Wait for server to be ready
-
    # Wait for the server to be listening on the port
    my $socket;
    my $ready = 0;
@@ -113,24 +113,21 @@ elsif ($pid > 0) {
 
    ok($ready, "Server is listening on $listenip:$port");
 
-     # ---- DEBUG stuff, taken right before testssl runs ----
-       my $reaped = waitpid($pid, WNOHANG);          # 0 => still running
-       my $state  = ($reaped == 0) ? 'ALIVE' : "DEAD (waitpid=$reaped)";
-       diag("DEBUG pre-testssl: pid=$pid state=$state");
-
-       my $listening = port_listening($listenip, $port);
-       diag("DEBUG pre-testssl: $listenip:$port LISTEN=" . ($listening // 'n/a'));
+   # ---- DEBUG stuff, taken right before testssl runs ----
+   my $reaped = waitpid($pid, WNOHANG);          # 0 => still running
+   my $state  = ($reaped == 0) ? 'ALIVE' : "DEAD (waitpid=$reaped)";
+   diag("DEBUG pre-testssl: pid=$pid state=$state");
 
    if  ( $os eq "linux" ){
+      my $listening = port_listening($listenip, $port);
+      diag("DEBUG pre-testssl: $listenip:$port LISTEN=" . ($listening // 'n/a'));
       diag("DEBUG netns: " . (`readlink /proc/self/ns/net 2>&1`));
       diag("DEBUG cgroup: " . (`cat /proc/self/cgroup 2>&1`));
       diag("DEBUG ss: "     . (`ss -ltnp 2>&1 | grep ":$port " || echo "(no listener)"`));
+
+      diag("DEBUG direct bash connect: " .
+        (`timeout 2 bash -c "echo > /dev/tcp/$listenip/$port" 2>&1 && echo OK || echo REFUSED`));
    }
-
-   diag("DEBUG direct bash connect: " .
-     (`timeout 2 bash -c "echo > /dev/tcp/$listenip/$port" 2>&1 && echo OK || echo REFUSED`));
-
-
    sleep (2);
 
    my $log_pre = '';
@@ -156,7 +153,7 @@ elsif ($pid > 0) {
    diag("Server Log:\n$log");
 }
 
-# Cleanup: Kill the server process. When run locally this is needed
+# Cleanup: Kill the server process. When running locally this is needed
 my $openssl_pid = `lsof -i -Pn | grep \$USER | grep openssl | awk '{ print \$2 }'`;
 kill 9, $openssl_pid;
 waitpid($openssl_pid, 0);
