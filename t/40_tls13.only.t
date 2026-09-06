@@ -66,7 +66,7 @@ fi
 # Start OpenSSL server
 echo "Starting server on port $PORT..."
 # $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE"
-$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
+RUNNER_TRACKING_ID="" && $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
 
 HEREDOC
 

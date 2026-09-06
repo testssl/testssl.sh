@@ -14,7 +14,7 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -keyout /tmp/k.pem -out /tmp/c.pem \
             -days 42 -nodes -subj "/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1
-          openssl s_server -accept 127.0.0.1:1443 -cert /tmp/c.pem -key /tmp/k.pem \
+          RUNNER_TRACKING_ID="" && openssl s_server -accept 127.0.0.1:1443 -cert /tmp/c.pem -key /tmp/k.pem \
             -tls1_3 -naccept 4242 >/tmp/srv.log 2>&1 &
           SPID=$!
           sleep 2
