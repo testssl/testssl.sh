@@ -10,10 +10,30 @@ use IO::Socket::INET;
 use File::Temp qw( tempdir );
 use File::Basename;
 
+use POSIX qw(WNOHANG);
+
+
 my $port = 1443;
 my $temp_dir = tempdir(CLEANUP => 1);
 my $server_script = "$temp_dir/start_server.sh";
+my $os="$^O";
 
+# Non-intrusive check: is $ip:$port in LISTEN state in our network namespace?
+# Reads /proc/net/tcp, so it does NOT consume a connection (unlike a probe).
+sub port_listening {
+    my ($ip, $port) = @_;
+    return undef unless -r '/proc/net/tcp';
+    my $hex_port = sprintf("%04X", $port);
+    my $hex_ip   = join '', map { sprintf("%02X", $_) } reverse split(/\./, $ip);
+    open my $fh, '<', '/proc/net/tcp' or return undef;
+    while (<$fh>) {
+        next if /^sl/;
+        my @f = split;
+        return 1 if $f[1] eq "$hex_ip:$hex_port" && $f[3] eq '0A';   # 0A == LISTEN
+    }
+    close $fh;
+    return 0;
+}
 
 # Shell script as HEREDOC - aim is reusability
 my $shell_code = <<'HEREDOC';
@@ -40,7 +60,7 @@ fi
 # Generate self-signed cert and key if they don't exist
 if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
     echo "Generating self-signed certificate and key..."
-    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" >/dev/null 2>&1
+    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1
 fi
 
 # Start OpenSSL server
@@ -88,31 +108,54 @@ elsif ($pid > 0) {
            close($socket);
            last;
        }
-       sleep 1;
    }
 
    ok($ready, "Server is listening on $listenip:$port");
 
    if ($ready) {
-       # Run testssl.sh, capture both stdout and stderr.
-       # We're using the OpenSSL version testssl.sh picks up
+       sleep(2);
+
+       # ---- DEBUG stuff, taken right before testssl runs ----
+       my $reaped = waitpid($pid, WNOHANG);          # 0 => still running
+       my $state  = ($reaped == 0) ? 'ALIVE' : "DEAD (waitpid=$reaped)";
+       diag("DEBUG pre-testssl: pid=$pid state=$state");
+
+       my $listening = port_listening($listenip, $port);
+       diag("DEBUG pre-testssl: $listenip:$port LISTEN=" . ($listening // 'n/a'));
+
+if  ( $os eq "linux" ){
+diag("DEBUG netns: " . (`readlink /proc/self/ns/net 2>&1`));
+diag("DEBUG cgroup: " . (`cat /proc/self/cgroup 2>&1`));
+diag("DEBUG ss: "     . (`ss -ltnp 2>&1 | grep ":$port " || echo "(no listener)"`));
+}
+
+diag("DEBUG direct bash connect: " .
+     (`timeout 2 bash -c "echo > /dev/tcp/$listenip/$port" 2>&1 && echo OK || echo REFUSED`));
+
+
+       my $log_pre = '';
+       if (open my $lfh, '<', "$temp_dir/server.log") {
+           local $/;
+           $log_pre = <$lfh> // '';
+           close $lfh;
+       }
+       diag("DEBUG pre-testssl server.log:\n$log_pre");
+       # ---- end DEBUG ----
+
        my $testssl_output = `./testssl.sh --protocols $listenip:$port 2>&1`;
 
-       # Check if TLS 1.3 is found
-       like($testssl_output, qr/TLS 1\.3/, "TLS 1.3 is supported");
-
-       # Check if TLS 1.2 is NOT found
+       like($testssl_output,   qr/TLS 1\.3/,        "TLS 1.3 is supported");
        unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
 
-   } else {
-     my $log = '';
-     if (open my $lfh, '<', "$temp_dir/server.log") {
-          local $/;            # slurp mode
-          $log = <$lfh> // '';
-          close $lfh;
-     }
-     diag("Server failed to start. Log:\n$log");
+       my $log = '';
+       if (open my $lfh, '<', "$temp_dir/server.log") {
+           local $/;
+           $log = <$lfh> // '';
+           close $lfh;
+       }
+       diag("Server Log:\n$log");
    }
+
    # Cleanup: Kill the server process
    kill 9, $pid;
    waitpid($pid, 0);
@@ -120,6 +163,9 @@ elsif ($pid > 0) {
 else {
    die "Fork failed: $!";
 }
+
+
+
 
 done_testing();
 
