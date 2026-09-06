@@ -46,7 +46,7 @@ KEY="server.key"
 # This OpenSSL version will support TLS 1.3
 OPENSSL=/usr/bin/openssl
 
-if [[ $(openssl version) =~ LibreSSL ]]; then               # MacOS. LibreSSL doesn't know "-naccept"
+if [[ $($OPENSSL version) =~ LibreSSL ]]; then              # MacOS. LibreSSL doesn't know "-naccept"
      if [[ -x /opt/homebrew/bin/openssl.NOPE ]]; then
           OPENSSL=/opt/homebrew/bin/openssl.NOPE            # We hid that during GHA CI checks
      elif [[ -x /opt/homebrew/bin/openssl ]]; then
