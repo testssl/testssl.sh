@@ -60,13 +60,13 @@ fi
 # Generate self-signed cert and key if they don't exist
 if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
     echo "Generating self-signed certificate and key..."
-    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null
+    $OPENSSL req -quiet -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null
 fi
 
 # Start OpenSSL server
 echo "Starting server on port $PORT..."
-# $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE" -naccept 4242
-$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -naccept 4242
+# $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE"
+$OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3
 
 HEREDOC
 
@@ -108,15 +108,12 @@ elsif ($pid > 0) {
            close($socket);
            last;
        }
-       sleep 1;
+       sleep (1);
    }
 
    ok($ready, "Server is listening on $listenip:$port");
 
-   if ($ready) {
-       sleep(2);
-
-       # ---- DEBUG stuff, taken right before testssl runs ----
+     # ---- DEBUG stuff, taken right before testssl runs ----
        my $reaped = waitpid($pid, WNOHANG);          # 0 => still running
        my $state  = ($reaped == 0) ? 'ALIVE' : "DEAD (waitpid=$reaped)";
        diag("DEBUG pre-testssl: pid=$pid state=$state");
@@ -124,49 +121,45 @@ elsif ($pid > 0) {
        my $listening = port_listening($listenip, $port);
        diag("DEBUG pre-testssl: $listenip:$port LISTEN=" . ($listening // 'n/a'));
 
-if  ( $os eq "linux" ){
-diag("DEBUG netns: " . (`readlink /proc/self/ns/net 2>&1`));
-diag("DEBUG cgroup: " . (`cat /proc/self/cgroup 2>&1`));
-diag("DEBUG ss: "     . (`ss -ltnp 2>&1 | grep ":$port " || echo "(no listener)"`));
-}
+   if  ( $os eq "linux" ){
+      diag("DEBUG netns: " . (`readlink /proc/self/ns/net 2>&1`));
+      diag("DEBUG cgroup: " . (`cat /proc/self/cgroup 2>&1`));
+      diag("DEBUG ss: "     . (`ss -ltnp 2>&1 | grep ":$port " || echo "(no listener)"`));
+   }
 
-diag("DEBUG direct bash connect: " .
+   diag("DEBUG direct bash connect: " .
      (`timeout 2 bash -c "echo > /dev/tcp/$listenip/$port" 2>&1 && echo OK || echo REFUSED`));
 
 
-       my $log_pre = '';
-       if (open my $lfh, '<', "$temp_dir/server.log") {
-           local $/;
-           $log_pre = <$lfh> // '';
-           close $lfh;
-       }
-       diag("DEBUG pre-testssl server.log:\n$log_pre");
-       # ---- end DEBUG ----
+   sleep (2);
 
-       my $testssl_output = `./testssl.sh --protocols $listenip:$port 2>&1`;
-
-       like($testssl_output,   qr/TLS 1\.3/,        "TLS 1.3 is supported");
-       unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
-
-       my $log = '';
-       if (open my $lfh, '<', "$temp_dir/server.log") {
-           local $/;
-           $log = <$lfh> // '';
-           close $lfh;
-       }
-       diag("Server Log:\n$log");
+   my $log_pre = '';
+   if (open my $lfh, '<', "$temp_dir/server.log") {
+       local $/;
+       $log_pre = <$lfh> // '';
+       close $lfh;
    }
+   diag("DEBUG pre-testssl server.log:\n$log_pre");
+   # ---- end DEBUG ----
 
-   # Cleanup: Kill the server process
-   kill 9, $pid;
-   waitpid($pid, 0);
+   my $testssl_output = `./testssl.sh --protocols $listenip:$port 2>&1`;
+
+   like($testssl_output,   qr/TLS 1\.3/,        "TLS 1.3 is supported");
+   unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
+
+   my $log = '';
+   if (open my $lfh, '<', "$temp_dir/server.log") {
+       local $/;
+       $log = <$lfh> // '';
+       close $lfh;
+   }
+   diag("Server Log:\n$log");
 }
-else {
-   die "Fork failed: $!";
-}
 
-
-
+# Cleanup: Kill the server process. When run locally this is needed
+my $openssl_pid = `lsof -i -Pn | grep \$USER | grep openssl | awk '{ print \$2 }'`;
+kill 9, $openssl_pid;
+waitpid($openssl_pid, 0);
 
 done_testing();
 
