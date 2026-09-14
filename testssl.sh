@@ -12637,12 +12637,14 @@ fd_socket() {
                     break
                fi
           done
-     # For the following exec commands: 2>/dev/null would remove a potential error message, but would disable
-     # debugging.
+     # For the following exec commandsi it should be noted: 2>/dev/null would remove
+     #  a potential error message, but would disable # debugging.
      # First we check whether a socket timeout was specified. We exec the connect in a subshell,
      # and see whether. If not we take the emergency exit: fatal() in connectivity_problem.
      # Otherwise (no socket timeout) OR when we survived that we do that without subshell.
      # proceed with the "usual case", see below.
+
+#FIXME:  \/  \/  why is this??? better next statement??
      elif [[ -n "$SOCKET_TIMEOUT" ]]; then
           if ! $TIMEOUT_CMD $SOCKET_TIMEOUT bash -c "exec 5<>/dev/tcp/$nodeip/$PORT"; then
                ((NR_SOCKET_FAIL++))
@@ -12652,8 +12654,24 @@ fd_socket() {
                return 6
           fi
      fi
-     # Now comes the usual case
-     if [[ -z "$PROXY" ]] && ! exec 5<>/dev/tcp/$nodeip/$PORT; then
+
+QUIC_SUCCEEDED=""                        # whether host supports HTTP/3=QUIC. Can be empty, no or yes
+if [[ -n "$STARTTLS" ]] || [[ -n "$PROXY" ]] ; then QUIC_SUCCEEDED=no; fi
+
+     if [[ -z "$QUIC_SUCCEEDED" ]]; then
+set -x
+          if exec 6<>/dev/udp/$nodeip/$PORT; then
+               QUIC_SUCCEEDED=yes
+          fi
+set +x
+     fi
+
+#FIXME:
+# - die if's besser
+# - fúr QUIC brauche ich OPENSSL mit QUIC, weil per socket gibt es intrinisch das problem. dass UDP doesn't establish a connection or guarantee a response
+
+     # Now comes the connect check
+     if ! exec 5<>/dev/tcp/$nodeip/$PORT; then
           ((NR_SOCKET_FAIL++))
           connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems, giving up"
           outln
