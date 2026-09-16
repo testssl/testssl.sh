@@ -414,6 +414,7 @@ PROXY=""                                # Once check_proxy() executed it contain
 MTLS=""                                 # mTLS authentication with client certificate and private key
 VULN_COUNT=0
 SERVICE=""                              # Is the server running an HTTP server, SMTP, POP or IMAP?
+QUIC_SUPPORTED=""                       # Whether host supports HTTP/3=QUIC. Can be empty, uncertain no or yes
 URI=""
 CERT_FINGERPRINT_SHA2=""
 RSA_CERT_FINGERPRINT_SHA2=""
@@ -1984,12 +1985,12 @@ http_head_printf() {
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
      # $node works here good as it connects via IPv6 first, then IPv4.
      # This is a subshell, so fd 8 is not inherited
-     bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
+     $BASH -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
      wait_kill $! $((HEADER_MAXSLEEP * 10))
      if [[ $? -ne 3 ]]; then
           # process with pid !$ wasn't killed but was that a reject? So we try again
           # to make sure there wasn't a TCP reset
-          bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null
+          $BASH -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null
           if [[ $? -eq 0 ]]; then
                exec 33<>/dev/tcp/$node/80
                safe_echo "HEAD ${path} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\nAccept: */*\r\n${extra_header}\r\n\r\n" >&33 2>$errfile
@@ -6487,10 +6488,11 @@ sub_quic() {
                     QUIC_WAIT=5
                fi
           fi
-          OPENSSL_CONF='' $use_openssl s_client -quic -alpn h3 -connect $NODEIP:$PORT -servername $NODE </dev/null \
+          OPENSSL_CONF='' echo | $use_openssl s_client -quic -alpn h3 -connect $NODEIP:$PORT -servername $NODE -no_ign_eof \
                2>$sclient_errfile  >$sclient_outfile &
           wait_kill $! $((QUIC_WAIT * 10))
           ret=$?
+
           if [[ $ret -eq 3 ]]; then
                # process was killed
                if [[ -n "$PROXY" ]]; then
@@ -12597,7 +12599,7 @@ starttls_telnet_dialog() {
 #    6: if opening the socket caused a problem
 #
 fd_socket() {
-     local fd="$1"
+     local fd="$1"                                     # not used yet
      local payload="$2"
      local proyxline=""
      local nodeip="$(tr -d '[]' <<< $NODEIP)"          # sockets do not need the square brackets we have of IPv6 addresses
@@ -12637,46 +12639,33 @@ fd_socket() {
                     break
                fi
           done
-     # For the following exec commandsi it should be noted: 2>/dev/null would remove
-     #  a potential error message, but would disable # debugging.
-     # First we check whether a socket timeout was specified. We exec the connect in a subshell,
-     # and see whether. If not we take the emergency exit: fatal() in connectivity_problem.
-     # Otherwise (no socket timeout) OR when we survived that we do that without subshell.
-     # proceed with the "usual case", see below.
+     else
+          # no proxy
 
-#FIXME:  \/  \/  why is this??? better next statement??
-     elif [[ -n "$SOCKET_TIMEOUT" ]]; then
-          if ! $TIMEOUT_CMD $SOCKET_TIMEOUT bash -c "exec 5<>/dev/tcp/$nodeip/$PORT"; then
+          # For the following exec command it should be noted: 2>/dev/null would remove
+          # a potential error message, but would disable # debugging.
+          # First we check whether a socket timeout was specified. We exec the connect in a subshell,
+          # and see whether. If not we take the emergency exit: fatal() in connectivity_problem.
+          # Otherwise (no socket timeout) OR when we survived that we do that without subshell.
+          # proceed with the "usual case", see below.
+
+          if [[ -n "$SOCKET_TIMEOUT" ]]; then
+               if ! $TIMEOUT_CMD $SOCKET_TIMEOUT $BASH -c "exec 5<>/dev/tcp/$nodeip/$PORT"; then
+                    ((NR_SOCKET_FAIL++))
+                    connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems (connect timeout), giving up"
+                    outln
+                    pr_warning "Unable to open a socket to $NODEIP:$PORT. "
+                    return 6
+               fi
+          elif ! exec 5<>/dev/tcp/$nodeip/$PORT; then
+               # this can run into a long network timeout. We can't put this in the background because we would need the fd of the socket
+               # which is in the subshell
                ((NR_SOCKET_FAIL++))
-               connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems (connect timeout), giving up"
+               connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems, giving up"
                outln
-               pr_warning "Unable to open a socket to $NODEIP:$PORT. "
+               pr_warning "Unable to open a TCP socket to $NODEIP:$PORT."
                return 6
           fi
-     fi
-
-QUIC_SUCCEEDED=""                        # whether host supports HTTP/3=QUIC. Can be empty, no or yes
-if [[ -n "$STARTTLS" ]] || [[ -n "$PROXY" ]] ; then QUIC_SUCCEEDED=no; fi
-
-     if [[ -z "$QUIC_SUCCEEDED" ]]; then
-set -x
-          if exec 6<>/dev/udp/$nodeip/$PORT; then
-               QUIC_SUCCEEDED=yes
-          fi
-set +x
-     fi
-
-#FIXME:
-# - die if's besser
-# - fúr QUIC brauche ich OPENSSL mit QUIC, weil per socket gibt es intrinisch das problem. dass UDP doesn't establish a connection or guarantee a response
-
-     # Now comes the connect check
-     if ! exec 5<>/dev/tcp/$nodeip/$PORT; then
-          ((NR_SOCKET_FAIL++))
-          connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems, giving up"
-          outln
-          pr_warning "Unable to open a socket to $NODEIP:$PORT. "
-          return 6
      fi
 
      if [[ -n "$STARTTLS" ]]; then
@@ -23281,7 +23270,7 @@ get_txt_record() {
 #
 shouldwedo_ipv6() {
      "$do_ipv4_only" && return 0
-     bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
+     $BASH -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
      wait_kill $! $((MAX_WAITSOCK * 10))
      if [[ $? -eq 3 ]]; then
           # was killed, so this got stuck
@@ -23290,7 +23279,7 @@ shouldwedo_ipv6() {
           do_ipv6_only=false                 # Ensures round brackets enclosing IPv6 addresses and we don't try IPv6 anymore
      else
           # we're trying in the foreground again, only to get the return code
-          bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null
+          $BASH -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null
           if [[ $? -eq 0 ]]; then
                IPv6_OK=true
           else
@@ -24095,6 +24084,44 @@ check_msg() {
 }
 
 
+# Pre check whether target IP is a QUIC only. It's partly
+# copied from sub_quic() and comes with a less wait time in
+# order not to penalize all hosts which don't support QUIC.
+# It sets QUIC_SUPPORTED and return these values:
+#    0 QUIC supported
+#    1 is NOT supported
+#    3 check not possible
+#
+quic_precheck() {
+     local use_openssl=""
+
+     # UDP doesn't support STARTTLS or a proxy
+     if [[ -z "$PROXY" ]] || [[ "$PROXY" ]] ; then
+          # The problem now is that UDP is connection less, so a simple bash socket doesn't work for QUIC.
+          # Thus we need to use any OPENSSL for now
+          if "$HAS_QUIC"; then
+               use_openssl=$OPENSSL
+          elif "$HAS2_QUIC"; then
+               use_openssl=$OPENSSL2
+          else
+               QUIC_SUPPORTED=uncertain
+               return 3
+          fi
+          OPENSSL_CONF='' echo | $use_openssl s_client -quic -alpn h3 -connect $NODEIP:$PORT -servername $NODE -no_ign_eof >/dev/null 2>&1 &
+          wait_kill $! $((QUIC_WAIT * 6))
+          if [[ $? -eq 3 ]]; then
+               # killed
+               QUIC_SUPPORTED=no
+               return 1
+          else
+               QUIC_SUPPORTED=yes
+               return 0
+          fi
+     fi
+
+}
+
+
 # arg1 (optional): ftp smtp, lmtp, pop3, imap, sieve, xmpp, xmpp-server, telnet, ldap, postgres, mysql, irc, nntp, sieve (maybe with trailing s)
 #
 determine_service() {
@@ -24103,7 +24130,10 @@ determine_service() {
      local basicauth_header=""
      local reqheader=""
 
-     # Check if we can connect to $NODEIP:$PORT. Attention: This ALWAYS uses sockets. Thus timeouts for --ssl-=native do not apply
+     # Check if we TCP connect via socket to $NODEIP:$PORT . Reason: we can't otherwise assure $OPENSSL supports what the server side offers.
+
+#FIXME: # Problem: wir wollen eigentlich einen Pre-Check bei determine_service, dies macht aber quasi alles!
+
      if ! fd_socket 5; then
           if [[ -n "$PROXY" ]]; then
                fatal "You're sure $PROXYNODE:$PROXYPORT allows tunneling here? Can't connect to \"$NODEIP:$PORT\"" $ERR_CONNECT
@@ -24112,7 +24142,11 @@ determine_service() {
                     ip_fatal "Couldn't connect to $NODEIP:$PORT"
                     return 1
                else
-                    fatal "Can't connect to \"$NODEIP:$PORT\"\nMake sure a firewall is not between you and your scanning target!" $ERR_CONNECT
+                    if [[ "$QUIC_SUPPORTED" == yes ]]; then
+                         fatal " Pure HTTP/3 = QUIC scanning is not supported yet"
+                    else
+                         fatal "Can't connect to \"$NODEIP:$PORT\"\nMake sure a firewall is not between you and your scanning target!" $ERR_CONNECT
+                    fi
                fi
           fi
      fi
@@ -26182,6 +26216,7 @@ lets_roll() {
 
      ((SERVER_COUNTER++))
      datebanner " Start"
+     quic_precheck
      determine_service "$1"        # STARTTLS service? Other will be determined here too. Returns 0 if test connect was ok or has already exited if fatal error occurred
                                    # determine_service() can return 1, it indicates that this IP cannot be reached but there are more IPs to check
      if [[ $? -eq 0 ]] ; then
