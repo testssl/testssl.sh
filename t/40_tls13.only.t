@@ -1,0 +1,161 @@
+#!/usr/bin/env perl
+
+# As the name indicates: Check for TLS 1.3 only hosts. It just runs the protocol section, there
+# it checks for TLS 1.2 (disabled) and TLS 1.3 (enabled)
+
+use strict;
+use warnings;
+use Test::More;
+use IO::Socket::INET;
+use File::Temp qw( tempdir );
+use File::Basename;
+
+use POSIX qw(WNOHANG);
+
+
+my $port = 1443;
+my $temp_dir = tempdir(CLEANUP => 1);
+my $server_script = "$temp_dir/start_server.sh";
+my $os="$^O";
+
+# Non-intrusive check: is $ip:$port in LISTEN state in our network namespace?
+# Reads /proc/net/tcp, so it does NOT consume a connection (unlike a probe).
+sub port_listening {
+    my ($ip, $port) = @_;
+    return undef unless -r '/proc/net/tcp';
+    my $hex_port = sprintf("%04X", $port);
+    my $hex_ip   = join '', map { sprintf("%02X", $_) } reverse split(/\./, $ip);
+    open my $fh, '<', '/proc/net/tcp' or return undef;
+    while (<$fh>) {
+        next if /^sl/;
+        my @f = split;
+        return 1 if $f[1] eq "$hex_ip:$hex_port" && $f[3] eq '0A';   # 0A == LISTEN
+    }
+    close $fh;
+    return 0;
+}
+
+# Shell script as HEREDOC - aim is reusability
+my $shell_code = <<'HEREDOC';
+#!/bin/bash
+# Configuration
+PORT=1443
+IP=127.0.0.1
+CERT="server.pem"
+KEY="server.key"
+# This OpenSSL version will support TLS 1.3
+OPENSSL=/usr/bin/openssl
+
+if [[ $($OPENSSL version) =~ LibreSSL ]]; then              # MacOS. LibreSSL doesn't know "-naccept"
+     if [[ -x /opt/homebrew/bin/openssl.NOPE ]]; then
+          OPENSSL=/opt/homebrew/bin/openssl.NOPE            # We hid that during GHA CI checks
+     elif [[ -x /opt/homebrew/bin/openssl ]]; then
+          OPENSSL=/opt/homebrew/bin/openssl                 # If you intend this to run
+     fi
+fi
+
+# Force a specific TLS 1.3 cipher suite when needed
+# CIPHER_SUITE="TLS_AES_256_GCM_SHA384"
+
+# Generate self-signed cert and key if they don't exist
+if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
+    echo "Generating self-signed certificate and key..."
+    $OPENSSL req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" -days 42 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null
+fi
+
+# Start OpenSSL server
+echo "Starting server on port $PORT..."
+# $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ciphersuites "$CIPHER_SUITE"
+env -u RUNNER_TRACKING_ID $OPENSSL s_server -accept "$IP:$PORT" -cert "$CERT" -key "$KEY" -tls1_3 -ign_eof 2>&1
+
+HEREDOC
+
+
+# Write the script to the temp directory
+open(my $fh, '>', $server_script) or die "Cannot write script: $!";
+print $fh $shell_code;
+close($fh);
+
+chmod 0755, $server_script;
+
+# Start the server in the background using fork/exec
+my $pid = fork();
+if ($pid == 0) {
+    chdir($temp_dir)                       or exit 1;
+    open(STDOUT, '>', "$temp_dir/server.log") or exit 1;
+    open(STDERR, '>&', STDOUT)               or exit 1;
+    exec($server_script);
+    exit 1;
+}
+elsif ($pid > 0) {
+   # Wait for the server to be listening on the port
+   my $socket;
+   my $ready = 0;
+   my $listenip = '127.0.0.1';
+
+   for my $i (1..30) {
+       $socket = IO::Socket::INET->new(
+           PeerAddr => $listenip,
+           PeerPort => $port,
+           Proto    => 'tcp',
+           Timeout  => 2,
+       );
+
+       if ($socket) {
+           $ready = 1;
+           close($socket);
+           last;
+       }
+       sleep (1);
+   }
+
+   ok($ready, "Server is listening on $listenip:$port");
+
+   # ---- DEBUG stuff, taken right before testssl runs ----
+   my $reaped = waitpid($pid, WNOHANG);          # 0 => still running
+   my $state  = ($reaped == 0) ? 'ALIVE' : "DEAD (waitpid=$reaped)";
+   diag("DEBUG pre-testssl: pid=$pid state=$state");
+
+   if  ( $os eq "linux" ){
+      my $listening = port_listening($listenip, $port);
+      diag("DEBUG pre-testssl: $listenip:$port LISTEN=" . ($listening // 'n/a'));
+      diag("DEBUG netns: " . (`readlink /proc/self/ns/net 2>&1`));
+      diag("DEBUG cgroup: " . (`cat /proc/self/cgroup 2>&1`));
+      diag("DEBUG ss: "     . (`ss -ltnp 2>&1 | grep ":$port " || echo "(no listener)"`));
+
+      diag("DEBUG direct bash connect: " .
+        (`timeout 2 bash -c "echo > /dev/tcp/$listenip/$port" 2>&1 && echo OK || echo REFUSED`));
+   }
+   sleep (2);
+
+   my $log_pre = '';
+   if (open my $lfh, '<', "$temp_dir/server.log") {
+       local $/;
+       $log_pre = <$lfh> // '';
+       close $lfh;
+   }
+   diag("DEBUG pre-testssl server.log:\n$log_pre");
+   # ---- end DEBUG ----
+
+   my $testssl_output = `./testssl.sh --protocols $listenip:$port 2>&1`;
+
+   like($testssl_output,   qr/TLS 1\.3/,        "TLS 1.3 is supported");
+   unlike($testssl_output, qr/OFFERED\s+TLS 1\.2/, "TLS 1.2 is NOT offered");
+
+   my $log = '';
+   if (open my $lfh, '<', "$temp_dir/server.log") {
+       local $/;
+       $log = <$lfh> // '';
+       close $lfh;
+   }
+#   diag("Server Log:\n$log");
+}
+
+# Cleanup: Kill the server process. When running locally this is needed
+my $openssl_pid = `lsof -i -Pn | grep \$USER | grep openssl | awk '{ print \$2 }'`;
+chomp $openssl_pid;
+if ($openssl_pid) { kill 9, $openssl_pid; waitpid($openssl_pid, 0); }
+
+done_testing();
+
+# vim:ts=5:sw=5:expandtab
