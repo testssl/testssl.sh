@@ -1805,7 +1805,7 @@ http_get() {
                curl -s --noproxy '*' -A $''"$useragent"'' -o $dl "$1"
           else
                # for the sake of simplicity assume the proxy is using http
-               curl -s -x $PROXYIP:$PROXYPORT -A $''"$useragent"'' -o $dl "$1"
+               curl -s -x "$PROXYIP":"$PROXYPORT" -A $''"$useragent"'' -o $dl "$1"
           fi
           return $?
      elif type -p wget &>/dev/null; then
@@ -1816,7 +1816,7 @@ http_get() {
                wget --no-proxy -q -U $''"$useragent"'' -O $dl "$1"
           else
                if [[ -z "$http_proxy" ]]; then
-                    http_proxy=http://$PROXYIP:$PROXYPORT wget -q -U $''"$useragent"'' -O $dl "$1"
+                    http_proxy=http://"$PROXYIP":"$PROXYPORT" wget -q -U $''"$useragent"'' -O $dl "$1"
                else
                     wget -q -U $''"$useragent"'' -O $dl "$1"
                fi
@@ -1836,7 +1836,7 @@ http_get() {
           if [[ -n $PROXY ]]; then
                # PROXYNODE works better than PROXYIP on modern versions of squid. \
                # We don't reuse the code in fd_socket() as there's initial CONNECT which makes problems
-               if ! exec 33<> /dev/tcp/${PROXYNODE}/${PROXYPORT}; then
+               if ! exec 33<> /dev/tcp/"${PROXYNODE}"/"${PROXYPORT}"; then
                     outln
                     pr_warning "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
                     fileout "$jsonID" "DEBUG" "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
@@ -1846,7 +1846,7 @@ http_get() {
                fi
           else
                IFS=/ read -r proto foo node query <<< "$1"
-               exec 33<>/dev/tcp/$node/80
+               exec 33<>/dev/tcp/"$node"/80
                printf -- "%b" "GET /$query HTTP/1.0\r\nUser-Agent: $useragent\r\nHost: $node\r\nAccept: */*\r\n\r\n" >&33
           fi
           # Strip HTTP header. When in Debug Mode we leave the raw data in place
@@ -1939,14 +1939,14 @@ http_head_printf() {
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
      # $node works here good as it connects via IPv6 first, then IPv4.
      # This is a subshell, so fd 8 is not inherited
-     bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
+     bash -c 'exec 8<>/dev/tcp/"$node"/80' 2>/dev/null &
      wait_kill $! $((HEADER_MAXSLEEP * 10))
      if [[ $? -ne 3 ]]; then
           # process with pid !$ wasn't killed but was that a reject? So we try again
           # to make sure there wasn't a TCP reset
-          bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null
+          bash -c 'exec 8<>/dev/tcp/"$node"/80' 2>/dev/null
           if [[ $? -eq 0 ]]; then
-               exec 33<>/dev/tcp/$node/80
+               exec 33<>/dev/tcp/"$node"/80
                safe_echo "HEAD ${path} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\nAccept: */*\r\n${extra_header}\r\n\r\n" >&33 2>$errfile
                ret=0
                touch $tmpfile
@@ -12490,7 +12490,7 @@ fd_socket() {
      fi
      if [[ -n "$PROXY" ]]; then
           # PROXYNODE works better than PROXYIP on modern versions of squid
-          if ! exec 5<> /dev/tcp/${PROXYNODE}/${PROXYPORT}; then
+          if ! exec 5<> /dev/tcp/"${PROXYNODE}"/"${PROXYPORT}"; then
                outln
                pr_warning "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
                return 6
@@ -12526,7 +12526,7 @@ fd_socket() {
      # Otherwise (no socket timeout) OR when we survived that we do that without subshell.
      # proceed with the "usual case", see below.
      elif [[ -n "$SOCKET_TIMEOUT" ]]; then
-          if ! $TIMEOUT_CMD $SOCKET_TIMEOUT bash -c "exec 5<>/dev/tcp/$nodeip/$PORT"; then
+          if ! $TIMEOUT_CMD $SOCKET_TIMEOUT bash -c 'exec 5<>/dev/tcp/"$nodeip"/"$PORT"'; then
                ((NR_SOCKET_FAIL++))
                connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems (connect timeout), giving up"
                outln
@@ -12535,7 +12535,7 @@ fd_socket() {
           fi
      fi
      # Now comes the usual case
-     if [[ -z "$PROXY" ]] && ! exec 5<>/dev/tcp/$nodeip/$PORT; then
+     if [[ -z "$PROXY" ]] && ! exec 5<>/dev/tcp/"$nodeip"/"$PORT"; then
           ((NR_SOCKET_FAIL++))
           connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems, giving up"
           outln
@@ -23223,7 +23223,7 @@ get_txt_record() {
 #
 shouldwedo_ipv6() {
      "$do_ipv4_only" && return 0
-     bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
+     bash -c 'exec 5<>/dev/tcp/"$1"/"$PORT"' &>/dev/null &
      wait_kill $! $((MAX_WAITSOCK * 10))
      if [[ $? -eq 3 ]]; then
           # was killed, so this got stuck
@@ -23232,7 +23232,7 @@ shouldwedo_ipv6() {
           do_ipv6_only=false                 # Ensures round brackets enclosing IPv6 addresses and we don't try IPv6 anymore
      else
           # we're trying in the foreground again, only to get the return code
-          bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null
+          bash -c 'exec 5<>/dev/tcp/"$1"/"$PORT"' &>/dev/null
           if [[ $? -eq 0 ]]; then
                IPv6_OK=true
           else
