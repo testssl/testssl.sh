@@ -1802,10 +1802,10 @@ http_get() {
 
      if type -p curl &>/dev/null; then
           if [[ -z "$PROXY" ]]; then
-               curl -s --noproxy '*' -A $''"$useragent"'' -o $dl "$1"
+               curl -s --noproxy '*' -A $''"$useragent"'' -o "$dl" "$1"
           else
                # for the sake of simplicity assume the proxy is using http
-               curl -s -x "$PROXYIP":"$PROXYPORT" -A $''"$useragent"'' -o $dl "$1"
+               curl -s -x "$PROXYIP":"$PROXYPORT" -A $''"$useragent"'' -o "$dl" "$1"
           fi
           return $?
      elif type -p wget &>/dev/null; then
@@ -1813,12 +1813,12 @@ http_get() {
           # assume the GET protocol we query is using http -- http_proxy is the $ENV not for the connection TO
           # the proxy, but for the protocol we query THROUGH the proxy
           if [[ -z "$PROXY" ]]; then
-               wget --no-proxy -q -U $''"$useragent"'' -O $dl "$1"
+               wget --no-proxy -q -U $''"$useragent"'' -O "$dl" "$1"
           else
                if [[ -z "$http_proxy" ]]; then
-                    http_proxy=http://"$PROXYIP":"$PROXYPORT" wget -q -U $''"$useragent"'' -O $dl "$1"
+                    http_proxy=http://"$PROXYIP":"$PROXYPORT" wget -q -U $''"$useragent"'' -O "$dl" "$1"
                else
-                    wget -q -U $''"$useragent"'' -O $dl "$1"
+                    wget -q -U $''"$useragent"'' -O "$dl" "$1"
                fi
           fi
           return $?
