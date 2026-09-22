@@ -24876,6 +24876,7 @@ issue_cmdline_warnings() {
      local avoid_complaints="^(1\.1\.1\.1|1\.0\.0\.1|8\.8\.8\.8|8\.8\.4\.4|9\.9\.9\.9)$"
      # yeah, I know there are more. But these are the most common where we avoid warnings
 
+     "$do_display_only" && return 0
      if "$FAST" ; then
           outln
           prln_warning "'--fast' can have some undesired side effects thus it is not recommended to use anymore"
