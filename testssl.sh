@@ -22419,6 +22419,8 @@ ignore_no_or_lame() {
 parse_hn_port() {
      local tmp_port
      local node_tmp=""
+     local host_re='^[][a-zA-Z0-9.:-]+$'
+     local port_re='^[[:digit:]]+$'     # invalid ports like 0 and 70000 will fail later
 
      NODE="$1"
      NODE="$(tolower "$NODE")"          # Lowercase
@@ -22434,7 +22436,7 @@ parse_hn_port() {
      fi
      # Was an IPv6 address supplied like [AA:BB:CC::]:port ?
      if grep -q ']' <<< "$NODE"; then
-          tmp_port=$(printf "$NODE" | sed 's/\[.*\]//' | sed 's/://')
+          tmp_port=$(printf '%s' "$NODE" | sed 's/\[.*\]//' | sed 's/://')
           # determine v6 port, supposed it was supplied additionally
           if [[ -n "$tmp_port" ]]; then
                PORT=$tmp_port
@@ -22474,9 +22476,26 @@ parse_hn_port() {
           NODE="$node_tmp"
      fi
 
+     # Anti injection gate on the final NODE and PORT
+     if ! [[ "$NODE" =~ $host_re ]] && ! printf '%s' "$NODE" | LC_ALL=C grep -q '[^[:print:]]'; then
+          fatal "Invalid hostname \"$NODE\"" $ERR_CMDLINE
+     elif [[ "$NODE" == -* ]]; then
+          # we allow dashes but not at the start
+          fatal "Invalid hostname \"$NODE\"" $ERR_CMDLINE
+     fi
+     if ! [[ "$PORT" =~ $port_re ]]; then
+          # in any case we have a default port set to 443 in the very beginning
+          fatal "Invalid port specified \"$PORT\"" $ERR_CMDLINE
+     fi
+
      debugme echo $NODE:$PORT
      if [[ -n "$XMPP_HOST" ]]; then
-          # XMPP host is set, force SNI to be that
+          # Symmetric to the $NODE validation
+          if { ! [[ "$XMPP_HOST" =~ $host_re ]] || [[ "$XMPP_HOST" == -* ]]; } \
+               && ! printf '%s' "$XMPP_HOST" | LC_ALL=C grep -q '[^[:print:]]'; then
+               fatal "Invalid XMPP host \"$XMPP_HOST\"" $ERR_CMDLINE
+          fi
+          # if XMPP host is set, force SNI
           SNI="-servername $XMPP_HOST"
      else
           SNI="-servername $NODE"
