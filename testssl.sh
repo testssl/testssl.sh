@@ -23401,6 +23401,9 @@ determine_rdns() {
 # We need to get the IP address of the proxy so we can use it in fd_socket
 #
 check_proxy() {
+     local re_hostname='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'
+     local re_ipv6='^[0-9a-fA-F:]+$'
+
      if [[ -n "$PROXY" ]]; then
           if ! "$HAS_PROXY"; then
                fatal "Your $OPENSSL is too old to support the \"-proxy\" option" $ERR_OSSLBIN
@@ -23422,6 +23425,11 @@ check_proxy() {
           PROXYNODE="${PROXYNODE/\]/}"
           is_number "$PROXYPORT" || fatal "Proxy port cannot be determined from \"$PROXY\"" $ERR_CMDLINE
 
+          # Security gate – allow only RFC-1035 hostname chars or bare IPv6 (brackets stripped already)
+          if ! [[ "$PROXYNODE" =~ $re_hostname ]] && ! [[ "$PROXYNODE" =~ $re_ipv6 ]]; then
+               fatal "Proxy node contains invalid characters: $PROXYNODE" $ERR_CMDLINE
+          fi
+
           if is_ipv4addr "$PROXYNODE"; then
                PROXYIP="$PROXYNODE"
           elif is_ipv6addr "$PROXYNODE"; then
@@ -23437,7 +23445,7 @@ check_proxy() {
                     fi
                fi
           else
-               # We check now preferred whether there was an IPv4 proxy via DNS specified
+               # We check now preferred whether there was an IPv4 proxy via DNS A record specified
                # If it fails it could be an IPv6 only proxy via DNS or we just can't reach the proxy
                PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
                if [[ -z "$PROXYIP" ]]; then
@@ -23450,7 +23458,12 @@ check_proxy() {
                fi
                [[ -z "$PROXYIP" ]] && fatal "Proxy IP cannot be determined from \"$PROXYNODE\"" $ERR_CMDLINE
           fi
+
           PROXY="-proxy $PROXYIP:$PROXYPORT"
+          # Final gate, just to be sure
+          if ! [[ "$PROXY" =~ ^-proxy\ \[?[0-9a-fA-F:.]+\]?:[0-9]{1,5}$ ]]; then
+               fatal "Proxy string failed final validation: $PROXY" $ERR_CMDLINE
+          fi
      fi
 }
 
