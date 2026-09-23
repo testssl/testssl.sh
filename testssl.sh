@@ -4176,7 +4176,7 @@ run_cipher_match(){
                               fi
                          done
                          [[ -z "$ciphers_to_test" ]] && [[ -z "$tls13_ciphers_to_test" ]] && break
-                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ciphers_to_test:1}\'" -ciphersuites "\'${tls13_ciphers_to_test:1}\'" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
+                         $OPENSSL s_client $(s_client_options "$proto -cipher '${ciphers_to_test:1}' -ciphersuites '${tls13_ciphers_to_test:1}' $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
                          sclient_connect_successful $? "$TMPFILE" || break
                          cipher=$(get_cipher $TMPFILE)
                          [[ -z "$cipher" ]] && break
@@ -4450,7 +4450,7 @@ run_allciphers() {
                          fi
                     done
                     [[ -z "$ciphers_to_test" ]] && [[ -z "$tls13_ciphers_to_test" ]] && break
-                    $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ciphers_to_test:1}\'" -ciphersuites "\'${tls13_ciphers_to_test:1}\'" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
+                    $OPENSSL s_client $(s_client_options "$proto -cipher '${ciphers_to_test:1}' -ciphersuites '${tls13_ciphers_to_test:1}' $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
                     sclient_connect_successful $? "$TMPFILE" || break
                     cipher=$(get_cipher $TMPFILE)
                     [[ -z "$cipher" ]] && break
@@ -4750,7 +4750,7 @@ ciphers_by_strength() {
                     done
                     success=1
                     if [[ -n "$ciphers_to_test" ]] || [[ -n "$tls13_ciphers_to_test" ]]; then
-                         $OPENSSL s_client $(s_client_options "-cipher "\'${ciphers_to_test:1}\'" -ciphersuites "\'${tls13_ciphers_to_test:1}\'" $proto $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
+                         $OPENSSL s_client $(s_client_options "-cipher '${ciphers_to_test:1}' -ciphersuites '${tls13_ciphers_to_test:1}' $proto $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
                          sclient_connect_successful $? "$TMPFILE"
                          if [[ $? -eq 0 ]]; then
                               cipher=$(get_cipher $TMPFILE)
@@ -5380,7 +5380,7 @@ run_client_simulation() {
                               curves[i]=""
                               [[ -n "$supported_curves" ]] && curves[i]="-curves ${supported_curves:1}"
                          fi
-                         options="$(s_client_options "-cipher ${ch_ciphers[i]} -ciphersuites "\'${ciphersuites[i]}\'" ${curves[i]} ${protos[i]} $STARTTLS $BUGS $PROXY -connect $NODEIP:$PORT ${ch_sni[i]}")"
+                         options="$(s_client_options "-cipher ${ch_ciphers[i]} -ciphersuites '${ciphersuites[i]}' ${curves[i]} ${protos[i]} $STARTTLS $BUGS $PROXY -connect $NODEIP:$PORT ${ch_sni[i]}")"
                          "$HAS_TLS12" || options="${options//-no_tls1_2 /}"
                          "$HAS_TLS11" || options="${options//-no_tls1_1 /}"
                          "$HAS_TLS1" || options="${options//-no_tls1 /}"
@@ -5461,7 +5461,7 @@ run_client_simulation() {
                                         debugme pr_local_problem "$tls not supported, "
                                         continue
                                    fi
-                                   options="$(s_client_options "$tls -cipher ${ch_ciphers[i]} -ciphersuites "\'${ciphersuites[i]}\'" ${curves[i]} $STARTTLS $BUGS $PROXY -connect $NODEIP:$PORT ${ch_sni[i]}")"
+                                   options="$(s_client_options "$tls -cipher ${ch_ciphers[i]} -ciphersuites '${ciphersuites[i]}' ${curves[i]} $STARTTLS $BUGS $PROXY -connect $NODEIP:$PORT ${ch_sni[i]}")"
                                    debugme echo "$OPENSSL s_client $options  </dev/null"
                                    $OPENSSL s_client $options  </dev/null >$TMPFILE 2>$ERRFILE
                                    sclient_connect_successful $? $TMPFILE
@@ -6486,7 +6486,7 @@ sub_cipherlists() {
                          "$FAST" && continue
                          [[ $(has_server_protocol "${proto:1}") -eq 1 ]] && continue
                     fi
-                    $OPENSSL s_client $(s_client_options "-cipher "$1" -ciphersuites "\'$2\'" $BUGS $STARTTLS -connect $NODEIP:$PORT $PROXY $SNI $proto") 2>$ERRFILE >$TMPFILE </dev/null
+                    $OPENSSL s_client $(s_client_options "-cipher $1 -ciphersuites '$2' $BUGS $STARTTLS -connect $NODEIP:$PORT $PROXY $SNI $proto") 2>$ERRFILE >$TMPFILE </dev/null
                     sclient_connect_successful $? $TMPFILE
                     sclient_success=$?
                     debugme cat $ERRFILE
@@ -7596,7 +7596,7 @@ check_tls12_pref() {
      ciphers_to_test="${ciphers_to_test%:}"
 
      while true; do
-          $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher "$ciphers_to_test$tested_cipher" -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
+          $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher $ciphers_to_test$tested_cipher -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
           if sclient_connect_successful $? $TMPFILE ; then
                cipher=$(get_cipher $TMPFILE)
                order+=" $cipher"
@@ -7612,7 +7612,7 @@ check_tls12_pref() {
      while true; do
           # no ciphers from "ALL$tested_cipher:$batchremoved" left
           # now we check $batchremoved, and remove the minus signs first:
-          $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher "$batchremoved" -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
+          $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher $batchremoved -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
           if sclient_connect_successful $? $TMPFILE ; then
                batchremoved_success=true               # signals that we have some of those ciphers and need to put everything together later on
                cipher=$(get_cipher $TMPFILE)
@@ -7645,7 +7645,7 @@ check_tls12_pref() {
                     [[ ! "$tested_cipher:" =~ :-$cipher: ]] && ciphers_to_test+=":$cipher"
                done
                [[ -z "$ciphers_to_test" ]] && break
-               $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher "${ciphers_to_test:1}" -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
+               $OPENSSL s_client $(s_client_options "$STARTTLS -tls1_2 $BUGS -cipher ${ciphers_to_test:1} -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
                if sclient_connect_successful $? $TMPFILE ; then
                     cipher=$(get_cipher $TMPFILE)
                     order+=" $cipher"
@@ -7727,7 +7727,7 @@ cipher_pref_check() {
                     else
                          ciphers_to_test="-ciphersuites ${ciphers_to_test:1}"
                     fi
-                    $OPENSSL s_client $(s_client_options "$STARTTLS -"$proto" $BUGS $ciphers_to_test -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
+                    $OPENSSL s_client $(s_client_options "$STARTTLS -$proto $BUGS $ciphers_to_test -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
                     sclient_connect_successful $? $TMPFILE || break
                     cipher=$(get_cipher $TMPFILE)
                     [[ -z "$cipher" ]] && break
@@ -7979,7 +7979,7 @@ cipher_pref_check() {
                else
                     ciphers_to_test="-ciphersuites $first_chacha_cipher:$first_cipher"
                fi
-               $OPENSSL s_client $(s_client_options "$STARTTLS -"$proto" $BUGS $ciphers_to_test -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
+               $OPENSSL s_client $(s_client_options "$STARTTLS -$proto $BUGS $ciphers_to_test -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>>$ERRFILE >$TMPFILE
                if sclient_connect_successful $? $TMPFILE; then
                     cipher="$(get_cipher $TMPFILE)"
                     [[ "$cipher" =~ CHACHA20 ]] && prioritize_chacha=true
@@ -9174,7 +9174,7 @@ etsi_ets_visibility_info() {
                                    len1=$((2*0x${dercert:j:2}))
                                    j+=2
                               fi
-                              access_description[nr_visnames]=""$(hex2binary "${dercert:j:len1}")""
+                              access_description[nr_visnames]="$(hex2binary "${dercert:j:len1}")"
                               nr_visnames+=1
                          done
                     fi
@@ -10821,7 +10821,7 @@ run_server_defaults() {
                # would have been found by get_server_certificate(). So, try again with a TLSv1.2 ClientHello.
                $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -no_tls1_3 -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>$ERRFILE >$TMPFILE
           else
-               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS "$OPTIMAL_PROTO" -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>$ERRFILE >$TMPFILE
+               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS $OPTIMAL_PROTO -connect $NODEIP:$PORT $PROXY $SNI") </dev/null 2>$ERRFILE >$TMPFILE
           fi
           if sclient_connect_successful $? $TMPFILE; then
                sessticket_lifetime_hint=$(awk '/session ticket lifetime/ { if (!found) print; found=1 }' $TMPFILE)
@@ -11329,7 +11329,7 @@ run_fs() {
                     elif [[ "$proto" =~ curves2 ]]; then
                          curves_option="-curves $curves_list2"
                     fi
-                    $OPENSSL s_client $(s_client_options "-${proto#*-} -cipher "\'${ciphers_to_test:1}\'" -ciphersuites "\'${tls13_ciphers_to_test:1}\'" $curves_option $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
+                    $OPENSSL s_client $(s_client_options "-${proto#*-} -cipher '${ciphers_to_test:1}' -ciphersuites '${tls13_ciphers_to_test:1}' $curves_option $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
                     sclient_connect_successful $? $TMPFILE || break
                     fs_cipher=$(get_cipher $TMPFILE)
                     [[ -z "$fs_cipher" ]] && break
@@ -11496,7 +11496,7 @@ run_fs() {
                               fi
                          done
                          [[ -z "$curves_to_test" ]] && break
-                         $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
+                         $OPENSSL s_client $(s_client_options "$proto -cipher '${ecdhe_cipher_list:1}' -ciphersuites '${tls13_cipher_list:1}' -curves ${curves_to_test:1} $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
                          sclient_connect_successful $? $TMPFILE || break
                          temp=$(awk -F': ' '/^Server Temp Key|^Peer Temp Key|^Negotiated TLS1.3 group/ { print $2 }' "$TMPFILE")
                          curve_found="${temp%%,*}"
@@ -11529,7 +11529,7 @@ run_fs() {
                               for (( i=low; i < high; i++ )); do
                                    "${supported_curve[i]}" && curves_to_test+=":${curves_ossl[i]}"
                               done
-                              $OPENSSL s_client $(s_client_options "$proto -cipher "\'${ecdhe_cipher_list:1}\'" -ciphersuites "\'${tls13_cipher_list:1}\'" -curves "${curves_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
+                              $OPENSSL s_client $(s_client_options "$proto -cipher '${ecdhe_cipher_list:1}' -ciphersuites '${tls13_cipher_list:1}' -curves ${curves_to_test:1} $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") &>$TMPFILE </dev/null
                               sclient_connect_successful $? $TMPFILE || break
                               temp=$(awk -F': ' '/^Server Temp Key|^Peer Temp Key|^Negotiated TLS1.3 group/ { print $2 }' "$TMPFILE")
                               curve_found="${temp%%,*}"
@@ -11963,7 +11963,7 @@ run_npn() {
           if "$HAS_TLS13" && ! "$TLS13_ONLY"; then
                 proto="-no_tls1_3"
           fi
-          $OPENSSL s_client $(s_client_options "$proto -connect $NODEIP:$PORT $BUGS $SNI -nextprotoneg "$NPN_PROTOs"") </dev/null 2>$ERRFILE >$TMPFILE
+          $OPENSSL s_client $(s_client_options "$proto -connect $NODEIP:$PORT $BUGS $SNI -nextprotoneg $NPN_PROTOs") </dev/null 2>$ERRFILE >$TMPFILE
           [[ $? -ne 0 ]] && ret=1
      else
           tls_sockets "03" "$TLS12_CIPHER" "all"
@@ -12303,7 +12303,7 @@ starttls_xmpp_dialog() {
      namespace="jabber:client"
      [[ "$STARTTLS_PROTOCOL" == xmpp-server ]] && namespace="jabber:server"
 
-     starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='"$namespace"' to='"$XMPP_HOST"' version='1.0'>"  'starttls(.*)features' 1 &&
+     starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='$namespace' to='$XMPP_HOST' version='1.0'>"  'starttls(.*)features' 1 &&
      starttls_io "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"  '<proceed'  1
      # starttls_io "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='"$namespace"' to='"$XMPP_HOST"' version='1.0'>"  'JUSTSEND' 2
      ret=$?
@@ -13047,9 +13047,9 @@ parse_sslv2_serverhello() {
                # Just in case somebody's interested in the exact error, we deliver it ;-)
                debugme echo -n ">TLS< alert message discovered: ${v2_hello_ascii} "
                case "${v2_hello_ascii:10:2}" in
-                    01) debugme echo "(01/warning: 0x"${v2_hello_ascii:12:2}"/$(tls_alert "${v2_hello_ascii:12:2}"))" ;;
-                    02) debugme echo "(02/fatal: 0x"${v2_hello_ascii:12:2}"/$(tls_alert "${v2_hello_ascii:12:2}"))" ;;
-                    *)  debugme echo "("${v2_hello_ascii:10:2}" : "${v2_hello_ascii:12:2}"))" ;;
+                    01) debugme echo "(01/warning: 0x${v2_hello_ascii:12:2}/$(tls_alert "${v2_hello_ascii:12:2}"))" ;;
+                    02) debugme echo "(02/fatal: 0x${v2_hello_ascii:12:2}/$(tls_alert "${v2_hello_ascii:12:2}"))" ;;
+                    *)  debugme echo "(${v2_hello_ascii:10:2} : ${v2_hello_ascii:12:2})" ;;
                esac
                ret=0
           elif [[ $v2_hello_initbyte != "8" ]] || [[ $v2_hello_handshake != "04" ]]; then
@@ -19713,7 +19713,7 @@ run_beast(){
                esac
           elif [[ $subret -eq 2 ]]; then
                sclient_supported "-$proto" || continue
-               $OPENSSL s_client $(s_client_options "-state -"${proto}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") 2>>$ERRFILE >$TMPFILE </dev/null
+               $OPENSSL s_client $(s_client_options "-state -${proto} $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") 2>>$ERRFILE >$TMPFILE </dev/null
                if sclient_connect_successful $? $TMPFILE; then
                     higher_proto_supported+=" $(get_protocol $TMPFILE)"
                     add_proto_offered "$proto" yes
@@ -19734,7 +19734,7 @@ run_beast(){
           elif [[ $subret -eq 1 ]]; then
                sclient_success=1
           elif sclient_supported "-$proto"; then
-               $OPENSSL s_client $(s_client_options "-"$proto" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
+               $OPENSSL s_client $(s_client_options "-$proto $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
                sclient_connect_successful $? $TMPFILE
                sclient_success=$?
           elif [[ "$proto" == ssl3 ]]; then
@@ -19770,7 +19770,7 @@ run_beast(){
                tls_sockets "$proto_hex" "$cbc_ciphers_hex, 00,ff"
                [[ $? -eq 0 ]] || continue
           else
-               $OPENSSL s_client $(s_client_options "-"$proto" -cipher "$cbc_cipher_list" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
+               $OPENSSL s_client $(s_client_options "-$proto -cipher $cbc_cipher_list $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
                sclient_connect_successful $? $TMPFILE || continue
           fi
 
@@ -19786,7 +19786,7 @@ run_beast(){
                     ! "${ciphers_found[i]}" && "${ossl_supported[i]}" && ciphers_to_test+=":${ciph[i]}"
                done
                [[ -z "$ciphers_to_test" ]] && break
-               $OPENSSL s_client $(s_client_options "-cipher "${ciphers_to_test:1}" -"${proto}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
+               $OPENSSL s_client $(s_client_options "-cipher ${ciphers_to_test:1} -${proto} $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>>$ERRFILE </dev/null
                sclient_connect_successful $? $TMPFILE || break
                cbc_cipher=$(get_cipher $TMPFILE)
                [[ -z "$cbc_cipher" ]] && break
@@ -20339,7 +20339,7 @@ run_rc4() {
                     ! "${ciphers_found2[i]}" && ciphers_to_test+=":${ciph2[i]}"
                done
                [[ -z "$ciphers_to_test" ]] && break
-               $OPENSSL s_client $(s_client_options "$proto -cipher "${ciphers_to_test:1}" $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
+               $OPENSSL s_client $(s_client_options "$proto -cipher ${ciphers_to_test:1} $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") >$TMPFILE 2>$ERRFILE </dev/null
                sclient_connect_successful $? "$TMPFILE" || break
                cipher=$(get_cipher $TMPFILE)
                [[ -z "$cipher" ]] && break
@@ -23735,7 +23735,7 @@ determine_optimal_proto() {
           # STARTTLS workaround needed see https://github.com/testssl/testssl.sh/issues/188 -- kind of odd
           for STARTTLS_OPTIMAL_PROTO in -tls1_2 -tls1 -ssl3 -tls1_1 -tls1_3 -ssl2; do
                sclient_supported "$STARTTLS_OPTIMAL_PROTO" || continue
-               $OPENSSL s_client $(s_client_options "$STARTTLS_OPTIMAL_PROTO $BUGS -connect "$NODEIP:$PORT" $PROXY -msg $STARTTLS $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
+               $OPENSSL s_client $(s_client_options "$STARTTLS_OPTIMAL_PROTO $BUGS -connect $NODEIP:$PORT $PROXY -msg $STARTTLS $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
                if sclient_auth $? $TMPFILE; then
                     all_failed=false
                     add_proto_offered "${STARTTLS_OPTIMAL_PROTO/-/}" yes
@@ -23759,19 +23759,19 @@ determine_optimal_proto() {
                # $ENABLE_PHA is false.
                if [[ -z "$URL_PATH" ]] || [[ "$URL_PATH" == / ]] || \
                   { "$HAS_TLS13" && ! "$HAS_ENABLE_PHA" && [[ -z "$proto" || "$proto" == -tls1_3 ]] && [[ $(has_server_protocol "tls1_3") -ne 1 ]]; }; then
-                    $OPENSSL s_client $(s_client_options "$proto $BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
+                    $OPENSSL s_client $(s_client_options "$proto $BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
                else
-                    safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$proto $BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI -ign_eof -enable_pha") >$TMPFILE 2>>$ERRFILE &
+                    safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$proto $BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI -ign_eof -enable_pha") >$TMPFILE 2>>$ERRFILE &
                     wait_kill $! $((HEADER_MAXSLEEP * 10))
                     if [[ $? -eq 0 ]]; then
                          # Issue HTTP GET again as it properly finished within $HEADER_MAXSLEEP and didn't hang.
                          # Doing it again in the foreground to get an accurate return code.
-                         safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$proto $BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI -ign_eof -enable_pha") >$TMPFILE 2>>$ERRFILE
+                         safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$proto $BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI -ign_eof -enable_pha") >$TMPFILE 2>>$ERRFILE
                     else
                          # Issuing HTTP GET caused $OPENSSL to hang, so just try to determine
                          # protocol support without also trying to collect information about
                          # client authentication.
-                         $OPENSSL s_client $(s_client_options "$proto $BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
+                         $OPENSSL s_client $(s_client_options "$proto $BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI") </dev/null >$TMPFILE 2>>$ERRFILE
                     fi
                fi
 
@@ -23799,13 +23799,13 @@ determine_optimal_proto() {
                     if [[ "$tmp" == tls1_3 ]] && [[ -n "$URL_PATH" ]] && [[ "$URL_PATH" != / ]] && ! "$HAS_ENABLE_PHA"; then
                          if [[ "$(has_server_protocol "tls1_2")" -eq 0 ]] || [[ "$(has_server_protocol "tls1_1")" -eq 0 ]] || \
                             [[ "$(has_server_protocol "tls1")" -eq 0 ]] || [[ "$(has_server_protocol "ssl3")" -eq 0 ]]; then
-                              safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI -ign_eof -no_tls1_3") >$TEMPDIR/client_auth_test.txt 2>>$ERRFILE &
+                              safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI -ign_eof -no_tls1_3") >$TEMPDIR/client_auth_test.txt 2>>$ERRFILE &
                               wait_kill $! $((HEADER_MAXSLEEP * 10))
                               # If the HTTP properly finished within $HEADER_MAXSLEEP and didn't hang, then
                               # do it again in the foreground to get an accurate return code. If it did hang,
                               # there is no way to test for client authentication, so don't try.
                               if [[ $? -eq 0 ]]; then
-                                   safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$BUGS -connect "$NODEIP:$PORT" -msg $PROXY $SNI -ign_eof -no_tls1_3") >$TEMPDIR/client_auth_test.txt 2>>$ERRFILE
+                                   safe_echo "$GET_REQ11" | $OPENSSL s_client $(s_client_options "$BUGS -connect $NODEIP:$PORT -msg $PROXY $SNI -ign_eof -no_tls1_3") >$TEMPDIR/client_auth_test.txt 2>>$ERRFILE
                                    sclient_auth $? $TEMPDIR/client_auth_test.txt
                               fi
                          elif [[ "$CLIENT_AUTH" == none ]]; then
