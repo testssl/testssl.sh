@@ -12070,7 +12070,7 @@ starttls_io() {
      local buffer=""
      local -i i
 
-     [[ -n "$3" ]] && waitsleep=$3
+     [[ -n "$3" ]] && nr_waits=$3
      [[ -z "$2" ]] && echo "FIXME $((LINENO))"
 
      # If there's a sending part it's IO. Postgres sends via socket and replies via
