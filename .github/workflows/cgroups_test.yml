@@ -1,0 +1,32 @@
+---
+name: cgroups test
+on: [pull_request]
+permissions:
+  contents: read
+
+jobs:
+  repro:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Bare s_server, no perl, no testssl
+        run: |
+          set -x
+          openssl req -x509 -newkey rsa:2048 -keyout /tmp/k.pem -out /tmp/c.pem \
+            -days 42 -nodes -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1
+          RUNNER_TRACKING_ID="" && openssl s_server -accept 127.0.0.1:1443 -cert /tmp/c.pem -key /tmp/k.pem \
+            -tls1_3 -naccept 4242 >/tmp/srv.log 2>&1 &
+          SPID=$!
+          sleep 2
+          echo "alive-before: $(kill -0 $SPID 2>/dev/null && echo yes || echo no)"
+          # the 'probe': connect and immediately close, exactly like the perl probe
+          timeout 2 bash -c 'echo > /dev/tcp/127.0.0.1/1443' 2>/dev/null
+          echo "probe-exit: $?"
+          sleep 2
+          echo "alive-after:  $(kill -0 $SPID 2>/dev/null && echo yes || echo no)"
+          echo '--- srv.log ---'; cat /tmp/srv.log
+          echo '--- cgroup ---'; cat /proc/$SPID/cgroup 2>/dev/null || echo "(process gone)"
+          echo '--- seccomp ---'; grep -E 'Seccomp|NoNewPrivs' /proc/$SPID/status 2>/dev/null || echo "(process gone)"
+          echo '--- limits ---'; cat /proc/$SPID/limits 2>/dev/null || echo "(process gone)"
+          kill -9 $SPID 2>/dev/null
+
