@@ -1975,6 +1975,8 @@ http_head_printf() {
 
 ldap_get() {
      local ldif
+     local crl="$1"
+     local tmpfile="$2"
      local jsonID="$3"
 
      if type -p curl &>/dev/null; then
