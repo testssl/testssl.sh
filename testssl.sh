@@ -22472,7 +22472,8 @@ validate_portnumber() {
 }
 
 
-# arg1: URI
+# arg1: URI. Does also validate hostname and port
+#
 parse_hn_port() {
      local tmp_port
 
@@ -26352,7 +26353,7 @@ lets_roll() {
           exit $?
      fi
 
-     [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs2CHECK and IPADDRs2SHOW is set now
+     [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs2CHECK and IPADDRs2SHOW is set now and validated
      prepare_logging "${FNAME_DATE}"
 
      if [[ -n "$PROXY" ]] && $DNS_VIA_PROXY; then
