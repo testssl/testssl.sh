@@ -22415,12 +22415,66 @@ ignore_no_or_lame() {
      fi
 }
 
+
+# Generic function for ANY hostname
+#
+validate_hostname() {
+     local host_re='^[][a-zA-Z0-9.:-]+$'
+     local node="$1"
+     local node_tmp=""
+
+     # We check for non-ASCII chars now. If there are some we'll try to convert it if IDN/IDN2 is installed
+     # If not, we'll continue. Hoping later that dig can use it. If not the error handler will tell.
+     # Honestly we don't care whether it's IDN2008 or IDN2003 or Emoji domains as long as it works.
+     # We try to resolve anything supplied, supposed it passes the security gate
+     if [[ "$node" == *[![:ascii:]]* ]]; then
+          if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
+               prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
+               outln " Trying to feed the resolver without converted \"$node\" ...\n"
+               #ToDo: fileout is missing
+               node_tmp="$node"
+          elif "$HAS_IDN2"; then
+               node_tmp="$(idn2 "$node" 2>/dev/null)"
+          fi
+          if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
+               node_tmp="$(idn "$node" 2>/dev/null)"
+          fi
+          if [[ -z "$node_tmp" ]]; then
+               prln_warning " URI contains non-ASCII characters and IDN conversion failed."
+               outln " Trying to feed the resolver without converted \"$node\" ...\n"
+               fileout hostname_problem "WARN" "URI contains non-ASCII characters and IDN conversion failed, continuing"
+               node_tmp="$node"
+          fi
+          node="$node_tmp"
+     fi
+
+     # Anti injection gate on the final NODE. First RE, then we handle IDN chars (printable).
+     # If both do not match we label the hostname as invalid. CRTL chars aren't allowed here
+     # also if DNS resolution would probably not succeed.
+     if ! [[ "$node" =~ $host_re ]] && ! printf '%s' "$node" | LC_ALL=C grep -q '[^[:print:][:cntrl:][ ]]'; then
+          return 1
+     elif [[ "$node" == -* ]]; then
+          # we allow dashes but not at the start
+          return 1
+     fi
+     return 0
+}
+
+
+# Generic function for ANY port number
+#
+validate_portnumber() {
+          local port="$1"
+
+          is_number "$port" || return 1
+          [[ "$port" -lt 65536 ]] || return 2
+          return 0
+}
+
+
 # arg1: URI
 parse_hn_port() {
      local tmp_port
-     local node_tmp=""
-     local host_re='^[][a-zA-Z0-9.:-]+$'
-     local port_re='^[[:digit:]]+$'     # invalid ports like 0 and 70000 will fail later
 
      NODE="$1"
      NODE="$(tolower "$NODE")"          # Lowercase
@@ -22451,55 +22505,21 @@ parse_hn_port() {
 
      NODE="${NODE%%.}"                  # strip trailing "." if supplied
 
-     # We check for non-ASCII chars now. If there are some we'll try to convert it if IDN/IDN2 is installed
-     # If not, we'll continue. Hoping later that dig can use it. If not the error handler will tell
-     # Honestly we don't care whether it's IDN2008 or IDN2003 or Emoji domains as long as it works.
-     # So we try to resolve anything supplied. If it can't  our resolver error handler takes care
-     if [[ "$NODE" == *[![:ascii:]]* ]]; then
-          if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
-               prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
-               outln " Trying to feed the resolver without converted \"$NODE\" ...\n"
-               #ToDo: fileout is missing
-               node_tmp="$NODE"
-          elif "$HAS_IDN2"; then
-               node_tmp="$(idn2 "$NODE" 2>/dev/null)"
-          fi
-          if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
-               node_tmp="$(idn "$NODE" 2>/dev/null)"
-          fi
-          if [[ -z "$node_tmp" ]]; then
-               prln_warning " URI contains non-ASCII characters and IDN conversion failed."
-               outln " Trying to feed the resolver without converted \"$NODE\" ...\n"
-               #ToDo: fileout is missing
-               node_tmp="$NODE"
-          fi
-          NODE="$node_tmp"
-     fi
+     validate_hostname "$NODE" || fatal "Invalid hostname \"$NODE\" supplied" $ERR_CMDLINE
 
-     # Anti injection gate on the final NODE and PORT
-     if ! [[ "$NODE" =~ $host_re ]] && ! printf '%s' "$NODE" | LC_ALL=C grep -q '[^[:print:]]'; then
-          fatal "Invalid hostname \"$NODE\"" $ERR_CMDLINE
-     elif [[ "$NODE" == -* ]]; then
-          # we allow dashes but not at the start
-          fatal "Invalid hostname \"$NODE\"" $ERR_CMDLINE
-     fi
-     if ! [[ "$PORT" =~ $port_re ]]; then
-          # in any case we have a default port set to 443 in the very beginning
-          fatal "Invalid port specified \"$PORT\"" $ERR_CMDLINE
-     fi
-
-     debugme echo $NODE:$PORT
      if [[ -n "$XMPP_HOST" ]]; then
-          # Symmetric to the $NODE validation
-          if { ! [[ "$XMPP_HOST" =~ $host_re ]] || [[ "$XMPP_HOST" == -* ]]; } \
-               && ! printf '%s' "$XMPP_HOST" | LC_ALL=C grep -q '[^[:print:]]'; then
-               fatal "Invalid XMPP host \"$XMPP_HOST\"" $ERR_CMDLINE
-          fi
+          # Symmetric to the $NODE validation above
+          validate_hostname "$XMPP_HOST" || fatal "Invalid xmpp servername \"$NODE\" supplied" $ERR_CMDLINE
           # if XMPP host is set, force SNI
           SNI="-servername $XMPP_HOST"
      else
           SNI="-servername $NODE"
      fi
+
+     validate_portnumber "$PORT" || fatal "Invalid port specified \"$PORT\"" $ERR_CMDLINE
+
+     debugme echo $NODE:$PORT
+
      URL_PATH=$(sed 's/https:\/\///' <<< "$1" | sed 's/'"${NODE}"'//' | sed 's/.*'"${PORT}"'//')      # remove protocol and node part and port
      URL_PATH=$(sed 's/\/\//\//g' <<< "$URL_PATH")          # we rather want // -> /
      URL_PATH=${URL_PATH%%.}                                # strip trailing "." so that it is not interpreted as URL
@@ -23401,9 +23421,6 @@ determine_rdns() {
 # We need to get the IP address of the proxy so we can use it in fd_socket
 #
 check_proxy() {
-     local re_hostname='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'
-     local re_ipv6='^[0-9a-fA-F:]+$'
-
      if [[ -n "$PROXY" ]]; then
           if ! "$HAS_PROXY"; then
                fatal "Your $OPENSSL is too old to support the \"-proxy\" option" $ERR_OSSLBIN
@@ -23423,12 +23440,13 @@ check_proxy() {
           # strip square brackets in IPv6 notation, but we may enter them later
           PROXYNODE="${PROXYNODE/\[/}"
           PROXYNODE="${PROXYNODE/\]/}"
-          is_number "$PROXYPORT" || fatal "Proxy port cannot be determined from \"$PROXY\"" $ERR_CMDLINE
 
-          # Security gate – allow only RFC-1035 hostname chars or bare IPv6 (brackets stripped already)
-          if ! [[ "$PROXYNODE" =~ $re_hostname ]] && ! [[ "$PROXYNODE" =~ $re_ipv6 ]]; then
-               fatal "Proxy node contains invalid characters: $PROXYNODE" $ERR_CMDLINE
-          fi
+          validate_portnumber "$PROXYPORT" || \
+               fatal "Proxy port \"$PROXYPORT\" cannot be determined or is out of range " $ERR_CMDLINE
+
+          # Security gate also for proxy to avoid injection problems
+          validate_hostname "$PROXYNODE" || \
+               fatal "Invalid proxy servername \"$PROXYNODE\" supplied" $ERR_CMDLINE
 
           if is_ipv4addr "$PROXYNODE"; then
                PROXYIP="$PROXYNODE"
@@ -23460,10 +23478,6 @@ check_proxy() {
           fi
 
           PROXY="-proxy $PROXYIP:$PROXYPORT"
-          # Final gate, just to be sure
-          if ! [[ "$PROXY" =~ ^-proxy\ \[?[0-9a-fA-F:.]+\]?:[0-9]{1,5}$ ]]; then
-               fatal "Proxy string failed final validation: $PROXY" $ERR_CMDLINE
-          fi
      fi
 }
 
