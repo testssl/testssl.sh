@@ -869,6 +869,25 @@ filter_printable() {
      sed -i 's/[^[:print:]]//g' $1 2>/dev/null
 }
 
+# Meant as stdin for $OPENSSL s_client, which exits as soon as it reads EOF on stdin. With TLS 1.3 the server
+# sends its session ticket after the handshake, so s_client may exit before the ticket arrives. This returns
+# (and so closes stdin) once file $1 contains pattern $2, or once $1 is non-empty if $2 is empty, or after
+# $3 tenths of a second. With $3=0 it returns immediately, like </dev/null.
+hold_stdin() {
+     local file="$1" pattern="$2"
+     local -i max_tenths="$3" i
+
+     for ((i=0; i<max_tenths; i++)); do
+          if [[ -z "$pattern" ]]; then
+               [[ -s "$file" ]] && return 0
+          else
+               grep -aq "$pattern" "$file" 2>/dev/null && return 0
+          fi
+          sleep 0.1
+     done
+     return 0
+}
+
 is_number() {
      [[ "$1" =~ ^[1-9][0-9]*$ ]] && \
           return 0 || \
@@ -7150,6 +7169,7 @@ sub_session_resumption() {
      local sess_data=$(mktemp $TEMPDIR/sub_session_data_resumption.$NODEIP.XXXXXX)
      local -a rw_line
      local protocol="$1"
+     local -i sess_wait=0
 
      if [[ "$2" == ID ]]; then
           local byID=true
@@ -7177,9 +7197,12 @@ sub_session_resumption() {
           # is TLSv1.3-only.
           ! "$TLS_TICKETS" && "$byID" && [[ $(has_server_protocol "tls1_2") -eq 0 ]] && protocol="-tls1_2"
           addcmd+=" $protocol"
+          # With TLS 1.3 the session ticket arrives after the handshake: wait for -sess_out to write it
+          [[ "$protocol" == -tls1_3 ]] && sess_wait=20
      fi
 
-     $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI $addcmd -sess_out $sess_data") </dev/null &>$tmpfile
+     $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI $addcmd -sess_out $sess_data") \
+          < <(hold_stdin "$sess_data" "" $sess_wait) &>$tmpfile
      ret1=$?
      if [[ $ret1 -ne 0 ]]; then
           # MacOS and LibreSSL return 1 here, that's why we need to check whether the handshake contains e.g. a certificate
@@ -8608,7 +8631,11 @@ get_server_certificate() {
                else
                     sigalgs="ECDSA+SHA256:ECDSA+SHA384:ECDSA+SHA512"
                fi
-               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs $sigalgs") </dev/null 2>$ERRFILE >$TMPFILE
+               # Wait for the post-handshake session ticket, so that run_server_defaults() sees its lifetime hint.
+               # Empty $TMPFILE first, as hold_stdin() may read it before the redirection below truncates it.
+               >$TMPFILE
+               $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -showcerts -connect $NODEIP:$PORT $PROXY $SNI -tls1_3 -tlsextdebug -status -msg -sigalgs $sigalgs") \
+                    < <(hold_stdin "$TMPFILE" "session ticket lifetime" 20) 2>$ERRFILE >$TMPFILE
                sclient_connect_successful $? $TMPFILE || return 1
                DETECTED_TLS_VERSION="0304"
                extract_certificates "tls1_3"
