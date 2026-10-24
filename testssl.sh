@@ -7197,8 +7197,9 @@ sub_session_resumption() {
           # is TLSv1.3-only.
           ! "$TLS_TICKETS" && "$byID" && [[ $(has_server_protocol "tls1_2") -eq 0 ]] && protocol="-tls1_2"
           addcmd+=" $protocol"
-          # With TLS 1.3 the session ticket arrives after the handshake: wait for -sess_out to write it
-          [[ "$protocol" == -tls1_3 ]] && sess_wait=20
+          # With TLS 1.3 the session ticket arrives after the handshake: wait for -sess_out to write it.
+          # Only the ticket test benefits; the byID path adds -no_ticket and TLS 1.3 has no ID resumption.
+          [[ "$protocol" == -tls1_3 ]] && ! "$byID" && sess_wait=20
      fi
 
      $OPENSSL s_client $(s_client_options "$STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI $addcmd -sess_out $sess_data") \
