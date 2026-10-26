@@ -22510,7 +22510,7 @@ parse_hn_port() {
 
      if [[ -n "$XMPP_HOST" ]]; then
           # Symmetric to the $NODE validation above
-          validate_hostname "$XMPP_HOST" || fatal "Invalid xmpp servername \"$NODE\" supplied" $ERR_CMDLINE
+          validate_hostname "$XMPP_HOST" || fatal "Invalid xmpp servername \"$XMPP_HOST\" supplied" $ERR_CMDLINE
           # if XMPP host is set, force SNI
           SNI="-servername $XMPP_HOST"
      else
