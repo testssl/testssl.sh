@@ -18444,8 +18444,8 @@ run_renego() {
                     2) pr_svrty_good "likely not vulnerable (OK)"; outln ", timed out ($((${ssl_reneg_attempts}*3+3))s)"        # it hung
                        fileout "$jsonID" "OK" "likely not vulnerable (timed out)" "$cve" "$cwe"
                        ;;
-                    *) prln_warning "FIXME (bug): $sec_client_renego"
-                       fileout "$jsonID" "DEBUG" "FIXME (bug) $sec_client_renego - Please report" "$cve" "$cwe"
+                    *) prln_warning "FIXME (bug): $tmp_result"
+                       fileout "$jsonID" "DEBUG" "FIXME (bug) $tmp_result - Please report" "$cve" "$cwe"
                        ret=1
                        ;;
                esac
@@ -18464,8 +18464,8 @@ run_renego() {
                           outln " -- mitigated ($loop_reneg successful reneg within ${ssl_reneg_attempts} in $((${ssl_reneg_attempts}*3+3))s(timeout))"
                        fileout "$jsonID" "OK" "not vulnerable, mitigated" "$cve" "$cwe"
                        ;;
-                    *) prln_warning "FIXME (bug): $sec_client_renego ($ssl_reneg_attempts tries)"
-                       fileout "$jsonID" "DEBUG" "FIXME (bug $ssl_reneg_attempts tries) $sec_client_renego" "$cve" "$cwe"
+                    *) prln_warning "FIXME (bug): $tmp_result ($ssl_reneg_attempts tries)"
+                       fileout "$jsonID" "DEBUG" "FIXME (bug $ssl_reneg_attempts tries) $tmp_result" "$cve" "$cwe"
                        ret=1
                        ;;
                esac
