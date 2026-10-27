@@ -23447,10 +23447,6 @@ check_proxy() {
           validate_portnumber "$PROXYPORT" || \
                fatal "Proxy port \"$PROXYPORT\" cannot be determined or is out of range " $ERR_CMDLINE
 
-          # Security gate also for proxy to avoid injection problems
-          validate_hostname "$PROXYNODE" || \
-               fatal "Invalid proxy servername \"$PROXYNODE\" supplied" $ERR_CMDLINE
-
           if is_ipv4addr "$PROXYNODE"; then
                PROXYIP="$PROXYNODE"
           elif is_ipv6addr "$PROXYNODE"; then
@@ -23466,6 +23462,10 @@ check_proxy() {
                     fi
                fi
           else
+               # Security gate also for proxy to avoid injection problems
+               validate_hostname "$PROXYNODE" || \
+                    fatal "Invalid proxy servername \"$PROXYNODE\" supplied" $ERR_CMDLINE
+
                # We check now preferred whether there was an IPv4 proxy via DNS A record specified
                # If it fails it could be an IPv6 only proxy via DNS or we just can't reach the proxy
                PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
