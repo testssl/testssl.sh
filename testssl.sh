@@ -22463,9 +22463,15 @@ validate_hostname() {
      local node="$1"
 
      # Anti injection gate on the final NODE. First RE, then we handle IDN chars (printable).
-     # If both do not match we label the hostname as invalid. CRTL chars aren't allowed here
+     # If both do not match we label the hostname as invalid. CRTL chars aren't allowed in part 2,
      # also if DNS resolution would probably not succeed.
-     if ! [[ "$node" =~ $host_re ]] && ! printf '%s' "$node" | LC_ALL=C grep -q '[^[:print:][:cntrl:][ ]]'; then
+     #
+     # Part 1 is the primary injection gate: "is this outside the known-safe charset?" If it doesn't match the RE,
+     #          we check part 2. Otherwise we return 0 (unless the hostname starts with a dash)
+     # Part 2 is the IDN allowance: "does this contain a non-ASCII byte?" If so, it's a legitimate internationalized
+     #          domain (raw) we accept it. No crtl chars allowed though.
+
+     if ! [[ "$node" =~ $host_re ]] && ! printf '%s' "$node" | LC_ALL=C grep -q '[^[:print:][:cntrl:]]'; then
           return 1
      elif [[ "$node" == -* ]]; then
           # we allow dashes but not at the start
