@@ -22417,37 +22417,50 @@ ignore_no_or_lame() {
 }
 
 
-# Generic function for ANY hostname
+# Convert a hostname to punycode if it contains non-ASCII characters.
+# Must be called before every validate_hostname() so the gate sees the converted value.
+# - arg1: name of the variable to update with the converted value
+# - arg2: the hostname value
+# Emits warnings if the conversion didn't happen.
 #
-validate_hostname() {
-     local host_re='^[][a-zA-Z0-9.:-]+$'
-     local node="$1"
+idn_convert() {
+     local varname="$1"
+     local node="$2"
      local node_tmp=""
 
      # We check for non-ASCII chars now. If there are some we'll try to convert it if IDN/IDN2 is installed
      # If not, we'll continue. Hoping later that dig can use it. If not the error handler will tell.
      # Honestly we don't care whether it's IDN2008 or IDN2003 or Emoji domains as long as it works.
      # We try to resolve anything supplied, supposed it passes the security gate
-     if [[ "$node" == *[![:ascii:]]* ]]; then
-          if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
-               prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
-               outln " Trying to feed the resolver without converted \"$node\" ...\n"
-               #ToDo: fileout is missing
-               node_tmp="$node"
-          elif "$HAS_IDN2"; then
-               node_tmp="$(idn2 "$node" 2>/dev/null)"
-          fi
-          if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
-               node_tmp="$(idn "$node" 2>/dev/null)"
-          fi
-          if [[ -z "$node_tmp" ]]; then
-               prln_warning " URI contains non-ASCII characters and IDN conversion failed."
-               outln " Trying to feed the resolver without converted \"$node\" ...\n"
-               fileout hostname_problem "WARN" "URI contains non-ASCII characters and IDN conversion failed, continuing"
-               node_tmp="$node"
-          fi
-          node="$node_tmp"
+     [[ "$node" == *[![:ascii:]]* ]] || return 0
+
+     if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
+          prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
+          outln " Trying to feed the resolver without converted \"$node\" ...\n"
+          #ToDo: fileout is missing
+          node_tmp="$node"
+     elif "$HAS_IDN2"; then
+          node_tmp="$(idn2 "$node" 2>/dev/null)"
      fi
+     if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
+          node_tmp="$(idn "$node" 2>/dev/null)"
+     fi
+     if [[ -z "$node_tmp" ]]; then
+          prln_warning " URI contains non-ASCII characters and IDN conversion failed."
+          outln " Trying to feed the resolver without converted \"$node\" ...\n"
+          fileout hostname_problem "WARN" "URI contains non-ASCII characters and IDN conversion failed, continuing"
+          node_tmp="$node"
+     fi
+     # writes e.g. $node_tmp to global NODE
+     printf -v "$varname" '%s' "$node_tmp"
+}
+
+
+# Generic function for ANY hostname
+#
+validate_hostname() {
+     local host_re='^[][a-zA-Z0-9.:-]+$'
+     local node="$1"
 
      # Anti injection gate on the final NODE. First RE, then we handle IDN chars (printable).
      # If both do not match we label the hostname as invalid. CRTL chars aren't allowed here
@@ -22507,10 +22520,12 @@ parse_hn_port() {
 
      NODE="${NODE%%.}"                  # strip trailing "." if supplied
 
+     idn_convert "NODE" "$NODE"
      validate_hostname "$NODE" || fatal "Invalid hostname \"$NODE\" supplied" $ERR_CMDLINE
 
      if [[ -n "$XMPP_HOST" ]]; then
           # Symmetric to the $NODE validation above
+          idn_convert "XMPP_HOST" "$XMPP_HOST"
           validate_hostname "$XMPP_HOST" || fatal "Invalid xmpp servername \"$XMPP_HOST\" supplied" $ERR_CMDLINE
           # if XMPP host is set, force SNI
           SNI="-servername $XMPP_HOST"
@@ -23463,6 +23478,7 @@ check_proxy() {
                fi
           else
                # Security gate also for proxy to avoid injection problems
+               idn_convert "PROXYNODE" "$PROXYNODE"
                validate_hostname "$PROXYNODE" || \
                     fatal "Invalid proxy servername \"$PROXYNODE\" supplied" $ERR_CMDLINE
 
