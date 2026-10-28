@@ -38,6 +38,6 @@ jobs:
       - name: Check shell scripts
         run: shellcheck -x -P "SCRIPTDIR"/utils --severity=error testssl.sh
 
-      # we could add more here which are not covered above = not included in error severity
-      - name: Check shell scripts to --include=SC2154
-        run: shellcheck --include=SC2154 testssl.sh
+      # Now some further code sanity checks which do not fall into the error severity
+      - name: Check shell scripts to --include=SCXXXX
+        run: shellcheck --include=SC2006,SC2015,SC2027,SC2154,SC2171,SC2236,SC2269,SC2313,SC2320,SC2321,SC2322 testssl.sh
