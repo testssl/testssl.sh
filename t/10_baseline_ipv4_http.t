@@ -47,22 +47,22 @@ $json_string = json($json_file);
 
 
 #1
-unlike($terminal_out, qr/$socket_errors≈/, "via sockets, checking terminal output");
+check_no_match($terminal_out, $socket_errors, "via sockets, checking terminal output");
 $tests++;
 
 #2
-unlike($json_string, qr/$json_errors/, "via sockets checking JSON output");
+check_no_match($json_string, $json_errors, "via sockets checking JSON output");
 $tests++;
 
 #3
 unlink $json_file;
 $terminal_out = `$prg --ssl-native $check2run $json_file $uri 2>&1`;
 $json_string = json($json_file);
-unlike($terminal_out, qr/$openssl_errors/, "via (builtin) OpenSSL, checking terminal output");
+check_no_match($terminal_out, $openssl_errors, "via (builtin) OpenSSL, checking terminal output");
 $tests++;
 
 #4
-unlike($json_string, qr/$json_errors/, "via OpenSSL (builtin) checking JSON output");
+check_no_match($json_string, $json_errors, "via OpenSSL (builtin) checking JSON output");
 $tests++;
 
 if ( $os eq "linux" ){
@@ -101,9 +101,38 @@ printf "\n\n";
 
 sub json {
 	my $file = shift;
-	$file = `cat $file`;
-	unlink $file;
-	return from_json($file);
+	my $content = `cat $file`;
+	from_json($content);
+	return $content;
+}
+
+# unlike() dumps the entire (often huge) output on failure, which makes the
+# actual problem hard to spot in CI. This helper performs the same check but,
+# on failure, prints only the lines that matched the error pattern (via diag,
+# i.e. stderr) instead of the whole output.
+sub check_no_match {
+    my ($output, $regex, $desc) = @_;
+    $output = "" unless defined $output;
+    my $re = $regex;
+    $re = qr/$re/ unless ref($re);
+    if ($output =~ $re) {
+        fail($desc);
+        my @lines = ();
+        foreach my $line (split /\n/, $output) {
+            if ($line =~ $re) {
+                push @lines, $line;
+            }
+        }
+        diag("---- ", scalar(@lines), " matching line(s) ----");
+        foreach my $line (@lines) {
+            diag($line);
+        }
+        diag("---- end matching lines ----");
+    }
+    else {
+        ok(1, $desc);
+    }
+    return;
 }
 
 # vim:ts=5:sw=5:expandtab
