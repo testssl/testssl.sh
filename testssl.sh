@@ -23415,6 +23415,7 @@ check_proxy() {
           fi
           if [[ "$PROXY" == auto ]]; then
                # Get $ENV https_proxy is the one we care about for connects
+               # shellcheck disable=SC2154
                PROXY="${https_proxy#*\/\/}"
                # Fallback:
                [[ -z "$PROXY" ]] && PROXY="${http_proxy#*\/\/}"
