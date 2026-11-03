@@ -349,6 +349,46 @@ Rating automatically gets disabled, to not give a wrong or misleading grade, whe
 
 A few file output options can also be preset via environment variables.
 
+### JSON AND CSV RESULTS
+
+The JSON and CSV formats contain findings rather than a copy of the terminal layout. Use the named fields to interpret a result, not its position or the color of the corresponding terminal text.
+
+#### Finding fields
+
+Flat JSON (`--json`, `--jsonfile`) is a JSON array of finding objects, not one independent JSON document per line. The fields are strings, including `port`:
+
+* `id`: identifier of the check, e.g. `TLS1_2` for TLS 1.2 support or `heartbleed` for the Heartbleed check. The same identifier can occur for different targets in one report.
+* `ip`: the supplied hostname (or IP address), followed by `/` and the IP address being tested. Despite its name, this field is not just an IP address.
+* `port`: the port being tested.
+* `severity`: the assessment of this finding, as described below.
+* `finding`: the result text, such as `offered` or `not offered`. Read it together with `id` and `severity`.
+* `cve`, `cwe`: related CVE and CWE identifiers, when available. JSON omits these fields when they are empty. A string can contain multiple identifiers separated by spaces. Their presence identifies the check's subject, not necessarily a vulnerability in the target: a negative vulnerability check can also include them.
+
+CSV uses the same values, with the following header and column order:
+
+```
+"id","fqdn/ip","port","severity","finding","cve","cwe"
+```
+
+The `fqdn/ip` column corresponds to flat JSON's `ip` field. Empty CVE and CWE values remain empty CSV fields. Use a CSV reader that understands quoted fields, since a finding can contain commas.
+
+#### Structured JSON
+
+Pretty JSON (`--json-pretty`, `--jsonfile-pretty`) changes the structure, not just the indentation. Its top-level object contains scan metadata and a `scanResult` array. Each entry describes a tested endpoint using `targetHost`, `ip` (the IP address alone), `port`, `rDNS` and `service`. Findings are grouped into section arrays such as `protocols`, `serverDefaults` and `vulnerabilities`.
+
+These finding objects contain `id`, `severity`, `finding` and any available `cve` or `cwe`; the target and port are inherited from the enclosing endpoint object rather than repeated in every finding. Only the selected checks are run, so consumers should not require every section to be present. Client-side problems can also be reported in top-level `clientProblem` arrays with a numeric suffix.
+
+#### Interpreting severity
+
+* `OK`: a positive result, corresponding to the green/light green terminal ratings (blue/light blue with `--colorblind`).
+* `INFO`: information without a positive or negative assessment. It does not by itself indicate a security problem, nor does it mean a check failed.
+* `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`: findings of increasing severity, corresponding to yellow, brown, red and light red terminal ratings respectively.
+* `WARN`, `FATAL`: scanning problems or errors, not vulnerability severity levels. Review the finding text; a check which could not be completed must not be treated as a successful negative result.
+
+Individual cipher findings in the server preference and cipher tests can carry a severity reflecting the cipher's quality, in addition to the summary findings for cipher categories.
+
+`--severity LOW` (or a higher threshold) filters findings in CSV and both JSON formats, excluding `INFO` and `OK`. `WARN` and `FATAL` are retained regardless of the threshold. A missing finding therefore does not prove that the target passed a check: the check may not have been selected, or the finding may have been filtered out. See COLOR RATINGS for the terminal presentation.
+
 ### COLOR RATINGS
 
 Testssl.sh makes use of (the eight) standard terminal colors. The color scheme is as follows:
