@@ -23293,7 +23293,7 @@ get_txt_record() {
 #
 shouldwedo_ipv6() {
      "$do_ipv4_only" && return 0
-     # This could be dangereous if there would be no validation for hostname and port
+     # This could be dangerous if there would be no validation for hostname and port
      bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
      wait_kill $! $((MAX_WAITSOCK * 10))
      if [[ $? -eq 3 ]]; then
