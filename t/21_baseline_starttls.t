@@ -64,7 +64,7 @@ $uri="smtp-relay.gmail.com:587";
 printf "\n%s\n", "STARTTLS SMTP unit test via sockets --> $uri ...";
 $socket_out = `$prg $check2run_smtp -t smtp $uri 2>&1`;
 # $socket_json = json('tmp.json');
-unlike($socket_out, qr/$socket_regex_bl/, "");
+check_no_match($socket_out, $socket_regex_bl, "");
 $tests++;
 
 #2
@@ -73,7 +73,7 @@ $uri="pop.gmx.net:110";
 printf "\n%s\n", "STARTTLS POP3 unit tests via sockets --> $uri ...";
 $socket_out = `$prg $check2run -t pop3 $uri 2>&1`;
 # $socket_json = json('tmp.json');
-unlike($socket_out, qr/$socket_regex_bl/, "");
+check_no_match($socket_out, $socket_regex_bl, "");
 $tests++;
 
 #3
@@ -82,7 +82,7 @@ $uri="imap.gmx.net:143";
 printf "\n%s\n", "STARTTLS IMAP unit tests via sockets --> $uri ...";
 $socket_out = `$prg $check2run -t imap $uri 2>&1`;
 # $socket_json = json('tmp.json');
-unlike($socket_out, qr/$socket_regex_bl/, "");
+check_no_match($socket_out, $socket_regex_bl, "");
 $tests++;
 
 #4
@@ -91,7 +91,7 @@ $uri="mail.tigertech.net:4190";
 printf "\n%s\n", "STARTTLS MANAGE(SIEVE) unit tests via sockets --> $uri ...";
 $socket_out = `$prg $check2run -t sieve $uri 2>&1`;
 # $socket_json = json('tmp.json');
-unlike($openssl_out, qr/$openssl_regex_bl/, "");
+check_no_match($openssl_out, $openssl_regex_bl, "");
 $tests++;
 
 #5
@@ -100,7 +100,7 @@ $uri="jabber.org:5222";
 printf "\n%s\n", "STARTTLS XMPP unit tests via sockets --> $uri ...";
 $socket_out = `$prg $check2run -t xmpp $uri 2>&1`;
 # $socket_json = json('tmp.json');
-unlike($openssl_out, qr/$openssl_regex_bl/, "");
+check_no_match($openssl_out, $openssl_regex_bl, "");
 $tests++;
 
 # commented out, bc of travis' limits
@@ -120,7 +120,7 @@ $socket_out = `$prg $check2run -t ftp $uri 2>&1`;
 # $socket_json = json('tmp.json');
 # OCSP stapling fails sometimes with: 'offered, error querying OCSP responder (ERROR: No Status found)'
 $socket_out =~ s/ error querying OCSP responder .*\n//g;
-unlike($socket_out, qr/$socket_regex_bl/, "");
+check_no_match($socket_out, $socket_regex_bl, "");
 $tests++;
 
 # /usr/bin/openssl on MacOS doesn't seem to be available (anymore)
@@ -131,7 +131,7 @@ if ( $os ne "darwin" ){
      printf "\n%s\n", "STARTTLS LDAP unit tests via sockets --> $uri ...";
      $socket_out = `$prg $check2run -t ldap $uri 2>&1`;
      # $socket_json = json('tmp.json');
-     unlike($socket_out, qr/$socket_regex_bl/, "");
+     check_no_match($socket_out, $socket_regex_bl, "");
      $tests++;
 }
 
@@ -156,6 +156,35 @@ sub json {
 	$file = `cat $file`;
 	unlink $file;
 	return from_json($file);
+}
+
+# unlike() dumps the entire (often huge) output on failure, which makes the
+# actual problem hard to spot in CI. This helper performs the same check but,
+# on failure, prints only the lines that matched the error pattern (via diag,
+# i.e. stderr) instead of the whole output.
+sub check_no_match {
+    my ($output, $regex, $desc) = @_;
+    $output = "" unless defined $output;
+    my $re = $regex;
+    $re = qr/$re/ unless ref($re);
+    if ($output =~ $re) {
+        fail($desc);
+        my @lines = ();
+        foreach my $line (split /\n/, $output) {
+            if ($line =~ $re) {
+                push @lines, $line;
+            }
+        }
+        diag("---- ", scalar(@lines), " matching line(s) ----");
+        foreach my $line (@lines) {
+            diag($line);
+        }
+        diag("---- end matching lines ----");
+    }
+    else {
+        ok(1, $desc);
+    }
+    return;
 }
 
 
