@@ -1821,10 +1821,10 @@ http_get() {
 
      if type -p curl &>/dev/null; then
           if [[ -z "$PROXY" ]]; then
-               curl -s --noproxy '*' -A $''"$useragent"'' -o $dl "$1"
+               curl -s --noproxy '*' -A $''"$useragent"'' -o "$dl" "$1"
           else
                # for the sake of simplicity assume the proxy is using http
-               curl -s -x $PROXYIP:$PROXYPORT -A $''"$useragent"'' -o $dl "$1"
+               curl -s -x "$PROXYIP":"$PROXYPORT" -A $''"$useragent"'' -o "$dl" "$1"
           fi
           return $?
      elif type -p wget &>/dev/null; then
@@ -1832,12 +1832,12 @@ http_get() {
           # assume the GET protocol we query is using http -- http_proxy is the $ENV not for the connection TO
           # the proxy, but for the protocol we query THROUGH the proxy
           if [[ -z "$PROXY" ]]; then
-               wget --no-proxy -q -U $''"$useragent"'' -O $dl "$1"
+               wget --no-proxy -q -U $''"$useragent"'' -O "$dl" "$1"
           else
                if [[ -z "$http_proxy" ]]; then
-                    http_proxy=http://$PROXYIP:$PROXYPORT wget -q -U $''"$useragent"'' -O $dl "$1"
+                    http_proxy=http://"$PROXYIP":"$PROXYPORT" wget -q -U $''"$useragent"'' -O "$dl" "$1"
                else
-                    wget -q -U $''"$useragent"'' -O $dl "$1"
+                    wget -q -U $''"$useragent"'' -O "$dl" "$1"
                fi
           fi
           return $?
@@ -1855,7 +1855,7 @@ http_get() {
           if [[ -n $PROXY ]]; then
                # PROXYNODE works better than PROXYIP on modern versions of squid. \
                # We don't reuse the code in fd_socket() as there's initial CONNECT which makes problems
-               if ! exec 33<> /dev/tcp/${PROXYNODE}/${PROXYPORT}; then
+               if ! exec 33<> /dev/tcp/"${PROXYNODE}"/"${PROXYPORT}"; then
                     outln
                     pr_warning "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
                     fileout "$jsonID" "DEBUG" "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
@@ -1865,7 +1865,7 @@ http_get() {
                fi
           else
                IFS=/ read -r proto foo node query <<< "$1"
-               exec 33<>/dev/tcp/$node/80
+               exec 33<>/dev/tcp/"$node"/80
                printf -- "%b" "GET /$query HTTP/1.0\r\nUser-Agent: $useragent\r\nHost: $node\r\nAccept: */*\r\n\r\n" >&33
           fi
           # Strip HTTP header. When in Debug Mode we leave the raw data in place
@@ -1957,7 +1957,8 @@ http_head_printf() {
 
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
      # $node works here good as it connects via IPv6 first, then IPv4.
-     # This is a subshell, so fd 8 is not inherited
+     # This is a subshell, so fd 8 is not inherited.
+     # Again: This could be dangereous if there would be no validation for hostname and port before.
      bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
      wait_kill $! $((HEADER_MAXSLEEP * 10))
      if [[ $? -ne 3 ]]; then
@@ -1965,7 +1966,7 @@ http_head_printf() {
           # to make sure there wasn't a TCP reset
           bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null
           if [[ $? -eq 0 ]]; then
-               exec 33<>/dev/tcp/$node/80
+               exec 33<>/dev/tcp/"$node"/80
                safe_echo "HEAD ${path} HTTP/1.1\r\nUser-Agent: ${useragent}\r\nHost: ${node}\r\nAccept: */*\r\n${extra_header}\r\n\r\n" >&33 2>$errfile
                ret=0
                touch $tmpfile
@@ -12517,7 +12518,7 @@ fd_socket() {
      fi
      if [[ -n "$PROXY" ]]; then
           # PROXYNODE works better than PROXYIP on modern versions of squid
-          if ! exec 5<> /dev/tcp/${PROXYNODE}/${PROXYPORT}; then
+          if ! exec 5<> /dev/tcp/"${PROXYNODE}"/"${PROXYPORT}"; then
                outln
                pr_warning "$PROG_NAME: unable to open a socket to proxy $PROXYNODE:$PROXYPORT"
                return 6
@@ -12562,7 +12563,7 @@ fd_socket() {
           fi
      fi
      # Now comes the usual case
-     if [[ -z "$PROXY" ]] && ! exec 5<>/dev/tcp/$nodeip/$PORT; then
+     if [[ -z "$PROXY" ]] && ! exec 5<>/dev/tcp/"$nodeip"/"$PORT"; then
           ((NR_SOCKET_FAIL++))
           connectivity_problem $NR_SOCKET_FAIL $MAX_SOCKET_FAIL "TCP connect problem" "repeated TCP connect problems, giving up"
           outln
@@ -22442,10 +22443,86 @@ ignore_no_or_lame() {
      fi
 }
 
-# arg1: URI
+
+# Convert a hostname to punycode if it contains non-ASCII characters.
+# Must be called before every validate_hostname() so the gate sees the converted value.
+# - arg1: name of the variable to update with the converted value
+# - arg2: the hostname value
+# Emits warnings if the conversion didn't happen.
+#
+idn_convert() {
+     local varname="$1"
+     local node="$2"
+     local node_tmp=""
+
+     # We check for non-ASCII chars now. If there are some we'll try to convert it if IDN/IDN2 is installed
+     # If not, we'll continue. Hoping later that dig can use it. If not the error handler will tell.
+     # Honestly we don't care whether it's IDN2008 or IDN2003 or Emoji domains as long as it works.
+     # We try to resolve anything supplied, supposed it passes the security gate
+     [[ "$node" == *[![:ascii:]]* ]] || return 0
+
+     if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
+          prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
+          outln " Trying to feed the resolver without converted \"$node\" ...\n"
+          #ToDo: fileout is missing
+          node_tmp="$node"
+     elif "$HAS_IDN2"; then
+          node_tmp="$(idn2 "$node" 2>/dev/null)"
+     fi
+     if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
+          node_tmp="$(idn "$node" 2>/dev/null)"
+     fi
+     if [[ -z "$node_tmp" ]]; then
+          prln_warning " URI contains non-ASCII characters and IDN conversion failed."
+          outln " Trying to feed the resolver without converted \"$node\" ...\n"
+          fileout hostname_problem "WARN" "URI contains non-ASCII characters and IDN conversion failed, continuing"
+          node_tmp="$node"
+     fi
+     # writes e.g. $node_tmp to global NODE
+     printf -v "$varname" '%s' "$node_tmp"
+}
+
+
+# Generic function for ANY hostname
+#
+validate_hostname() {
+     local host_re='^[][a-zA-Z0-9.:-]+$'
+     local node="$1"
+
+     # Anti injection gate on the final NODE. First RE, then we handle IDN chars (printable).
+     # If both do not match we label the hostname as invalid. CRTL chars aren't allowed in part 2,
+     # also if DNS resolution would probably not succeed.
+     #
+     # Part 1 is the primary injection gate: "is this outside the known-safe charset?" If it doesn't match the RE,
+     #          we check part 2. Otherwise we return 0 (unless the hostname starts with a dash)
+     # Part 2 is the IDN allowance: "does this contain a non-ASCII byte?" If so, it's a legitimate internationalized
+     #          domain (raw) we accept it. No crtl chars allowed though.
+
+     if ! [[ "$node" =~ $host_re ]] && ! printf '%s' "$node" | LC_ALL=C grep -q '[^[:print:][:cntrl:]]'; then
+          return 1
+     elif [[ "$node" == -* ]]; then
+          # we allow dashes but not at the start
+          return 1
+     fi
+     return 0
+}
+
+
+# Generic function for ANY port number
+#
+validate_portnumber() {
+          local port="$1"
+
+          is_number "$port" || return 1
+          [[ "$port" -lt 65536 ]] || return 2
+          return 0
+}
+
+
+# arg1: URI. Does also validate hostname and port
+#
 parse_hn_port() {
      local tmp_port
-     local node_tmp=""
 
      NODE="$1"
      NODE="$(tolower "$NODE")"          # Lowercase
@@ -22461,7 +22538,7 @@ parse_hn_port() {
      fi
      # Was an IPv6 address supplied like [AA:BB:CC::]:port ?
      if grep -q ']' <<< "$NODE"; then
-          tmp_port=$(printf "$NODE" | sed 's/\[.*\]//' | sed 's/://')
+          tmp_port=$(printf '%s' "$NODE" | sed 's/\[.*\]//' | sed 's/://')
           # determine v6 port, supposed it was supplied additionally
           if [[ -n "$tmp_port" ]]; then
                PORT=$tmp_port
@@ -22476,38 +22553,23 @@ parse_hn_port() {
 
      NODE="${NODE%%.}"                  # strip trailing "." if supplied
 
-     # We check for non-ASCII chars now. If there are some we'll try to convert it if IDN/IDN2 is installed
-     # If not, we'll continue. Hoping later that dig can use it. If not the error handler will tell
-     # Honestly we don't care whether it's IDN2008 or IDN2003 or Emoji domains as long as it works.
-     # So we try to resolve anything supplied. If it can't  our resolver error handler takes care
-     if [[ "$NODE" == *[![:ascii:]]* ]]; then
-          if ! "$HAS_IDN2" && ! "$HAS_IDN"; then
-               prln_warning " URI contains non-ASCII characters and libidn/libidn2 not available."
-               outln " Trying to feed the resolver without converted \"$NODE\" ...\n"
-               #ToDo: fileout is missing
-               node_tmp="$NODE"
-          elif "$HAS_IDN2"; then
-               node_tmp="$(idn2 "$NODE" 2>/dev/null)"
-          fi
-          if "$HAS_IDN" && [[ -z "$node_tmp" ]]; then
-               node_tmp="$(idn "$NODE" 2>/dev/null)"
-          fi
-          if [[ -z "$node_tmp" ]]; then
-               prln_warning " URI contains non-ASCII characters and IDN conversion failed."
-               outln " Trying to feed the resolver without converted \"$NODE\" ...\n"
-               #ToDo: fileout is missing
-               node_tmp="$NODE"
-          fi
-          NODE="$node_tmp"
-     fi
+     idn_convert "NODE" "$NODE"
+     validate_hostname "$NODE" || fatal "Invalid hostname \"$NODE\" supplied" $ERR_CMDLINE
 
-     debugme echo $NODE:$PORT
      if [[ -n "$XMPP_HOST" ]]; then
-          # XMPP host is set, force SNI to be that
+          # Symmetric to the $NODE validation above
+          idn_convert "XMPP_HOST" "$XMPP_HOST"
+          validate_hostname "$XMPP_HOST" || fatal "Invalid xmpp servername \"$XMPP_HOST\" supplied" $ERR_CMDLINE
+          # if XMPP host is set, force SNI
           SNI="-servername $XMPP_HOST"
      else
           SNI="-servername $NODE"
      fi
+
+     validate_portnumber "$PORT" || fatal "Invalid port specified \"$PORT\"" $ERR_CMDLINE
+
+     debugme echo $NODE:$PORT
+
      URL_PATH=$(sed 's/https:\/\///' <<< "$1" | sed 's/'"${NODE}"'//' | sed 's/.*'"${PORT}"'//')      # remove protocol and node part and port
      URL_PATH=$(sed 's/\/\//\//g' <<< "$URL_PATH")          # we rather want // -> /
      URL_PATH=${URL_PATH%%.}                                # strip trailing "." so that it is not interpreted as URL
@@ -23231,6 +23293,7 @@ get_txt_record() {
 #
 shouldwedo_ipv6() {
      "$do_ipv4_only" && return 0
+     # This could be dangereous if there would be no validation for hostname and port
      bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
      wait_kill $! $((MAX_WAITSOCK * 10))
      if [[ $? -eq 3 ]]; then
@@ -23429,7 +23492,9 @@ check_proxy() {
           # strip square brackets in IPv6 notation, but we may enter them later
           PROXYNODE="${PROXYNODE/\[/}"
           PROXYNODE="${PROXYNODE/\]/}"
-          is_number "$PROXYPORT" || fatal "Proxy port cannot be determined from \"$PROXY\"" $ERR_CMDLINE
+
+          validate_portnumber "$PROXYPORT" || \
+               fatal "Proxy port \"$PROXYPORT\" cannot be determined or is out of range " $ERR_CMDLINE
 
           if is_ipv4addr "$PROXYNODE"; then
                PROXYIP="$PROXYNODE"
@@ -23446,7 +23511,12 @@ check_proxy() {
                     fi
                fi
           else
-               # We check now preferred whether there was an IPv4 proxy via DNS specified
+               # Security gate also for proxy to avoid injection problems
+               idn_convert "PROXYNODE" "$PROXYNODE"
+               validate_hostname "$PROXYNODE" || \
+                    fatal "Invalid proxy servername \"$PROXYNODE\" supplied" $ERR_CMDLINE
+
+               # We check now preferred whether there was an IPv4 proxy via DNS A record specified
                # If it fails it could be an IPv6 only proxy via DNS or we just can't reach the proxy
                PROXYIP="$(get_a_record "$PROXYNODE" 2>/dev/null | grep -v alias | sed 's/^.*address //')"
                if [[ -z "$PROXYIP" ]]; then
@@ -23459,6 +23529,7 @@ check_proxy() {
                fi
                [[ -z "$PROXYIP" ]] && fatal "Proxy IP cannot be determined from \"$PROXYNODE\"" $ERR_CMDLINE
           fi
+
           PROXY="-proxy $PROXYIP:$PROXYPORT"
      fi
 }
@@ -26334,7 +26405,7 @@ lets_roll() {
           exit $?
      fi
 
-     [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs2CHECK and IPADDRs2SHOW is set now
+     [[ -z "$NODE" ]] && parse_hn_port "${URI}"        # NODE, URL_PATH, PORT, IPADDRs2CHECK and IPADDRs2SHOW is set now and validated
      prepare_logging "${FNAME_DATE}"
 
      if [[ -n "$PROXY" ]] && $DNS_VIA_PROXY; then
