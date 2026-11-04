@@ -1958,7 +1958,7 @@ http_head_printf() {
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
      # $node works here good as it connects via IPv6 first, then IPv4.
      # This is a subshell, so fd 8 is not inherited.
-     # Again: This could be dangereous if there would be no validation for hostname and port before.
+     # Again: This could be dangerous if there would be no validation for hostname and port before.
      bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
      wait_kill $! $((HEADER_MAXSLEEP * 10))
      if [[ $? -ne 3 ]]; then
