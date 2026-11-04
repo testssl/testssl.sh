@@ -1939,7 +1939,7 @@ http_head_printf() {
      [[ $DEBUG -eq 0 ]] && errfile=/dev/null
      # $node works here good as it connects via IPv6 first, then IPv4.
      # This is a subshell, so fd 8 is not inherited.
-     # Again: This could be dangereous if there would be no validation for hostname and port before.
+     # Again: This could be dangerous if there would be no validation for hostname and port before.
      bash -c "exec 8<>/dev/tcp/$node/80" 2>/dev/null &
      wait_kill $! $((HEADER_MAXSLEEP * 10))
      if [[ $? -ne 3 ]]; then
@@ -23266,7 +23266,7 @@ get_txt_record() {
 #
 shouldwedo_ipv6() {
      "$do_ipv4_only" && return 0
-     # This could be dangereous if there would be no validation for hostname and port
+     # This could be dangerous if there would be no validation for hostname and port
      bash -c "exec 5<>/dev/tcp/$1/$PORT" &>/dev/null &
      wait_kill $! $((MAX_WAITSOCK * 10))
      if [[ $? -eq 3 ]]; then
