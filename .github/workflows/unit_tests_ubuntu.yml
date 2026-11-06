@@ -18,6 +18,12 @@ on:
       - 'LICENSE'
       - 'Dockerfile'
       - 'Dockerfile.alpine'
+  # Also run on pushes to 3.3dev: pull_request runs are recorded against the
+  # PR's head branch (never 3.3dev), so without this the Readme badge
+  # (?branch=3.3dev) has no matching runs and renders gray "no status".
+  push:
+    branches:
+      - 3.3dev
 
 permissions:
   contents: read
