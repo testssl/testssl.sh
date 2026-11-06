@@ -22,6 +22,10 @@
 # accompanied by the same license (see link). Do not violate the license.
 # If you do not agree to these terms, do not use testssl.sh in the first place!
 #
+# Modified 2026-11-06: get_cn_from_cert() returns the complete common name of a
+# certificate again, including an equals sign inside the CN (e.g. "CN=foo=bar").
+# See t/95_cn_equals.t.
+#
 # OpenSSL, which is being used and maybe distributed via one of this projects'
 # web sites, is subject to their licensing: https://www.openssl.org/source/license.txt
 #
@@ -8811,7 +8815,7 @@ get_cn_from_cert() {
      # for e.g. russian sites -esc_msb,utf8 works in an UTF8 terminal -- any way to check platform independent?
      # see x509(1ssl):
      subject="$($OPENSSL x509 -in $1 -noout -subject -nameopt multiline,-align,sname,-esc_msb,utf8,-space_eq 2>>$ERRFILE)"
-     echo "$(awk -F'=' '/CN=/ { print $2 }' <<< "$subject" | tr '\n' ' ')"
+     echo "$(awk '/^[[:space:]]*CN=/ { sub(/^[[:space:]]*CN=/, ""); print }' <<< "$subject" | tr '\n' ' ')"
      return 0
 }
 
