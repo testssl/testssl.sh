@@ -1288,7 +1288,13 @@ fileout_json_print_parameter() {
           if [[ "$value" =~ [[:cntrl:]] ]]; then
                value="$(sanitize_fileout "$value")"
           fi
-          printf -- "%b%b%b%b" "$spaces" "\"$parameter\"" "$filler" ": \"$value\"" >> "$JSONFILE"
+          # The value is data received, not a printf format: escape backslash,
+          # double quote and the LF which sanitize_fileout keeps (see #2330),
+          # then write it with %s so \0NN, \xNN, \c or \t are not interpreted.
+          value="${value//\\/\\\\}"
+          value="${value//\"/\\\"}"
+          value="${value//$'\n'/\\n}"
+          printf -- "%s%s%s%s" "$spaces" "\"$parameter\"" "$filler" ": \"$value\"" >> "$JSONFILE"
           "$not_last" && printf ",\n" >> "$JSONFILE"
      fi
 }
