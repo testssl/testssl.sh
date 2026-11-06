@@ -74,6 +74,11 @@ $baseline_csv =~ s/ECDH 253/ECDH 256/g;
 $cat_csv      =~ s/"engine_problem.*\n//g;
 $baseline_csv =~ s/"engine_problem.*\n//g;
 
+# remove the nonce in the CSP
+$cat_csv      =~ s/'nonce-.*'/'nonce-42'/g;
+$baseline_csv =~ s/'nonce-.*'/'nonce-42'/g;
+
+
 $diff = diff \$cat_csv, \$baseline_csv;
 
 # Compare the differences to the baseline file -- and print differences if there were detected.
