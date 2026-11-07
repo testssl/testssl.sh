@@ -191,6 +191,7 @@ IPv6_OK=false                           # Determines later whether there's IPv6 
 ALL_CLIENTS=${ALL_CLIENTS:-false}       # do you want to run all client simulation form all clients supplied by SSLlabs?
 OFFENSIVE=${OFFENSIVE:-true}            # do you want to include offensive vulnerability tests which may cause blocking by an IDS?
 ADDTL_CA_FILES="${ADDTL_CA_FILES:-""}"  # single file with a CA in PEM format or comma separated lists of them
+declare -a ADDTL_CA_FILES_ARRAY=()         # expanded CA paths, preserving whitespace in filenames
 
 ########### Tuning vars which cannot be set by a cmd line switch. Use instead e.g "HEADER_MAXSLEEP=10 ./testssl.sh <your_args_here>"
 #
@@ -2108,9 +2109,9 @@ check_revocation_crl() {
           fi
      fi
      if grep -qe '-----BEGIN CERTIFICATE-----' $TEMPDIR/intermediatecerts.pem; then
-          $OPENSSL verify -crl_check -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
+          $OPENSSL verify -crl_check -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT &> "${tmpfile%%.crl}.err"
      else
-          $OPENSSL verify -crl_check -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
+          $OPENSSL verify -crl_check -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$GOOD_CA_BUNDLE" "${tmpfile%%.crl}.pem") $HOSTCERT &> "${tmpfile%%.crl}.err"
      fi
      if [[ $? -eq 0 ]]; then
           out ", "
@@ -2168,14 +2169,14 @@ check_revocation_ocsp() {
                # Response appears to use SHA-1 in CertID
                $OPENSSL ocsp -no_nonce -respin "$TEMPDIR/stapled_ocsp_response.dd" \
                     -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-                    -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+                    -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
                success=$?
           fi
           if [[ $success -ne 0 ]] && [[ "$stapled_response" =~ 0609608648016503040201 ]]; then
                # Response appears to use SHA-256 in CertID
                $OPENSSL ocsp -sha256 -no_nonce -respin "$TEMPDIR/stapled_ocsp_response.dd" \
                     -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-                    -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+                    -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
                success=$?
           fi
      else
@@ -2206,7 +2207,7 @@ check_revocation_ocsp() {
           fi
           $openssl_bin ocsp -no_nonce ${host_header} -url "$uri" \
                -issuer $TEMPDIR/hostcert_issuer.pem -verify_other $TEMPDIR/intermediatecerts.pem \
-               -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
+               -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$GOOD_CA_BUNDLE") -cert $HOSTCERT -text &> "$tmpfile"
           success=$?
      fi
 
@@ -8150,9 +8151,9 @@ determine_trust() {
           # in a subshell because that should be valid here only
           (export SSL_CERT_DIR="/dev/null"; export SSL_CERT_FILE="/dev/null"
           if [[ $certificates_provided -ge 2 ]]; then
-               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$bundle_fname") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
+               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$bundle_fname") -untrusted $TEMPDIR/intermediatecerts.pem $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
           else
-               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat ${ADDTL_CA_FILES//,/ } "$bundle_fname") $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
+               $OPENSSL verify $TRUSTED1ST -purpose sslserver -CAfile <(cat "${ADDTL_CA_FILES_ARRAY[@]}" "$bundle_fname") $HOSTCERT >$TEMPDIR/${certificate_file[i]}.1 2>$TEMPDIR/${certificate_file[i]}.2
           fi)
           verify_retcode[i]=$(awk '/error [1-9][0-9]? at [0-9]+ depth lookup:/ { if (!found) {print $2; found=1} }' $TEMPDIR/${certificate_file[i]}.1 $TEMPDIR/${certificate_file[i]}.2)
           [[ -z "${verify_retcode[i]}" ]] && verify_retcode[i]=0
@@ -21933,6 +21934,7 @@ tuning / connect options (most also can be preset via environment variables):
      --ids-friendly                skips a few vulnerability checks which may cause IDSs to block the scanning IP
      --phone-out                   allow to contact external servers for CRL download, querying OCSP responder and the HSTS preload API
      --add-ca <CA files|CA dir>    path to <CAdir> with *.pem or a comma separated list of CA files to include in trust check
+                                  quote the argument if file or directory names contain spaces
      --mtls <CLIENT CERT file>     path to <CLIENT CERT> file in PEM format containing unencrypted certificate key (beta)
      --basicauth <user:pass>       provide HTTP basic auth information
      --reqheader <header>          add custom http request headers
@@ -25405,6 +25407,26 @@ check_base_requirements() {
      fi
 }
 
+# Expand additional CA paths once, without splitting filenames on whitespace.
+prepare_additional_ca_files() {
+     local fname
+     local IFS=,
+
+     if [[ -d "$ADDTL_CA_FILES" ]]; then
+          ADDTL_CA_FILES_ARRAY=("$ADDTL_CA_FILES"/*.pem)
+     else
+          # Split only at commas; retain pathname expansion for existing glob users.
+          # shellcheck disable=SC2206
+          ADDTL_CA_FILES_ARRAY=($ADDTL_CA_FILES)
+     fi
+     for fname in "${ADDTL_CA_FILES_ARRAY[@]}"; do
+          [[ -s "$fname" ]] || fatal_cmd_line "The CA file \"$fname\" does not exist" $ERR_RESOURCE
+          grep -q 'BEGIN CERTIFICATE' "$fname" || fatal_cmd_line "\"$fname\" is not CA file in PEM format" $ERR_RESOURCE
+     done
+     return 0
+}
+
+
 parse_cmd_line() {
      local outfile_arg=""
      local cipher_mapping
@@ -26046,16 +26068,7 @@ parse_cmd_line() {
      [[ $CMDLINE_IP == one ]] && ( is_ipv4addr "$URI" || is_ipv6addr "$URI" )  && fatal_cmd_line "\"--ip=one\" plus supplying an IP address doesn't work" $ERR_CMDLINE
      "$do_mx_all_ips" && [[ "$NODNS" == none ]] && fatal_cmd_line "\"--mx\" and \"--nodns=none\" don't work together" $ERR_CMDLINE
 
-     if [[ "${ADDTL_CA_FILES}" =~ \  ]]; then
-          fatal_cmd_line "The CA file \"${ADDTL_CA_FILES}\" must not contain spaces" $ERR_RESOURCE
-     fi
-     if [[ -d "${ADDTL_CA_FILES}" ]]; then
-          ADDTL_CA_FILES="$ADDTL_CA_FILES/*.pem"
-     fi
-     for fname in ${ADDTL_CA_FILES//,/ }; do
-          [[ -s "$fname" ]] || fatal_cmd_line "The CA file \"$fname\" does not exist" $ERR_RESOURCE
-          grep -q 'BEGIN CERTIFICATE' "$fname" || fatal_cmd_line "\"$fname\" is not CA file in PEM format" $ERR_RESOURCE
-     done
+     prepare_additional_ca_files
 
      # Check if mTLS has been selected, and if the correct client auth PEM file has been provided by user
      if [[ -n "$MTLS" ]]; then
