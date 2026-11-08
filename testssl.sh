@@ -12590,6 +12590,51 @@ starttls_telnet_dialog() {
      return $ret
 }
 
+
+# function to check for availablity of a port. It doesn't block as fd_socket()
+# also timeout isn't needed which is not a/v under MacOS.
+# - arg1: ip address (v4/v6)
+# - arg2: port
+# - arg3: timeout in 100ms
+#
+is_tcp_port_open() {
+     local -i fd=42
+     local host="$(tr -d '[]' <<< $1)"
+     local port=$2
+     local hms=$3
+     local elapsed=0
+
+     # vars need to be validated here, which happened in validate*()
+     eval "exec ${fd}<>/dev/tcp/${host}/${port}" 2>/dev/null &
+     local pid=$!
+
+     while kill -0 "$pid" 2>/dev/null; do
+          if (( elapsed >= $hms )); then
+               kill "$pid" 2>/dev/null
+               wait "$pid" 2>/dev/null
+               debugme echo "TIMEOUT"
+               return 3
+          fi
+
+          sleep 0.1
+          ((elapsed++))
+     done
+
+     wait "$pid"
+     local status=$?
+
+     if (( status == 0 )); then
+          debugme echo "CONNECTED"
+          exec 42<&-
+          exec 42>&-
+     else
+          debugme echo "FAILED"
+          status=2
+     fi
+
+     return "$status"
+}
+
 # arg1: fd for socket (which we don't use yet. It's a hassle, not clear whether it works under every bash version
 # arg2: optional: for STARTTLS additional command to be injected
 # return values:
@@ -24087,7 +24132,7 @@ check_msg() {
 # Pre check whether target IP is a QUIC only. It's partly
 # copied from sub_quic() and comes with a less wait time in
 # order not to penalize all hosts which don't support QUIC.
-# It sets QUIC_SUPPORTED and return these values:
+# It sets QUIC_SUPPORTED and returns these values:
 #    0 QUIC supported
 #    1 is NOT supported
 #    3 check not possible
@@ -24096,9 +24141,9 @@ quic_precheck() {
      local use_openssl=""
 
      # UDP doesn't support STARTTLS or a proxy
+     # Also: UDP is connection less, so a simple bash socket doesn't work for QUIC.
+     # Thus we need to use any OPENSSL for now
      if [[ -z "$PROXY" ]] || [[ "$PROXY" ]] ; then
-          # The problem now is that UDP is connection less, so a simple bash socket doesn't work for QUIC.
-          # Thus we need to use any OPENSSL for now
           if "$HAS_QUIC"; then
                use_openssl=$OPENSSL
           elif "$HAS2_QUIC"; then
@@ -24112,9 +24157,11 @@ quic_precheck() {
           if [[ $? -eq 3 ]]; then
                # killed
                QUIC_SUPPORTED=no
+               debugme echo $QUIC_SUPPORTED
                return 1
           else
                QUIC_SUPPORTED=yes
+               debugme echo $QUIC_SUPPORTED
                return 0
           fi
      fi
@@ -24129,12 +24176,12 @@ determine_service() {
      local protocol
      local basicauth_header=""
      local reqheader=""
+     local -i init_socket_timeount=40
 
-     # Check if we TCP connect via socket to $NODEIP:$PORT . Reason: we can't otherwise assure $OPENSSL supports what the server side offers.
+     # Check first if we TCP connect via socket to $NODEIP:$PORT . Reason: we can't otherwise assure $OPENSSL supports what the server side offers.
+     is_tcp_port_open $NODEIP $PORT $init_socket_timeount
 
-#FIXME: # Problem: wir wollen eigentlich einen Pre-Check bei determine_service, dies macht aber quasi alles!
-
-     if ! fd_socket 5; then
+     if [[ $? -ne 0 ]]; then
           if [[ -n "$PROXY" ]]; then
                fatal "You're sure $PROXYNODE:$PROXYPORT allows tunneling here? Can't connect to \"$NODEIP:$PORT\"" $ERR_CONNECT
           else
@@ -24143,14 +24190,16 @@ determine_service() {
                     return 1
                else
                     if [[ "$QUIC_SUPPORTED" == yes ]]; then
-                         fatal " Pure HTTP/3 = QUIC scanning is not supported yet"
+                         # quic_precheck was positive, see above
+                         outln
+                         fatal " Scanning hosts via HTTP/3 = QUIC only is not supported yet"
                     else
+                         outln
                          fatal "Can't connect to \"$NODEIP:$PORT\"\nMake sure a firewall is not between you and your scanning target!" $ERR_CONNECT
                     fi
                fi
           fi
      fi
-     close_socket 5
 
      outln
      if [[ -z "$1" ]]; then
