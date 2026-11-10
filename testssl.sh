@@ -21635,7 +21635,7 @@ find_openssl_binary() {
 
      OPENSSL_NR_CIPHERS=$(count_ciphers "$(actually_supported_osslciphers 'ALL:COMPLEMENTOFALL' 'ALL')")
      if [[ $OPENSSL_NR_CIPHERS -le 140 ]]; then
-          [[ "$OSSL_NAME" =~ LibreSSL ]] && [[ ${OSSL_VER//./} -ge 210 ]] && HAS_DH_BITS=true
+          [[ "$OSSL_NAME" =~ LibreSSL ]] && [[ $OSSL_VER_MAJOR -gt 2 || ${OSSL_VER_MINOR%%\.*} -ge 1 ]] && HAS_DH_BITS=true
           if "$SSL_NATIVE"; then
                outln
                pr_warning "LibreSSL/OpenSSL in native ssl mode with poor cipher support is not a good choice for testing INSECURE features!"
