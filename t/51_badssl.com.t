@@ -1,28 +1,57 @@
 #!/usr/bin/env perl
 
 use strict;
+use warnings;
 use Test::More;
 use Data::Dumper;
 use JSON;
 
 my $tests = 0;
 my $prg="./testssl.sh";
+my $check2run="-S -q --ip=one --fast --ssl-native --color 0";
+my $okout;
+my $okjson;
+my $uri="";
+my $os="$^O";
 
 my (
 	$out,
 	$json,
 	$found,
 );
-# OK
-pass("Running testssl.sh against badssl.com to create a baseline (may take 2~3 minutes)"); $tests++;
-my $okout = `$prg -S --jsonfile tmp.json --color 0 badssl.com`;
-my $okjson = json('tmp.json');
+
+die "Unable to open $prg" unless -f $prg;
+
+# Business logic: We assume that we also do not need this on MacOS as we're
+# confident LibreSSL/OpenSSL handle almost everything equal. Google's
+# badssl service seems lately (2026/11) rather unresponsive which causes
+# problems for us. See also the flags here which may help avoiding that.
+#
+if ( $os eq "darwin" ){
+     plan skip_all => 'No checks on MacOS';
+} elsif ( $os eq "linux" ) {
+     $check2run = $check2run . ' --openssl-timeout=300';
+}
+
+
+# Provide proper start conditions
+unlink 'tmp.json';
+
+#1+#2 OK
+$uri="badssl.com";
+pass("Running testssl.sh against $uri to create a baseline (may take 2-3 minutes)"); $tests++;
+$okout = `$prg $check2run --jsonfile tmp.json $uri`;
+$okjson = json('tmp.json');
 unlink 'tmp.json';
 cmp_ok(@$okjson,'>',10,"We should have more then 10 findings"); $tests++;
 
-# Expiration
-pass("Running testssl against expired.badssl.com"); $tests++;
-$out = `$prg -S --jsonfile tmp.json --color 0 expired.badssl.com`;
+# Try to not have the IP blocked @ expired.badssl.com
+sleep 60;
+
+# Expiration #3 - #7
+$uri="expired.badssl.com";
+pass("Running testssl against $uri"); $tests++;
+$out = `$prg $check2run --jsonfile tmp.json $uri`;
 like($out, qr/Chain of trust\s+NOT ok \(expired\)/,"The chain of trust should be expired"); $tests++;
 like($out, qr/Certificate Validity \(UTC\)\s+expired/,"The certificate should be expired"); $tests++;
 $json = json('tmp.json');
@@ -38,9 +67,13 @@ foreach my $f ( @$json ) {
 }
 is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 
-# Self signed and not-expired
-pass("Running testssl against self-signed.badssl.com"); $tests++;
-$out = `$prg -S --jsonfile tmp.json --color 0 self-signed.badssl.com`;
+# Try to not have the IP blocked @ self-signed.badssl.com
+sleep 90;
+
+# Self signed and not-expired: #9
+$uri="self-signed.badssl.com";
+pass("Running testssl against $uri"); $tests++;
+$out = `$prg $check2run --jsonfile tmp.json $uri`;
 unlike($out, qr/Certificate Validity \(UTC\)s+expired/,"The certificate should not be expired"); $tests++;
 $json = json('tmp.json');
 unlink 'tmp.json';
@@ -81,8 +114,9 @@ foreach my $f ( @$okjson ) {
 is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 
 # Wrong host
-#pass("Running testssl against wrong.host.badssl.com"); $tests++;
-#$out = `./testssl.sh -S --jsonfile tmp.json --color 0 wrong.host.badssl.com`;
+#$uri="wrong.host.badssl.com";
+#pass("Running testssl against $uri"); $tests++;
+#$out = ``$prg $check2run --jsonfile tmp.json $uri`;
 #unlike($out, qr/Certificate Expiration\s+expired\!/,"The certificate should not be expired"); $tests++;
 #$json = json('tmp.json');
 #unlink 'tmp.json';
@@ -97,9 +131,14 @@ is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 #}
 #is($found,1,"We had a finding for this in the JSON output"); $tests++;
 
-# Incomplete chain
-pass("Running testssl against incomplete-chain.badssl.com"); $tests++;
-$out = `$prg -S --jsonfile tmp.json --color 0 incomplete-chain.badssl.com`;
+# Try to not have the IP blocked @ self-signed.badssl.com
+sleep 90;
+
+
+# Incomplete chain #22,#23
+$uri='incomplete-chain.badssl.com';
+pass("Running testssl against $uri"); $tests++;
+$out = `$prg $check2run --jsonfile tmp.json $uri`;
 like($out, qr/Chain of trust.*?NOT ok\s+\(chain incomplete\)/,"Chain of trust should fail because of incomplete"); $tests++;
 $json = json('tmp.json');
 unlink 'tmp.json';
@@ -114,11 +153,15 @@ foreach my $f ( @$json ) {
 }
 is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 
-# TODO: RSA 8192
+# Try to not have the IP blocked @ self-signed.badssl.com
+sleep 90;
 
-# TODO: CBC
-#pass("Running testssl against cbc.badssl.com"); $tests++;
-#$out = `./testssl.sh -e --jsonfile tmp.json --color 0 cbc.badssl.com`;
+
+# if we want to uncomment the floowing: see flags above
+
+#$uri='cbc.badssl.com';
+#pass("Running testssl against $uri"); $tests++;
+#$out = `$prg $check2run --jsonfile tmp.json $uri`;
 #like($out, qr/Chain of trust.*?NOT ok\s+\(chain incomplete\)/,"Chain of trust should fail because of incomplete"); $tests++;
 #$json = json('tmp.json');
 #unlink 'tmp.json';
@@ -136,7 +179,7 @@ is($found,1,"We should have a finding for this in the JSON output"); $tests++;
 
 done_testing($tests);
 
-sub json($) {
+sub json {
 	my $file = shift;
 	$file = `cat $file`;
 	unlink $file;
@@ -144,5 +187,5 @@ sub json($) {
 }
 
 
-#  vim:ts=5:sw=5:expandtab
+# vim:ts=5:sw=5:expandtab
 
