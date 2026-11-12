@@ -73,7 +73,7 @@
 "cookie_count","testssl.sh/81.169.235.32","443","INFO","0 at '/'","",""
 "X-Frame-Options","testssl.sh/81.169.235.32","443","OK","DENY","",""
 "X-Content-Type-Options","testssl.sh/81.169.235.32","443","OK","nosniff","",""
-"Content-Security-Policy","testssl.sh/81.169.235.32","443","OK","script-src 'unsafe-inline'; style-src 'unsafe-inline' 'self'; object-src 'self'; base-uri 'none'; img-src 'self' ; default-src 'self'; frame-ancestors 'self'; upgrade-insecure-requests; form-action 'none'","",""
+"Content-Security-Policy","testssl.sh/81.169.235.32","443","OK","script-src 'nonce-099a680dc989ae55e646fb2fe525c9b0'; style-src 'unsafe-inline' 'self'; object-src 'self'; base-uri 'none'; img-src 'self'; default-src 'self'; frame-ancestors 'self'; upgrade-insecure-requests; form-action 'self' https://www.paypal.com","",""
 "Cross-Origin-Opener-Policy","testssl.sh/81.169.235.32","443","INFO","same-origin-allow-popups","",""
 "Cross-Origin-Resource-Policy","testssl.sh/81.169.235.32","443","INFO","same-site","",""
 "Cross-Origin-Embedder-Policy","testssl.sh/81.169.235.32","443","INFO","require-corp","",""
