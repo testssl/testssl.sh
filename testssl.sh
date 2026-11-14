@@ -8814,7 +8814,7 @@ get_cn_from_cert() {
      # for e.g. russian sites -esc_msb,utf8 works in an UTF8 terminal -- any way to check platform independent?
      # see x509(1ssl):
      subject="$($OPENSSL x509 -in $1 -noout -subject -nameopt multiline,-align,sname,-esc_msb,utf8,-space_eq 2>>$ERRFILE)"
-     echo "$(awk -F'=' '/CN=/ { print $2 }' <<< "$subject" | tr '\n' ' ')"
+     echo "$(awk '/^[[:space:]]*CN=/ { sub(/^[[:space:]]*CN=/, ""); print }' <<< "$subject" | tr '\n' ' ')"
      return 0
 }
 
