@@ -17,6 +17,7 @@
 * Detect short-lived certificates (validity period <= `DAYS_VALID_SHORTLIVED`, default 10 days) and no longer flag them red merely for their short lifespan; warn only when less than 24h is left (#3097)
 * Check for SLH-DSA signatures (draft-reddy-tls-slhdsa)
 * Check for two KEMs in draft-rosomakho-tls-ecdhe-mlkem512
+* Check for MLKEM1024X448 (draft-preussmattsson-tls-mlkem1024-x448)
 
 ### Features implemented / improvements in 3.2
 
