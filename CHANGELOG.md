@@ -4,6 +4,7 @@
 ### Features implemented / improvements in 3.3dev
 
 * QUIC protocol check
+* QUIC-only host pre-check
 * TLS 1.3 early data (0-RTT)
 * Support for RFC 8998,  draft-yang-tls-hybrid-sm2-mlkem (TLS_SM4_GCM_SM3, TLS_SM4_CCM_SM3 ciphers, kx groups curveSM2, curveSM2MLKEM768; SM2 pub keys + signatures)
 * Adds a check for mandatory extended master secret TLS extension
@@ -14,10 +15,14 @@
 * Detect and show DNS HTTPS RR (RFC 9460)
 * Provide an FAQ
 * Security fix: HTML-escape URLs in the HTML report to prevent stored XSS from a server-controlled `Location:` header (#3090)
+* Potential security fix: Validate user controlled variables like $NODE, $PROXY, $XMPP_HOST, $PORT thoroughly
 * Detect short-lived certificates (validity period <= `DAYS_VALID_SHORTLIVED`, default 10 days) and no longer flag them red merely for their short lifespan; warn only when less than 24h is left (#3097)
+* General support for OpenSSL 4
+* Support using LibreSSL 4.3.0 for X25519MLKEM768
 * Check for SLH-DSA signatures (draft-reddy-tls-slhdsa)
-* Check for two KEMs in draft-rosomakho-tls-ecdhe-mlkem512
+* Check for two KEMs in draft-rosomakho-tls-ecdhe-mlkem512 (SecP256r1MLKEM512, MLKEM512X25519)
 * Check for MLKEM1024X448 (draft-preussmattsson-tls-mlkem1024-x448)
+
 
 ### Features implemented / improvements in 3.2
 
