@@ -17239,6 +17239,13 @@ run_ccs_injection(){
      [[ $VULN_COUNT -le $VULN_THRESHLD ]] && outln && pr_headlineln " Testing for CCS injection vulnerability " && outln
      pr_bold " CCS"; out " ($cve)                       "
 
+     if "$TLS13_ONLY"; then
+          pr_svrty_best "not vulnerable (OK)"
+          fileout "$jsonID" "OK" "not vulnerable, , TLS 1.3-only host" "$cve" "$cwe"
+          outln ", TLS 1.3-only host"
+          return 0
+     fi
+
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
           prln_local_problem "STARTTLS/$STARTTLS_PROTOCOL and --ssl-native collide here"
           return 1
