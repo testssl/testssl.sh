@@ -46,8 +46,10 @@ to get bugfixes, other feedback and more contributions.
 ### Status / Development cycle
 
 This is the 3.2 branch, is the so-call old-stable branch. It gets bug fixes only. Release cycles are longer than we plan,
-3.2.0 was released in April 2025. If you're looking for more [features have a look](https://github.com/testssl/testssl.sh/blob/3.3dev/CHANGELOG.md) @ 3.3dev.
-It's almost as stable as 3.2 but output and more is subject to change. A more conservative approach would be picking the [snapshots in 3.3dev (see left hand side)](https://github.com/testssl/testssl.sh/releases/).
+3.2.0 was released in April 2025. If you're looking for absolute stability this is your branch. If you want more recent
+[features you rather should look](https://github.com/testssl/testssl.sh/blob/3.3dev/CHANGELOG.md) @ 3.3dev.
+It's almost as stable as 3.2 but output and more is subject to change. A more conservative approach would be picking the
+[snapshots in 3.3dev (see left hand side)](https://github.com/testssl/testssl.sh/releases/).
 
 Given the current manpower we only support n-1 versions. That means 3.0 became EOL with the release of 3.2.0. The 3.3.dev branch will eventually evolve into 3.4,
 then 3.2.x will become EOL.
