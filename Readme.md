@@ -43,6 +43,16 @@ paid service in the internet you are strongly encouraged to mention to your audi
 that you're using this program and where to get this program from. That helps us
 to get bugfixes, other feedback and more contributions.
 
+### Status / Development cycle
+
+This is the 3.2 branch, is the so-call old-stable branch. It gets bug fixes only. Release cycles are longer than we plan,
+3.2.0 was released in April 2025. If you're looking for more [features have a look](https://github.com/testssl/testssl.sh/blob/3.3dev/CHANGELOG.md) @ 3.3dev.
+It's almost as stable as 3.2 but output and more is subject to change. A more conservative approach would be picking the [snapshots in 3.3dev (see left hand side)](https://github.com/testssl/testssl.sh/releases/).
+
+Given the current manpower we only support n-1 versions. That means 3.0 became EOL with the release of 3.2.0. The 3.3.dev branch will eventually evolve into 3.4,
+then 3.2.x will become EOL.
+
+
 ### Compatibility
 
 Testssl.sh is working on every Linux/BSD distribution and MacOS out of the box. Latest by 2.9dev
@@ -91,10 +101,6 @@ For more please consult [Dockerfile.md](https://github.com/testssl/testssl.sh/bl
 Usage of the program is without any warranty. Use it at your own risk.
 
 Testssl.sh is intended to be used as a standalone CLI tool. While we tried to apply best practise security measures and sanitize external input, we can't guarantee that the program is without any vulnerabilities. Running as a web service may pose security risks and you're advised to apply additional security measures. Validate input from the user and from all services which are queried.
-
-### Status
-
-Given the current manpower we only support n-1 versions. We started a 3.3.dev branch where further development takes place before 3.4 becomes the stable version and 3.2 becomes old-stable. As said, 3.0.x became EOL.
 
 ### Documentation
 
