@@ -15,8 +15,8 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/testssl/testssl.sh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 `testssl.sh` is a free command line tool which checks a server's service on
-any port for the support of TLS/SSL ciphers, protocols as well as some
-cryptographic flaws.
+any port for the support of TLS/SSL ciphers, protocols, key exchanges and much
+more -- as well as some cryptographic flaws.
 
 ### Key features
 
@@ -37,19 +37,19 @@ cryptographic flaws.
 
 This software is free. You can use it under the terms of GPLv2, see LICENSE.
 
-Attribution is important for the future of this project -- also in the
+Attribution is important for the future of this project -- also on the
 internet. Thus if you're offering a scanner based on testssl.sh as a public and/or
-paid service in the internet you are strongly encouraged to mention to your audience
+paid service on the internet you are strongly encouraged to mention to your audience
 that you're using this program and where to get this program from. That helps us
 to get bugfixes, other feedback and more contributions.
 
 ### Status / Development cycle
 
-This is the 3.2 branch, is the so-call old-stable branch. It gets bug fixes only. Release cycles are longer than we plan,
+This is the 3.2 branch, the so-called old-stable branch. It gets bug fixes only. Release cycles are always longer than planned;
 3.2.0 was released in April 2025. If you're looking for absolute stability this is your branch. If you want more recent
 [features you rather should look](https://github.com/testssl/testssl.sh/blob/3.3dev/CHANGELOG.md) @ 3.3dev.
-It's almost as stable as 3.2 but output and more is subject to change. A more conservative approach would be picking the
-[snapshots in 3.3dev (see left hand side)](https://github.com/testssl/testssl.sh/releases/).
+It's almost as stable as 3.2 but output and more are subject to change. A more conservative approach would be picking always the latest
+[snapshot in 3.3dev (see left hand side)](https://github.com/testssl/testssl.sh/releases/) if you don't like changes that often.
 
 Given the current manpower we only support n-1 versions. That means 3.0 became EOL with the release of 3.2.0. The 3.3.dev branch will eventually evolve into 3.4,
 then 3.2.x will become EOL.
@@ -59,11 +59,11 @@ then 3.2.x will become EOL.
 
 Testssl.sh is working on every Linux/BSD distribution and MacOS out of the box. Latest by 2.9dev
 most of the limitations of disabled features from the openssl client are gone
-due to bash-socket-based checks. An old OpenSSL-bad version is supplied but
-but you can also use any LibreSSL or OpenSSL version.
+due to bash-socket-based checks. An old OpenSSL-bad version is supplied, but
+you can also use any LibreSSL or OpenSSL version.
    testssl.sh also works on other unixoid systems out of the box, supposed they have
 `/bin/bash` >= version 3.2 and standard tools like sed and awk installed. An implicit
-(silent) check for binaries is done when you start testssl.sh . System V needs probably
+(silent) check for binaries is done when you start testssl.sh. System V needs probably
 to have GNU grep installed. Windows (using MSYS2, Cygwin or WSL) work too.
 
 Update notifications can be found at [github](https://github.com/testssl/testssl.sh) or most important ones @ [mastodon](https://infosec.exchange/@testssl) or [bluesky](https://bsky.app/profile/testssl.bsky.social). [twitter](https://twitter.com/drwetter) is not being used anymore.
@@ -102,7 +102,7 @@ For more please consult [Dockerfile.md](https://github.com/testssl/testssl.sh/bl
 
 Usage of the program is without any warranty. Use it at your own risk.
 
-Testssl.sh is intended to be used as a standalone CLI tool. While we tried to apply best practise security measures and sanitize external input, we can't guarantee that the program is without any vulnerabilities. Running as a web service may pose security risks and you're advised to apply additional security measures. Validate input from the user and from all services which are queried.
+Testssl.sh is intended to be used as a standalone CLI tool. While we tried to apply best practice security measures and sanitize external input, we can't guarantee that the program is without any vulnerabilities. Running as a web service may pose security risks and you're advised to apply additional security measures. Validate input from the user and from all services which are queried.
 
 ### Documentation
 
@@ -113,11 +113,11 @@ Testssl.sh is intended to be used as a standalone CLI tool. While we tried to ap
 
 ### Contributing
 
-A lot of contributors already helped to push the project where it currently is, see [CREDITS.md](https://github.com/testssl/testssl.sh/blob/3.2/CREDITS.md). Your contribution would be also welcome! There's an [issue list](https://github.com/testssl/testssl.sh/issues). To get started look for issues which are labeled as [good first issue](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), [for grabs](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22for+grabs%22) or [help wanted](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). The latter is more advanced. You can also lookout for [documentation issues](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3Adocumentation), or you can help with [unit testing](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22unit%20test%22) or improving github actions.
+A lot of contributors already helped to push the project where it currently is, see [CREDITS.md](https://github.com/testssl/testssl.sh/blob/3.2/CREDITS.md). Your contribution would be also welcome! There's an [issue list](https://github.com/testssl/testssl.sh/issues). To get started look for issues which are labeled as [good first issue](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), [for grabs](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22for+grabs%22) or [help wanted](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). The latter is more advanced. You can also look out for [documentation issues](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3Adocumentation), or you can help with [unit testing](https://github.com/testssl/testssl.sh/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22unit%20test%22) or improving github actions.
 
-It is recommended to read [CONTRIBUTING.md](https://github.com/testssl/testssl.sh/blob/3.2/CONTRIBUTING.md) and please also have a look at he [Coding Convention](https://github.com/testssl/testssl.sh/blob/3.2/Coding_Convention.md). Before you start writing PRs with hundreds of lines, better create an issue first.
+It is recommended to read [CONTRIBUTING.md](https://github.com/testssl/testssl.sh/blob/3.2/CONTRIBUTING.md) and please also have a look at the [Coding Convention](https://github.com/testssl/testssl.sh/blob/3.2/Coding_Convention.md). Before you start writing PRs with hundreds of lines, better create an issue first.
 
-In general there's also some maintenance burden, like maintaining handshakes and CA stores etc. . If you believe you can contribute and be responsible to one of those maintenance task, please speak up. That would free resources that we could use for development.
+In general there's also some maintenance burden, like maintaining handshakes and CA stores etc. If you believe you can contribute and be responsible for one of those maintenance tasks, please speak up. That would free resources that we could use for development.
 
 
 ### Bug reports
