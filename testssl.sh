@@ -17713,7 +17713,7 @@ receive_app_data() {
 # General overview which browser "supports" which vulnerability:
 # https://en.wikipedia.org/wiki/Transport_Layer_Security#Web_browsers
 
-# first a helper function which saves some handshake (visible via -U --debug=4)
+# first a helper function which saves some handshakes (visible via -U --debug=4)
 #
 shortcut_tls13_only() {
      local jsonID="$1"
@@ -17854,7 +17854,7 @@ run_ccs_injection(){
 
      pr_bold " CCS"; out " ($cve)                       "
 
-     # there were 18 unncessary handshakes otherwise:
+     # there were 18 unnecessary handshakes otherwise:
      "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only host" && return 0
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
@@ -19540,8 +19540,8 @@ run_logjam() {
      pr_bold " LOGJAM"; out " ($cve), experimental      "
 
      # saves 2 handshake with RSA cipher but if we'd keep the cipher list offered by the server
-     # we could also save those in other constallations
-     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only hosts don't suport export DH ciphers / downgrades" && return 0
+     # we could also save those in other constellations
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only hosts don't support export DH ciphers / downgrades" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      # Also as the openssl binary distributed has everything we need measurements show that
