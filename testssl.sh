@@ -17854,7 +17854,7 @@ run_ccs_injection(){
 
      pr_bold " CCS"; out " ($cve)                       "
 
-     # there were 18unncessary handshakes otherwise:
+     # there were 18 unncessary handshakes otherwise:
      "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only host" && return 0
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
@@ -18864,16 +18864,7 @@ run_sweet32() {
 
      pr_bold " SWEET32"; out " (${cve// /, })    "
 
-     if "$TLS13_ONLY"; then
-          # Unfortunately there's no restriction using TLS 1.2 with $sweet32_ciphers
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", TLS 1.3 doesn't offer such ciphers"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable" "$cve" "$cwe"
-          return 0
-     fi
-
-     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only servers don't offer ciphers" && return
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only servers don't offer ciphers" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      # The openssl binary distributed has almost everything we need (PSK, KRB5 ciphers and feff, ffe0 are typically missing).
@@ -19340,15 +19331,7 @@ run_freak() {
 
      pr_bold " FREAK"; out " ($cve)                     "
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", TLS 1.3-only server"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable" "$cve" "$cwe"
-          return 0
-     fi
-
-     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only server" && return
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only server" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      if "$using_sockets"; then
@@ -20148,7 +20131,7 @@ run_winshock() {
 
      pr_bold " Winshock"; out " ($cve), experimental    "
 
-     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" "- TLS 1.3-only host" && return
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" "- TLS 1.3-only host" && return 0
 
      if [[ "$(has_server_protocol "tls1_3")" -eq 0 ]] ; then
           # There's no MS server supporting TLS 1.3. Winshock was way back in time
