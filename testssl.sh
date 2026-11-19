@@ -1405,7 +1405,7 @@ fileout_insert_warning() {
 
      # See #2599. The "clientProblem" wrapper should only be added if fileout_insert_warning()
      # is called before fileout_banner(). The only instance in which this function is called
-     # after fileout_banner() is in the case of a TLS 1.3 only server when $OPENSSL does not
+     # after fileout_banner() is in the case of a TLS 1.3-only server when $OPENSSL does not
      # support TLS 1.3.
      if "$do_pretty_json" && "$JSONHEADER" && ! "$TLS13_ONLY"; then
           echo -e "          \"clientProblem${CLIENT_PROB_NO}\" : [" >>"$JSONFILE"
@@ -6066,7 +6066,7 @@ run_protocols() {
      esac
 
      # Now, we are doing a basic/pre test for TLS 1.2 and 1.3 in order not to penalize servers (medium)
-     # running TLS 1.3 only when TLS 1.2 is not offered.  0 and 5 are the return codes for
+     # running TLS 1.3-only when TLS 1.2 is not offered.  0 and 5 are the return codes for
      # TLS 1.3 support (kind of, including deprecated pre-versions of TLS 1.3)
      if [[ $(has_server_protocol tls1_2) -eq 0 ]]; then
           ret_val_tls12=0
@@ -7534,7 +7534,7 @@ run_server_preference() {
           1) fileout_rating="CRITICAL" ;;
      esac
      if "$TLS13_ONLY" && ! "$has_tls13_cipher_order"; then
-          terminal_msg="no (TLS 1.3 only)"
+          terminal_msg="no (TLS 1.3-only)"
           limitedsense=" (limited sense as client will pick)"
           fileout_msg="not a server cipher order for TLS 1.3 configured"
      elif ! "$TLS13_ONLY" && [[ -z "$cipher2" ]]; then
@@ -7581,7 +7581,7 @@ run_server_preference() {
      else
           if "$has_tls13_cipher_order"; then
                if "$TLS13_ONLY"; then
-                    out "yes (TLS 1.3 only)"
+                    out "yes (TLS 1.3-only)"
                     fileout "$jsonID" "INFO" "server (TLS 1.3)"
                else
                     pr_svrty_best "yes (OK)"
@@ -10928,8 +10928,8 @@ run_server_defaults() {
      if [[ $tls_extensions =~ \#23 ]]; then
           if "$TLS13_ONLY"; then
                # this shouldn't happen
-               fileout "$jsonID" "LOW" "Misconfiguration: Extended master secret extension detected for TLS 1.3 only"
-               debugme outln "${spaces}Misconfiguration: Extended master secret extension detected for TLS 1.3 only"
+               fileout "$jsonID" "LOW" "Misconfiguration: Extended master secret extension detected for TLS 1.3-only"
+               debugme outln "${spaces}Misconfiguration: Extended master secret extension detected for TLS 1.3-only"
           else
                if grep -qE 'Protocol.*(TLSv1.)' $TEMPDIR/$NODEIP.parse_tls_serverhello.txt ; then
                     fileout "$jsonID" "INFO" "Extended master secret extension detected"
@@ -17713,6 +17713,20 @@ receive_app_data() {
 # General overview which browser "supports" which vulnerability:
 # https://en.wikipedia.org/wiki/Transport_Layer_Security#Web_browsers
 
+# first a helper function which saves some handshakes (visible via -U --debug=4)
+#
+shortcut_tls13_only() {
+     local jsonID="$1"
+     local cve="$2"
+     local cwe="$3"
+     local added_msg="$4"
+
+     pr_svrty_best "not vulnerable (OK)"
+     fileout "$jsonID" "OK" "not vulnerable${added_msg}" "$cve" "$cwe"
+     outln "$added_msg"
+     return 0
+}
+
 # mainly adapted from https://gist.github.com/takeshixx/10107280
 #
 run_heartbleed(){
@@ -17727,6 +17741,9 @@ run_heartbleed(){
      local hint=""
 
      pr_bold " Heartbleed"; out " ($cve)                "
+
+     # saves 2 client hellos:
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only host" && return 0
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
           prln_local_problem "STARTTLS/$STARTTLS_PROTOCOL and --ssl-native collide here"
@@ -17837,12 +17854,8 @@ run_ccs_injection(){
 
      pr_bold " CCS"; out " ($cve)                       "
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          fileout "$jsonID" "OK" "not vulnerable, , TLS 1.3-only host" "$cve" "$cwe"
-          outln ", TLS 1.3-only host"
-          return 0
-     fi
+     # there were 18 unnecessary handshakes otherwise:
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only host" && return 0
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
           prln_local_problem "STARTTLS/$STARTTLS_PROTOCOL and --ssl-native collide here"
@@ -18039,6 +18052,9 @@ run_ticketbleed() {
 
      [[ -n "$STARTTLS" ]] && return 0
      pr_bold " Ticketbleed"; out " ($cve), experimental "
+
+     # save 2 client hellos
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only host unaffected" && return 0
 
      if [[ "$SERVICE" != HTTP ]] && [[ "$CLIENT_AUTH" != required ]]; then
           outln "(applicable only for HTTP service)"
@@ -18383,11 +18399,7 @@ run_renego() {
      jsonID="secure_renego"
 
      if "$TLS13_ONLY"; then
-          # https://www.openssl.org/blog/blog/2018/02/08/tlsv1.3/
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", no renegotiation support in TLS 1.3 only servers"
-          outln
-          fileout "$jsonID" "OK" "TLS 1.3 only server" "$cve" "$cwe"
+          shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", no renegotiation support in TLS 1.3-only servers"
      else
           # first fingerprint for the Line "Secure Renegotiation IS NOT" or "Secure Renegotiation IS "
           $OPENSSL s_client $(s_client_options "$proto $STARTTLS $BUGS -connect $NODEIP:$PORT $PROXY $SNI") 2>&1 </dev/null >$TMPFILE 2>$ERRFILE
@@ -18448,10 +18460,7 @@ run_renego() {
      esac
 
      if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", no renegotiation support in TLS 1.3 only servers"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable, TLS 1.3 only" "$cve" "$cwe"
+          shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", no renegotiation support in TLS 1.3-only servers"
      elif [[ "$CLIENT_AUTH" == required ]] && [[ -z "$MTLS" ]]; then
           prln_warning "not having provided client certificate and private key file, the client x509-based authentication prevents this from being tested"
           fileout "$jsonID" "WARN" "not having provided client certificate and private key file, the client x509-based authentication prevents this from being tested"
@@ -18595,13 +18604,7 @@ run_crime() {
      pr_bold " CRIME, TLS " ; out "($cve)                "
      jsonID="CRIME_TLS"
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", no compression in TLS 1.3 only servers"
-          outln
-          fileout "$jsonID" "OK" "TLS 1.3 only server" "$cve" "$cwe"
-          return 0
-     fi
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", no compression in TLS 1.3eonly servers" && return 0
 
      if ! "$HAS_ZLIB"; then
           if "$SSL_NATIVE"; then
@@ -18861,14 +18864,7 @@ run_sweet32() {
 
      pr_bold " SWEET32"; out " (${cve// /, })    "
 
-     if "$TLS13_ONLY"; then
-          # Unfortunately there's no restriction using TLS 1.2 with $sweet32_ciphers
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", TLS 1.3 doesn't offer such ciphers"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable" "$cve" "$cwe"
-          return 0
-     fi
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only servers don't offer ciphers" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      # The openssl binary distributed has almost everything we need (PSK, KRB5 ciphers and feff, ffe0 are typically missing).
@@ -19157,7 +19153,7 @@ run_tls_fallback_scsv() {
                     fileout "$jsonID" "HIGH" "TLS 1.3, 1.2, 1.1, 1.0 not supported"
                else
                     # TLS 1.2, TLS 1.1, and TLS 1 are not supported, but can't tell whether TLS 1.3 is supported.
-                    # This could be a TLS 1.3 only server, an SSLv3 only server (if SSLv3 support cannot be tested),
+                    # This could be a TLS 1.3-only server, an SSLv3 only server (if SSLv3 support cannot be tested),
                     # or a server that does not support SSLv3 or any TLS protocol. So, don't report a severity,
                     # since this could either be good or bad.
                     outln "No fallback possible, TLS 1.2, TLS 1.1, and TLS 1 not supported"
@@ -19335,13 +19331,7 @@ run_freak() {
 
      pr_bold " FREAK"; out " ($cve)                     "
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", TLS 1.3 only server"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable" "$cve" "$cwe"
-          return 0
-     fi
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only server" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      if "$using_sockets"; then
@@ -19548,6 +19538,10 @@ run_logjam() {
      local jsonID2="${jsonID}-common_primes"
 
      pr_bold " LOGJAM"; out " ($cve), experimental      "
+
+     # saves 2 handshake with RSA cipher but if we'd keep the cipher list offered by the server
+     # we could also save those in other constellations
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only hosts don't support export DH ciphers / downgrades" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      # Also as the openssl binary distributed has everything we need measurements show that
@@ -20137,6 +20131,8 @@ run_winshock() {
 
      pr_bold " Winshock"; out " ($cve), experimental    "
 
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" "- TLS 1.3-only host" && return 0
+
      if [[ "$(has_server_protocol "tls1_3")" -eq 0 ]] ; then
           # There's no MS server supporting TLS 1.3. Winshock was way back in time
           pr_svrty_best "not vulnerable (OK)"
@@ -20319,13 +20315,7 @@ run_lucky13() {
 
      pr_bold " LUCKY13"; out " ($cve), experimental     "
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", no CBC ciphers in TLS 1.3 only servers"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable, TLS 1.3 only" "$cve" "$cwe"
-          return 0
-     fi
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", no CBC ciphers in TLS 1.3-only servers" && return 0
 
      "$SSL_NATIVE" && using_sockets=false
      # The openssl binary distributed has almost everything we need (PSK, KRB5 ciphers and feff, ffe0 are typically missing).
@@ -20401,13 +20391,7 @@ run_rc4() {
 
      pr_bold " RC4"; out " (${cve// /, })        "
 
-     if "$TLS13_ONLY"; then
-          pr_svrty_best "not vulnerable (OK)"
-          [[ $DEBUG -ge 1 ]] && out ", no RC4 support in TLS 1.3 only servers"
-          outln
-          fileout "$jsonID" "OK" "not vulnerable, TLS 1.3 only" "$cve" "$cwe"
-          return 0
-     fi
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", no RC4 support in TLS 1.3 only servers" && return 0
 
      # Get a list of all the cipher suites to test. #FIXME: This is rather ineffective as RC4 ciphers won't change.
      # We should instead build a fixed list here like @ other functions
@@ -21112,6 +21096,10 @@ run_robot() {
      local jsonID="ROBOT"
 
      pr_bold " ROBOT                                     "
+
+     # saves 2 handshake with RSA cipher but if we keep the cipher list offered by the server
+     # we could also save those in other scenarios
+     "$TLS13_ONLY" && shortcut_tls13_only "$jsonID" "$cve" "$cwe" ", TLS 1.3-only hosts have no RSA ciphers" && return 0
 
      if [[ "$STARTTLS_PROTOCOL" =~ irc ]]; then
           prln_local_problem "STARTTLS/$STARTTLS_PROTOCOL and --ssl-native collide here"
