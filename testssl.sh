@@ -17241,7 +17241,7 @@ run_ccs_injection(){
 
      if "$TLS13_ONLY"; then
           pr_svrty_best "not vulnerable (OK)"
-          fileout "$jsonID" "OK" "not vulnerable, , TLS 1.3-only host" "$cve" "$cwe"
+          fileout "$jsonID" "OK" "not vulnerable, TLS 1.3-only host" "$cve" "$cwe"
           outln ", TLS 1.3-only host"
           return 0
      fi
