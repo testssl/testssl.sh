@@ -23268,8 +23268,11 @@ decode_https_rr_ech() {
 decode_https_rr_ipv6() {
      local entry="$1"
      local -i len="${#entry}"
-     local ipv6_wire="" str=""
+     local ipv6_wire="" ipv6_str="" result=""
+     local one_addr="" hextet="" out_str=""
+     local -a addrs hextets
      local -i ptr=0                                    # we start @ pos=0
+     local -i i n run_start run_len best_start best_len
 
      while (( ptr < len )); do
           ipv6_wire=${entry:$ptr:4}                    # we have 8 hextets, length 4, filled with zero if needed --> 32 chars
@@ -23287,19 +23290,69 @@ decode_https_rr_ipv6() {
 
      ipv6_str="$(tolower "$ipv6_str")"
 
-     # poor man's compression, max 5 zero hextets
-     ipv6_str=${ipv6_str//:0000:0000:0000:0000:0000:/::}
-     ipv6_str=${ipv6_str//:0000:0000:0000:0000:/::}
-     ipv6_str=${ipv6_str//:0000:0000:0000:/::}
-     ipv6_str=${ipv6_str//:0000:0000:/::}
-     ipv6_str=${ipv6_str//:0000:/::}
+     # strip the leading zeros of every hextet and compress only the leftmost
+     # longest run of two or more zero hextets by "::" -- one run per address,
+     # so the result is at most one "::" as RFC 5952, 4.2.2 asks for; a single
+     # zero hextet stays "0" and is never turned into "::".
+     IFS=',' read -r -a addrs <<< "$ipv6_str"
+     for one_addr in "${addrs[@]}"; do
+          if [[ -n "$result" ]]; then
+               result+=","
+          fi
+          IFS=':' read -r -a hextets <<< "$one_addr"
+          n=${#hextets[@]}
 
-     # strip up to 3 leading zeros in a hextet
-     ipv6_str=${ipv6_str//:0/:}
-     ipv6_str=${ipv6_str//:0/:}
-     ipv6_str=${ipv6_str//:0/:}
+          for (( i=0; i<n; i++ )); do                  # strip leading zeros
+               hextet=${hextets[i]}
+               while [[ ${#hextet} -gt 1 && "${hextet:0:1}" == "0" ]]; do
+                    hextet=${hextet:1}
+               done
+               hextets[i]="$hextet"
+          done
 
-     safe_echo "ipv6hint=${ipv6_str}"
+          run_start=0; run_len=0; best_start=-1; best_len=0
+          for (( i=0; i<n; i++ )); do                  # leftmost longest run of zeros
+               if [[ "${hextets[i]}" == "0" ]]; then
+                    if (( run_len == 0 )); then
+                         run_start=$i
+                    fi
+                    run_len=$(( run_len + 1 ))
+               else
+                    run_len=0
+               fi
+               if (( run_len > best_len )); then
+                    best_len=$run_len
+                    best_start=$run_start
+               fi
+          done
+
+          out_str=""
+          if (( best_len >= 2 )); then
+               for (( i=0; i<best_start; i++ )); do
+                    if (( i > 0 )); then
+                         out_str+=":"
+                    fi
+                    out_str+="${hextets[i]}"
+               done
+               out_str+="::"
+               for (( i=best_start+best_len; i<n; i++ )); do
+                    out_str+="${hextets[i]}"
+                    if (( i < n - 1 )); then
+                         out_str+=":"
+                    fi
+               done
+          else
+               for (( i=0; i<n; i++ )); do
+                    if (( i > 0 )); then
+                         out_str+=":"
+                    fi
+                    out_str+="${hextets[i]}"
+               done
+          fi
+          result+="$out_str"
+     done
+
+     safe_echo "ipv6hint=${result}"
 }
 
 # key 7 — dohpath: UTF-8 URI template for DNS-over-HTTPS
