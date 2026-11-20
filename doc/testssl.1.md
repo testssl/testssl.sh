@@ -349,6 +349,20 @@ Rating automatically gets disabled, to not give a wrong or misleading grade, whe
 
 A few file output options can also be preset via environment variables.
 
+### MACHINE-READABLE OUTPUT ON STDOUT
+
+JSON and CSV options write an additional report; they do not replace the human-readable terminal output. `--quiet` suppresses the banner, not the scan results. Redirecting ordinary stdout to a file therefore does not produce JSON or CSV.
+
+On systems with `/dev/stderr`, the report can be sent to stdout for a pipeline or container log:
+
+```sh
+./testssl.sh --quiet --color 0 --jsonfile /dev/stderr example.com 2>&1 >/dev/null
+```
+
+The order of the redirections matters: `2>&1` first connects stderr (and thus the JSON report) to the original stdout, then `>/dev/null` discards the human-readable output. Reversing them discards both streams. Use `--jsonfile-pretty /dev/stderr` for structured JSON or `--csvfile /dev/stderr` for CSV instead.
+
+Diagnostics written to stderr will share the report stream, so check the command's exit status and validate the output before consuming it. For a report kept separate from stderr diagnostics, use a regular output file instead, e.g. `--jsonfile results.json`. See JSON AND CSV RESULTS for the report formats.
+
 ### JSON AND CSV RESULTS
 
 The JSON and CSV formats contain findings rather than a copy of the terminal layout. Use the named fields to interpret a result, not its position or the color of the corresponding terminal text.
