@@ -10,6 +10,7 @@
 "TLS1_3","testssl.sh/81.169.235.32","443","OK","offered with final","",""
 "NPN","testssl.sh/81.169.235.32","443","INFO","not offered","",""
 "ALPN","testssl.sh/81.169.235.32","443","INFO","http/1.1","",""
+"ALPN_HTTP2","testssl.sh/81.169.235.32","443","OK","h2","",""
 "cipherlist_NULL","testssl.sh/81.169.235.32","443","OK","not offered","","CWE-327"
 "cipherlist_aNULL","testssl.sh/81.169.235.32","443","OK","not offered","","CWE-327"
 "cipherlist_EXPORT","testssl.sh/81.169.235.32","443","OK","not offered","","CWE-327"
