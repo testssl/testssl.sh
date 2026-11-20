@@ -872,6 +872,30 @@
         be appended to <code>&lt;fname_prefix&gt;</code>.</p>
         <p>A few file output options can also be preset via environment
         variables.</p>
+        <h3 id="machine-readable-output-on-stdout">MACHINE-READABLE
+        OUTPUT ON STDOUT</h3>
+        <p>JSON and CSV options write an additional report; they do not
+        replace the human-readable terminal output. <code>--quiet</code>
+        suppresses the banner, not the scan results. Redirecting
+        ordinary stdout to a file therefore does not produce JSON or
+        CSV.</p>
+        <p>On systems with <code>/dev/stderr</code>, the report can be
+        sent to stdout for a pipeline or container log:</p>
+        <div class="sourceCode" id="cb2"><pre
+        class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./testssl.sh</span> <span class="at">--quiet</span> <span class="at">--color</span> 0 <span class="at">--jsonfile</span> /dev/stderr example.com <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span> <span class="op">&gt;</span>/dev/null</span></code></pre></div>
+        <p>The order of the redirections matters:
+        <code>2&gt;&amp;1</code> first connects stderr (and thus the
+        JSON report) to the original stdout, then
+        <code>&gt;/dev/null</code> discards the human-readable output.
+        Reversing them discards both streams. Use
+        <code>--jsonfile-pretty /dev/stderr</code> for structured JSON
+        or <code>--csvfile /dev/stderr</code> for CSV instead.</p>
+        <p>Diagnostics written to stderr will share the report stream,
+        so check the command’s exit status and validate the output
+        before consuming it. For a report kept separate from stderr
+        diagnostics, use a regular output file instead,
+        e.g. <code>--jsonfile results.json</code>. See JSON AND CSV
+        RESULTS for the report formats.</p>
         <h3 id="json-and-csv-results">JSON AND CSV RESULTS</h3>
         <p>The JSON and CSV formats contain findings rather than a copy
         of the terminal layout. Use the named fields to interpret a
@@ -1176,12 +1200,12 @@
         <p>To implement a new grading cap, simply call the
         <code>set_grade_cap()</code> function, with the grade and a
         reason:</p>
-        <div class="sourceCode" id="cb3"><pre
-        class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">set_grade_cap</span> <span class="st">&quot;D&quot;</span> <span class="st">&quot;Vulnerable to documentation&quot;</span></span></code></pre></div>
+        <div class="sourceCode" id="cb4"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">set_grade_cap</span> <span class="st">&quot;D&quot;</span> <span class="st">&quot;Vulnerable to documentation&quot;</span></span></code></pre></div>
         <p>To implement a new grade warning, simply call the
         <code>set_grade_warning()</code> function, with a message:</p>
-        <div class="sourceCode" id="cb4"><pre
-        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">set_grade_warning</span> <span class="st">&quot;Documentation is always right&quot;</span></span></code></pre></div>
+        <div class="sourceCode" id="cb5"><pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">set_grade_warning</span> <span class="st">&quot;Documentation is always right&quot;</span></span></code></pre></div>
         <h4
         id="implementing-a-new-check-which-contains-grade-caps">Implementing
         a new check which contains grade caps</h4>
