@@ -3619,27 +3619,33 @@ run_cookie_flags() {     # ARG1: Path
           else
                negative_word="NOT"
           fi
-          nr_secure=$(grep -iac secure $TMPFILE)
-          case $nr_secure in
-               0) pr_svrty_medium "$negative_word" ;;
-               [123456789]) pr_svrty_good "$nr_secure/$nr_cookies";;
-          esac
+          # A cookie attribute is a bare token: "; Secure" / "; Secure;" / "; Secure" at EOL.
+          # Substring matching counts "Path=/secure", "Domain=secure.example.com" or
+          # "secureflag=0" as compliant, and the old [1-9] case branch silently dropped
+          # every count >= 10. Anchor on the attribute position and compare numerically.
+          nr_secure=$(grep -ciE ';[[:space:]]*secure([[:space:]]*;|[[:space:]]*$)' "$TMPFILE")
+          if [[ $nr_secure -eq 0 ]]; then
+               pr_svrty_medium "$negative_word"
+          else
+               pr_svrty_good "$nr_secure/$nr_cookies"
+          fi
           out " secure, "
           if [[ $nr_cookies -eq $nr_secure ]]; then
                fileout "cookie_secure" "OK" "All ($nr_cookies) at \"$1\" marked as secure"
           else
                fileout "cookie_secure" "INFO" "$nr_secure/$nr_cookies at \"$1\" marked as secure"
           fi
-          nr_httponly=$(grep -cai httponly $TMPFILE)
-          case $nr_httponly in
-               0) pr_svrty_medium "$negative_word" ;;
-               [123456789]) pr_svrty_good "$nr_httponly/$nr_cookies";;
-          esac
+          nr_httponly=$(grep -ciE ';[[:space:]]*httponly([[:space:]]*;|[[:space:]]*$)' "$TMPFILE")
+          if [[ $nr_httponly -eq 0 ]]; then
+               pr_svrty_medium "$negative_word"
+          else
+               pr_svrty_good "$nr_httponly/$nr_cookies"
+          fi
           out " HttpOnly"
           if [[ $nr_cookies -eq $nr_httponly ]]; then
                fileout "cookie_httponly" "OK" "All ($nr_cookies) at \"$1\" marked as HttpOnly$msg302_"
           else
-               fileout "cookie_httponly" "INFO" "$nr_secure/$nr_cookies at \"$1\" marked as HttpOnly$msg302_"
+               fileout "cookie_httponly" "INFO" "$nr_httponly/$nr_cookies at \"$1\" marked as HttpOnly$msg302_"
           fi
           outln "$msg302"
           allcookies="$(awk '/[Ss][Ee][Tt]-[Cc][Oo][Oo][Kk][Ii][Ee]:/ { print $2 }' "$TMPFILE")"
