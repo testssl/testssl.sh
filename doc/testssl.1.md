@@ -223,7 +223,7 @@ Also for multiple server certificates are being checked for as well as for the c
 * Web server modules
 * IPv4 address in header
 * Cookie (including Secure/HTTPOnly flags)
-* Decodes BIG IP F5 non-encrypted cookies
+* Decodes BIG IP F5 and Citrix Netscaler (ADC) non-encrypted cookies
 * Security headers (X-Frame-Options, X-XSS-Protection, Expect-CT,... , CSP headers). Nonsense is not yet detected here.
 
 `-c, --client-simulation`     This simulates a handshake with a number of standard clients so that you can figure out which client cannot or can connect to your site. For the latter case the protocol, cipher and curve is displayed, also if there's Forward Secrecy. testssl.sh uses a handselected set of clients which are retrieved by the SSLlabs API. The output is aligned in columns when combined with the `--wide` option. If you want the full nine yards of clients displayed use the environment variable ALL_CLIENTS.
