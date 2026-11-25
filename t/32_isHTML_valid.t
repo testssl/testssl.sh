@@ -100,17 +100,16 @@ $debughtml =~ s/.*has_compression.*\n//g;
 $debughtml =~ s/.*Extended master secret extension detected.*\n//g;
 # is whole line:   s/.*<pattern> .*\n//g;
 
-# Extract and mask IP address as it can change
-if ( $html =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) {
-    $ip = $1;
-}
-$html =~ s/$ip/AAA.BBB.CCC.DDD/g;
+# almost remove the rDNS line
+$html      =~ s/rDNS \(\d+\.\d+\.\d+\.\d+\):\h+.*\n//g ;
+$debughtml =~ s/rDNS \(\d+\.\d+\.\d+\.\d+\):\h+.*\n//g ;
 
-if ( $debughtml =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) {
-    $ip = $1;
-}
-$debughtml =~ s/$ip/AAA.BBB.CCC.DDD/g;
+# Extract and mask IP addresses as they can change. Also quote them (dots!)
+if ( $html =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) { $ip = $1; }
+$html      =~ s/\Q$ip\E/AAA.BBB.CCC.DDD/g;
 
+if ( $debughtml =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) { $ip = $1; }
+$debughtml      =~ s/\Q$ip\E/AAA.BBB.CCC.DDD/g;
 
 $diff = diff \$debughtml, \$html;
 

@@ -1128,6 +1128,46 @@ f5_port_decode() {
      echo $((16#${tmp:2:2}${tmp:0:2}))  # reverse order and convert it from hex to dec
 }
 
+# now some functions for the integrated Citrix NetScaler (Citrix ADC) cookie detector and decoder
+# https://github.com/catalyst256/Netscaler-Cookie-Decryptor (GPLv2, same license as testssl.sh)
+
+# The vServer name of the NetScaler cookie is obfuscated with a Caesar shift (a->z, b->a, ...), undo it.
+# arg1: vServer name as found in the cookie name
+#
+nsc_decode_servicename() {
+     local name="$1" out="" i c code
+     local -r lower="abcdefghijklmnopqrstuvwxyz" upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+     for ((i=0; i<${#name}; i++)); do
+          c="${name:i:1}"
+          # printf '%d' "'c" returns the decimal value of a character, no additional binary needed
+          code=$(printf '%d' "'$c")
+          if [[ $c =~ [a-z] ]]; then
+               out+="${lower:$(( (code - 97 + 25) % 26 )):1}"
+          elif [[ $c =~ [A-Z] ]]; then
+               out+="${upper:$(( (code - 65 + 25) % 26 )):1}"
+          else
+               out+="$c"
+          fi
+     done
+     echo "$out"
+}
+
+# arg1: the 8 hex chars of the cookie value which hold the XOR'ed IPv4 address of the pool member
+#
+nsc_decode_ip() {
+     local tmp
+     tmp=$(printf "%08x" $(( 16#$1 ^ 0x03081e11 )))
+     echo $((16#${tmp:0:2})).$((16#${tmp:2:2})).$((16#${tmp:4:2})).$((16#${tmp:6:2}))
+}
+
+# arg1: the 4 hex chars of the cookie value which hold the XOR'ed port of the pool member
+#
+nsc_decode_port() {
+     echo $(( 16#$1 ^ 0x3630 ))
+}
+
+
 ###### END universal helper function definitions ######
 
 
@@ -3546,39 +3586,88 @@ sub_f5_bigip_check() {
      debugme echo -e "all cookies: >> $allcookies <<\n"
      while true; do IFS='=' read cookiename cookievalue
           [[ -z "$cookievalue" ]] && break
-          cookievalue=${cookievalue/;/}
+          cookievalue="${cookievalue%%;*}"             # drop Path/Expires/HttpOnly attributes
+          cookievalue="${cookievalue//[[:cntrl:]]}"    # drop the CR etc of the CRLF line ending
           debugme echo $cookiename : $cookievalue
           if grep -Eq '[0-9]{8,10}\.[0-9]{3,5}\.0000' <<< "$cookievalue"; then
                ip="$(f5_ip_oldstyle "$cookievalue")"
                port="$(f5_port_decode $cookievalue)"
-               out "${spaces}F5 cookie (default IPv4 pool member): "; pr_italic "$cookiename "; prln_svrty_medium "${ip}:${port}"
-               fileout "cookie_bigip_f5" "MEDIUM" "Information leakage: F5 cookie $cookiename $cookievalue is default IPv4 pool member ${ip}:${port}" "$cve" "$cwe"
+               out "${spaces}F5 cookie (default IPv4 pool member): "; pr_italic "$cookiename "; prln_svrty_low "${ip}:${port}"
+               fileout "cookie_bigip_f5" "LOW" "Information leakage: F5 cookie $cookiename $cookievalue is default IPv4 pool member ${ip}:${port}" "$cve" "$cwe"
           elif grep -Eq '^rd[0-9]{1,3}o0{20}f{4}[a-f0-9]{8}o[0-9]{1,5}' <<< "$cookievalue"; then
                routed_domain="$(f5_determine_routeddomain "$cookievalue")"
                offset=$(( 2 + ${#routed_domain} + 1 + 24))
                port="${cookievalue##*o}"
                ip="$(f5_hex2ip "${cookievalue:$offset:8}")"
-               out "${spaces}F5 cookie (IPv4 pool in routed domain "; pr_svrty_medium "$routed_domain"; out "): "; pr_italic "$cookiename "; prln_svrty_medium "${ip}:${port}"
-               fileout "cookie_bigip_f5" "MEDIUM" "Information leakage: F5 cookie $cookiename $cookievalue is IPv4 pool member in routed domain $routed_domain ${ip}:${port}" "$cve" "$cwe"
+               out "${spaces}F5 cookie (IPv4 pool in routed domain "; pr_svrty_low "$routed_domain"; out "): "; pr_italic "$cookiename "; prln_svrty_low "${ip}:${port}"
+               fileout "cookie_bigip_f5" "LOW" "Information leakage: F5 cookie $cookiename $cookievalue is IPv4 pool member in routed domain $routed_domain ${ip}:${port}" "$cve" "$cwe"
           elif grep -Eq '^vi[a-f0-9]{32}\.[0-9]{1,5}' <<< "$cookievalue"; then
                ip="$(f5_hex2ip6 ${cookievalue:2:32})"
                port="${cookievalue##*.}"
                port=$(f5_port_decode "$port")
-               out "${spaces}F5 cookie (default IPv6 pool member): "; pr_italic "$cookiename "; prln_svrty_medium "${ip}:${port}"
-               fileout "cookie_bigip_f5" "MEDIUM" "Information leakage: F5 cookie $cookiename $cookievalue is default IPv6 pool member ${ip}:${port}" "$cve" "$cwe"
+               out "${spaces}F5 cookie (default IPv6 pool member): "; pr_italic "$cookiename "; prln_svrty_low "${ip}:${port}"
+               fileout "cookie_bigip_f5" "LOW" "Information leakage: F5 cookie $cookiename $cookievalue is default IPv6 pool member ${ip}:${port}" "$cve" "$cwe"
           elif grep -Eq '^rd[0-9]{1,3}o[a-f0-9]{32}o[0-9]{1,5}' <<< "$cookievalue"; then
                routed_domain="$(f5_determine_routeddomain "$cookievalue")"
                offset=$(( 2 + ${#routed_domain} + 1 ))
                port="${cookievalue##*o}"
                ip="$(f5_hex2ip6 ${cookievalue:$offset:32})"
-               out "${spaces}F5 cookie (IPv6 pool in routed domain "; pr_svrty_medium "$routed_domain"; out "): "; pr_italic "$cookiename "; prln_svrty_medium "${ip}:${port}"
-               fileout "cookie_bigip_f5" "MEDIUM" "Information leakage: F5 cookie $cookiename $cookievalue is IPv6 pool member in routed domain $routed_domain ${ip}:${port}" "$cve" "$cwe"
+               out "${spaces}F5 cookie (IPv6 pool in routed domain "; pr_svrty_low "$routed_domain"; out "): "; pr_italic "$cookiename "; prln_svrty_low "${ip}:${port}"
+               fileout "cookie_bigip_f5" "LOW" "Information leakage: F5 cookie $cookiename $cookievalue is IPv6 pool member in routed domain $routed_domain ${ip}:${port}" "$cve" "$cwe"
           elif grep -Eq '^!.*=$' <<< "$cookievalue"; then
                if [[ "${#cookievalue}" -eq 81 ]] ; then
                     savedcookies="${savedcookies}     ${cookiename}=${cookievalue:1:79}"
                     out "${spaces}Encrypted F5 cookie named "; pr_italic "${cookiename}"; outln " detected"
                     fileout "cookie_bigip_f5" "INFO" "encrypted F5 cookie named ${cookiename}"
                fi
+          fi
+     done <<< "$allcookies"
+}
+
+
+# arg1: multiline string w cookies
+# arg2: spaces to indent the output
+#
+sub_nsc_cookie_check() {
+     local allcookies="$1"
+     local line cookievalue cookiename ip_hex port_hex vserver ip port
+     local spaces="$2"
+     local cwe="CWE-200"
+     local cve=""
+
+     # Citrix NetScaler / Citrix ADC inserts a persistence cookie named NSC_<vServer name> which reveals the
+     # backend server (pool member) the client was directed to. It's actually an ancient Caesar "encryption":
+     # https://web.archive.org/web/20230609041258/https://cybernomad.online/2012/01/03/netscaler-making-sense-of-the-cookie-part-1/ .
+     # and a bit of XOR for the IP address and the port,  both with fixed values
+     # Decoding taken from # https://github.com/catalyst256/Netscaler-Cookie-Decryptor . License also GPLv2
+
+     debugme echo -e "all cookies: >> $allcookies <<\n"
+     while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          # Split at the first '=' only, that is where name and value are separated
+          cookiename="${line%%=*}"
+          cookievalue="${line#*=}"
+          # Everything from the first ';' on are cookie attributes (Path, Expires, HttpOnly ...) and the
+          # header line still carries the CR of the CRLF line ending (see sanitze_http_header, #2337).
+          # Neither is part of the value, and both would break the anchored regex a few lines below.
+          cookievalue="${cookievalue%%;*}"
+          cookievalue="${cookievalue//[[:cntrl:]]}"
+          # "NSC_<name>==<hex>" leaves a leading '=' in the value, get rid of it
+          while [[ ${cookievalue:0:1} == "=" ]]; do cookievalue="${cookievalue:1}"; done
+          debugme echo $cookiename : $cookievalue
+          [[ $cookiename =~ ^[NSC_] ]] || continue
+
+          if [[ $cookievalue =~ ^[0-9a-fA-F]{8}([0-9a-fA-F]{8}).*([0-9a-fA-F]{4})$ ]]; then
+               ip_hex="${BASH_REMATCH[1]}"
+               port_hex="${BASH_REMATCH[2]}"
+               vserver="$(nsc_decode_servicename "${cookiename:4}")"
+               ip="$(nsc_decode_ip "$ip_hex")"
+               port="$(nsc_decode_port "$port_hex")"
+               out "${spaces}NetScaler cookie (vServer "; pr_italic "$vserver"; out ", pool member): "; pr_italic "$cookiename "; prln_svrty_low "${ip}:${port}"
+               fileout "cookie_netscaler" "LOW" "Information leakage: NetScaler cookie $cookiename ($cookievalue), vServer \"$vserver\" at ${ip}:${port}" "$cve" "$cwe"
+          else
+               out "${spaces}NetScaler cookie "; pr_italic "$cookiename"; outln " (couldn't be decoded)"
+               fileout "cookie_netscaler" "INFO" "regular NetScaler cookie $cookiename issued, its value ($cookievalue) couldn't be decoded" "$cve" "$cwe"
           fi
      done <<< "$allcookies"
 }
@@ -3644,6 +3733,7 @@ run_cookie_flags() {     # ARG1: Path
           outln "$msg302"
           allcookies="$(awk '/[Ss][Ee][Tt]-[Cc][Oo][Oo][Kk][Ii][Ee]:/ { print $2 }' "$TMPFILE")"
           sub_f5_bigip_check "$allcookies" "$spaces"
+          sub_nsc_cookie_check "$allcookies" "$spaces"
      fi
 
      tmpfile_handle ${FUNCNAME[0]}.txt
