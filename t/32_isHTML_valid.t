@@ -100,17 +100,19 @@ $debughtml =~ s/.*has_compression.*\n//g;
 $debughtml =~ s/.*Extended master secret extension detected.*\n//g;
 # is whole line:   s/.*<pattern> .*\n//g;
 
-# Extract and mask IP address as it can change
-if ( $html =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) {
-    $ip = $1;
-}
-$html =~ s/$ip/AAA.BBB.CCC.DDD/g;
 
-if ( $debughtml =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) {
-    $ip = $1;
-}
-$debughtml =~ s/$ip/AAA.BBB.CCC.DDD/g;
+# Extract and mask IP addresses as they can change. Also quote them (dots!)
+if ( $html =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) { $ip = $1; }
+$html     =~ s/\Q$ip\E/AAA.BBB.CCC.DDD/g;
 
+if ( $debughtml =~ /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/ ) { $ip = $1; }
+$debughtml =~ s/\Q$ip\E/AAA.BBB.CCC.DDD/g;
+
+# The two runs may pick a different A record, which changes the column
+# padding of the rDNS banner line. Normalize that line's whitespace.
+# So we need to collapse blanks after "rDNS (...):"
+$html     =~ s/(rDNS \(\Q$ip\E):)\h+/ $1 /g;
+$debughtml =~ s/(rDNS \(\Q$ip\E):)\h+/ $1 /g;
 
 $diff = diff \$debughtml, \$html;
 
