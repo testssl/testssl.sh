@@ -164,7 +164,7 @@ Any single check switch supplied as an argument prevents testssl.sh from doing a
 
 `-e, --each-cipher` checks each of the (currently configured) 370 ciphers via openssl + sockets remotely on the server and reports back the result in wide mode. If you want to display each cipher tested you need to add `--show-each`. Per default it lists the following parameters: `hexcode`, `OpenSSL cipher suite name`, `key exchange`, `encryption bits`, `IANA/RFC cipher suite name`. Please note the `--mapping` parameter changes what cipher suite names you will see here and at which position. Also please note that the __bit__ length for the encryption is shown and not the __security__ length, albeit it'll be sorted by the latter. For 3DES due to the Meet-in-the-Middle problem the bit size of 168 bits is equivalent to the security size of 112 bits.
 
-`-E, --cipher-per-proto`  is similar to `-e, --each-cipher`. It checks each of the possible ciphers, here: per protocol. If you want to display each cipher tested you need to add `--show-each`. The output is sorted by security strength, it lists the encryption bits though.
+`-E, --cipher-per-proto`  is similar to `-e, --each-cipher`. It checks each of the possible ciphers, here: per protocol. If you want to display each cipher tested you need to add `--show-each`. The output is sorted by security strength, it lists the encryption bits though. Note: This is a deprecated switch to be removed latest at the next release.
 
 `-s, --std, --categories`   tests certain lists of cipher suites / cipher categories by strength. (`--standard` is deprecated.)  Those lists are (`openssl ciphers $LIST`, $LIST from below:)
 
@@ -275,6 +275,19 @@ Also for multiple server certificates are being checked for as well as for the c
 `--rc4, --appelbaum`        Checks which RC4 stream ciphers are being offered.
 
 
+### OMITTING INDIVIDUAL CHECKS
+
+`--no-<check>`  Turn one check off and omit it from the run, e.g. `--no-robot` or `--no-client-simulation`. Valid `<check>` are the checks listed in the sections above:
+
+* non-vulnerability checks: cipher_per_proto, protocols, cipherlists, server_defaults, server_preference, header, client_simulation, fs, grease, rating
+* individual vulnerability checks: heartbleed, ccs_injection, ticketbleed, opossum, robot, renegotiation, crime, breach, poodle, tls_fallback_scsv, sweet32, freak, drown, logjam, beast, lucky13, winshock, rc4, starttls_injection
+* `vulnerabilities` (also `vulns`) as an umbrella switch for all vulnerability checks
+
+Dashes and underscores are interchangeable, i.e. `--no-client-simulation` is the same as `--no-client_simulation`. The switch can be repeated. An unknown `<check>` is rejected with an error message and a non-zero exit status.
+
+Checks are interdependent, specifically for the rating: it automatically gets disabled, when not all required functions are executed (e.g when checking for a single vulnerabilities). `--disable-rating` is deprecated but continues to work.
+
+
 ### OUTPUT OPTIONS
 
 `-q, --quiet`  Normally testssl.sh displays a banner on stdout with several version information, usage rights and a warning. This option suppresses it. Please note that by choosing this option you acknowledge usage terms and the warning normally appearing in the banner.
@@ -306,9 +319,6 @@ Please note that in testssl.sh 3.0 you can still use `rfc` instead of `iana` and
 4. display bytes sent via sockets
 5. display bytes received via sockets
 6. whole 9 yards
-
-`--disable-rating` disables rating.
-Rating automatically gets disabled, to not give a wrong or misleading grade, when not all required functions are executed (e.g when checking for a single vulnerabilities).
 
 
 ### FILE OUTPUT OPTIONS
@@ -524,6 +534,10 @@ does the same checks as above, with the difference that one IP address is being 
       testssl.sh -6 https://testssl.net
 
 As opposed to the first example it also tests the IPv6 part -- supposed you have an IPv6 network and your openssl supports IPv6 (see above).
+
+      testssl.sh --full --no-robot --no-client-simulation https://testssl.sh
+
+Runs all checks but the ROBOT and client simulation ones. Rating is dropped because not all checks needed for it were performed.
 
       testssl.sh -t smtp smtp.gmail.com:25
 
