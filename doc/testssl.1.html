@@ -447,7 +447,8 @@
         ciphers, here: per protocol. If you want to display each cipher
         tested you need to add <code>--show-each</code>. The output is
         sorted by security strength, it lists the encryption bits
-        though.</p>
+        though. Note: This is a deprecated switch to be removed latest
+        at the next release.</p>
         <p><code>-s, --std, --categories</code> tests certain lists of
         cipher suites / cipher categories by strength.
         (<code>--standard</code> is deprecated.) Those lists are
@@ -666,6 +667,34 @@
         Windows. In the end the server banner is being looked at.</p>
         <p><code>--rc4, --appelbaum</code> Checks which RC4 stream
         ciphers are being offered.</p>
+        <h3 id="omitting-individual-checks">OMITTING INDIVIDUAL
+        CHECKS</h3>
+        <p><code>--no-&lt;check&gt;</code> Turn one check off and omit
+        it from the run, e.g. <code>--no-robot</code> or
+        <code>--no-client-simulation</code>. Valid
+        <code>&lt;check&gt;</code> are the checks listed in the sections
+        above:</p>
+        <ul>
+        <li>non-vulnerability checks: cipher_per_proto, protocols,
+        cipherlists, server_defaults, server_preference, header,
+        client_simulation, fs, grease, rating</li>
+        <li>individual vulnerability checks: heartbleed, ccs_injection,
+        ticketbleed, opossum, robot, renegotiation, crime, breach,
+        poodle, tls_fallback_scsv, sweet32, freak, drown, logjam, beast,
+        lucky13, winshock, rc4, starttls_injection</li>
+        <li><code>vulnerabilities</code> (also <code>vulns</code>) as an
+        umbrella switch for all vulnerability checks</li>
+        </ul>
+        <p>Dashes and underscores are interchangeable,
+        i.e. <code>--no-client-simulation</code> is the same as
+        <code>--no-client_simulation</code>. The switch can be repeated.
+        An unknown <code>&lt;check&gt;</code> is rejected with an error
+        message and a non-zero exit status.</p>
+        <p>Checks are interdependent, specifically for the rating: it
+        automatically gets disabled, when not all required functions are
+        executed (e.g when checking for a single vulnerabilities).
+        <code>--disable-rating</code> is deprecated but continues to
+        work.</p>
         <h3 id="output-options">OUTPUT OPTIONS</h3>
         <p><code>-q, --quiet</code> Normally testssl.sh displays a
         banner on stdout with several version information, usage rights
@@ -732,10 +761,6 @@
         <li>display bytes received via sockets</li>
         <li>whole 9 yards</li>
         </ol>
-        <p><code>--disable-rating</code> disables rating. Rating
-        automatically gets disabled, to not give a wrong or misleading
-        grade, when not all required functions are executed (e.g when
-        checking for a single vulnerabilities).</p>
         <h3 id="file-output-options">FILE OUTPUT OPTIONS</h3>
         <p><code>--log, --logging</code> Logs stdout also to
         <code>${NODE}-p${port}${YYYYMMDD-HHMM}.log</code> in current
@@ -1229,6 +1254,10 @@
         <p>As opposed to the first example it also tests the IPv6 part –
         supposed you have an IPv6 network and your openssl supports IPv6
         (see above).</p>
+        <pre><code>  testssl.sh --full --no-robot --no-client-simulation https://testssl.sh</code></pre>
+        <p>Runs all checks but the ROBOT and client simulation ones.
+        Rating is dropped because not all checks needed for it were
+        performed.</p>
         <pre><code>  testssl.sh -t smtp smtp.gmail.com:25</code></pre>
         <p>Checks are done via a STARTTLS handshake on the plain text
         port 25. It checks every IP on smtp.gmail.com.</p>

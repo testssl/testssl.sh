@@ -22052,7 +22052,7 @@ help() {
      --openssl-timeout <seconds>   useful to avoid hangers. Max <seconds> to wait before openssl connect will be terminated
 
 single check as <options>  ("$PROG_NAME URI" does everything except -E and -g):
-     -e, --each-cipher             checks each local cipher remotely
+     -e, --each-cipher             checks each local cipher remotely (deprecated)
      -E, --cipher-per-proto        checks those per protocol
      -s, --std, --categories       tests standard cipher categories by strength
      -f, --fs, --forward-secrecy   checks forward secrecy settings
@@ -22085,6 +22085,13 @@ single check as <options>  ("$PROG_NAME URI" does everything except -E and -g):
      -J, --logjam                  tests for LOGJAM vulnerability
      -D, --drown                   tests for DROWN vulnerability
      --rc4, --appelbaum            which RC4 ciphers are being offered?
+
+     --no-<check>                  omits <check> from the run, e.g. "--no-vulnerabilities" or "--no-client-simulation". A
+                                   valid <check> can be: cipher_per_proto, protocols, cipherlists, server_defaults,
+                                   server_preference, header, client_simulation, fs, grease, rating. This also work
+                                   for each vulnerability. Some checks are interdependent. More see man page.
+                                   To disable rating use --no-rating, --disable-rating is deprecated.
+
 
 tuning / connect options (most also can be preset via environment variables):
      -9, --full                    includes tests for implementation bugs and cipher per protocol (could disappear)
@@ -22121,7 +22128,6 @@ output options (can also be preset via environment variables):
      --color <0|1|2|3>             0: no escape or other codes,  1: b/w escape codes,  2: color (default), 3: extra color (color all ciphers)
      --colorblind                  swap green and blue in the output
      --debug <0-6>                 1: screen output normal but keeps debug output in /tmp/.  2-6: see "grep -A 5 '^DEBUG=' testssl.sh"
-     --disable-rating              explicitly disables the rating output
 
 file output options (can also be preset via environment variables)
      --log, --logging              logs stdout to '\${NODE}-p\${port}\${YYYYMMDD-HHMM}.log' in current working directory (cwd)
@@ -25606,6 +25612,7 @@ count_do_variables() {
 debug_globals() {
      local gbl
 
+     [[ -n "${SKIP_TESTS[*]}" ]] && printf "Checks which were turned off: %s\n" "${SKIP_TESTS[*]}"
      for gbl in do_allciphers do_vulnerabilities do_beast do_lucky13 do_breach do_ccs_injection do_ticketbleed do_cipher_per_proto do_crime \
           do_freak do_logjam do_drown do_header do_heartbleed do_mx_all_ips do_fs do_protocols do_rc4 do_starttls_injection do_grease\
           do_opossum do_robot do_renego do_cipherlists do_server_defaults do_server_preference do_ssl_poodle do_tls_fallback_scsv \
@@ -25618,24 +25625,142 @@ debug_globals() {
 }
 
 
-# This is determining the tests which should be skipped by --no-* or --disable-* a a cmdline arg.
+# Normalize a check name which was given to --no-* / --disable-*, see #2876.
+# "--no-client-simulation" and "--no-client_simulation" are the same check.
+#
+normalize_check_name() {
+     local name="$(tolower "$1")"
+
+     name="${name#--}"
+     name="${name#no[-_]}"
+     name="${name#disable[-_]}"
+     # dashes and underscores are interchangeable, "--no-client-simulation" == "--no_client_simulation"
+     name="${name//-/_}"
+
+     printf '%s\n' "$name"
+}
+
+
+# Turn one check off.
+# -  arg1: normalized check name (see normalize_check_name()), see #2876.
+#
+# Returns 0 if <check> is known and the corresponding "do_*" global was set to false,
+# returns 1 if it's an unknown check (then nothing is changed).
+# Some checks are interdependent, e.g. rating needs all checks listed in set_rating_state().
+#
+disable_check() {
+     local check="$1"
+
+     case "$check" in
+          # "big" sections which are not vulnerability related
+          allciphers|each_cipher)                  do_allciphers=false ;;
+          cipher_per_proto)                        do_cipher_per_proto=false ;;
+          protocols)                               do_protocols=false ;;
+          cipherlists|std|standard|categories)     do_cipherlists=false ;;
+          server_defaults)                         do_server_defaults=false ;;
+          server_preference|preference)            do_server_preference=false ;;
+          header|headers)                          do_header=false ;;
+          client_simulation|client_sim)            do_client_simulation=false ;;
+          fs|forward_secrecy|pfs)                  do_fs=false ;;
+          grease)                                  do_grease=false ;;
+          rating)                                  do_rating=false ;;
+
+          # individual vulnerabilities
+          heartbleed)                              do_heartbleed=false ;;
+          ccs|ccs_injection)                       do_ccs_injection=false ;;
+          ticketbleed)                             do_ticketbleed=false ;;
+          opossum)                                 do_opossum=false ;;
+          robot|bb)                                do_robot=false ;;
+          renego|renegotiation)                    do_renego=false ;;
+          crime|compression)                       do_crime=false ;;
+          breach)                                  do_breach=false ;;
+          poodle|ssl_poodle)                       do_ssl_poodle=false ;;
+          tls_fallback|tls_fallback_scsv|scsv)     do_tls_fallback_scsv=false ;;
+          sweet32)                                 do_sweet32=false ;;
+          freak)                                   do_freak=false ;;
+          drown)                                   do_drown=false ;;
+          logjam)                                  do_logjam=false ;;
+          beast)                                   do_beast=false ;;
+          lucky13)                                 do_lucky13=false ;;
+          winshock)                                do_winshock=false ;;
+          rc4|appelbaum)                           do_rc4=false ;;
+          starttls_injection)                      do_starttls_injection=false ;;
+
+          # umbrella switch: omit all vulnerability checks
+          vulnerabilities|vulns|all_vulns)
+               do_vulnerabilities=false
+               do_heartbleed=false
+               do_ccs_injection=false
+               do_ticketbleed=false
+               do_opossum=false
+               do_robot=false
+               do_renego=false
+               do_crime=false
+               do_breach=false
+               do_ssl_poodle=false
+               do_tls_fallback_scsv=false
+               do_sweet32=false
+               do_freak=false
+               do_drown=false
+               do_logjam=false
+               do_beast=false
+               do_lucky13=false
+               do_winshock=false
+               do_rc4=false
+               do_starttls_injection=false ;;
+          *) return 1 ;;
+     esac
+     return 0
+}
+
+
+# List of all checks which can be turned off, used for the error message and the
+# help screen. Keep in sync with disable_check().
+#
+skippable_checks() {
+     printf '%s\n' "cipher_per_proto, protocols, cipherlists, server_defaults, server_preference, header, client_simulation, fs, grease, rating, heartbleed, ccs_injection, ticketbleed, opossum, robot, renegotiation, crime, breach, poodle, tls_fallback_scsv, sweet32, freak, drown, logjam, beast, lucky13, winshock, rc4, starttls_injection, vulnerabilities"
+}
+
+
+# Checks which set_rating_state() needs to be able to compute a rating. The aliases
+# accepted by # disable_check() are listed too, see Keep in sync with set_rating_state().
+#
+rating_needed_checks() {
+     printf '%s\n' "cipher_per_proto cipherlists std standard categories server_defaults header heartbleed ccs ccs_injection ticketbleed robot bb renego renegotiation crime compression fs forward_secrecy pfs poodle ssl_poodle tls_fallback tls_fallback_scsv scsv drown beast rc4 appelbaum logjam"
+}
+
+
+# Count the vulnerability checks which are still enabled. Needed because --no-* can turn individual checks off
+#
+count_vuln_checks() {
+     local gbl
+     local -i nr=0
+
+     for gbl in do_heartbleed do_ccs_injection do_ticketbleed do_opossum do_robot do_renego do_crime \
+          do_breach do_ssl_poodle do_tls_fallback_scsv do_sweet32 do_freak do_drown do_logjam do_beast \
+          do_lucky13 do_winshock do_rc4 do_starttls_injection; do
+          "${!gbl}" && ((nr++))
+     done
+     return $nr
+}
+
+
+# This is determining the tests which should be skipped by --no-* / --disable-*, see #2876.
 # It achieves that by setting the do_<variables> according to the global array $SKIP_TESTS
 #
 set_skip_tests() {
      local t
 
      for t in "${SKIP_TESTS[@]}"; do
-          t="do_${t}"
-          # declare won't do it here --> local scope
-          eval "$t"=false
-          debugme printf '%s\n' "set $t: ${!t}"
+          disable_check "$t"
+          debugme printf '%s\n' "Skipping check: $t"
      done
 }
 
 
-
 # arg1: either switch+value (=) or switch
 # arg2: value (if no = provided)
+#
 parse_opt_equal_sign() {
      if [[ "$1" == *=* ]]; then
           safe_echo "${1#*=}"
@@ -25646,8 +25771,10 @@ parse_opt_equal_sign() {
      fi
 }
 
+
 # Create the command line string for printing purposes
 # See https://stackoverflow.com/questions/10835933/preserve-quotes-in-bash-arguments
+#
 create_cmd_line_string() {
      local arg
      local -a allargs=()
@@ -25945,10 +26072,14 @@ parse_cmd_line() {
                -g|--grease)
                     do_grease=true
                     ;;
-               --disable-rating|--no-rating)
-                    # TODO: a generic thing would be --disable-* / --no-* ,
-                    # catch $1 and add it to the array ( #1502 )
-                    SKIP_TESTS+=("rating")
+               --no[-_]*|--disable[-_]*)
+                    # Generic switch which turns a check off. We use SKIP_TESTS() / set_skip_tests(). It is applied *after* the
+                    # defaults were set, i.e. "--no-*" wins over "-U"/"-9". We allow --disable for compatibility reasons (rating).
+                    local check="$(normalize_check_name "$1")"
+                    if ! disable_check "$check"; then
+                         fatal_cmd_line "$1: unknown check \"$check\". Checks which can be turned off are: $(skippable_checks)" $ERR_CMDLINE
+                    fi
+                    SKIP_TESTS+=("$check")
                     ;;
                -9|--full)
                     set_scanning_defaults
@@ -26370,6 +26501,9 @@ parse_cmd_line() {
      count_do_variables
      [[ $? -eq 0 ]] && set_scanning_defaults
      set_skip_tests
+     # The "Testing vulnerabilities" header is only printed if at least one check is left, see #2876
+     VULN_COUNT=$(count_vuln_checks)
+
      [[ "$DEBUG" -ge 5 ]] && debug_globals
 
      # Unless explicit disabled, check if rating can or should be enabled.
@@ -26397,6 +26531,24 @@ issue_cmdline_warnings() {
           outln
           prln_warning "'--fast' can have some undesired side effects thus it is not recommended to use anymore"
           fileout_insert_warning "cmdline_fast_depreciation" "WARN" "'--fast' can have some undesired side effects thus it is not recommended to use anymore"
+     fi
+
+     # Consequences of --no-* / --disable-*
+     if [[ -n "${SKIP_TESTS[*]}" ]]; then
+          local check needed_rating_checks="" missing_rating_checks=""
+          needed_rating_checks=" $(rating_needed_checks) "
+
+          # Rating needs all the checks listed in set_rating_state(). If one of them was turned
+          # off (and rating wasn't disabled explicitly) the rating is omitted.
+          for check in "${SKIP_TESTS[@]}"; do
+               [[ $needed_rating_checks =~ [[:space:]]${check}[[:space:]] ]] && missing_rating_checks+="$check "
+          done
+          # do_rating could already be unset here, so we need to check the command line in order to not display a futile warning
+          if ! "$do_rating" && [[ -n "$missing_rating_checks" ]] && [[ ! $CMDLINE =~ --(no|disable)[_-]rating ]]; then
+               outln
+               prln_warning "Rating was disabled as some checks which are needed for that were turned off (${missing_rating_checks% })"
+               fileout_insert_warning "cmdline_rating_skipped" "WARN" "Rating was disabled as some checks which are needed for that were turned off (${missing_rating_checks% })"
+          fi
      fi
      if "$SSL_NATIVE"; then
           outln

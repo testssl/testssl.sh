@@ -477,6 +477,8 @@ If you want to display each cipher tested you need to add
 \f[CR]\-\-show\-each\f[R].
 The output is sorted by security strength, it lists the encryption bits
 though.
+Note: This is a deprecated switch to be removed latest at the next
+release.
 .PP
 \f[CR]\-s, \-\-std, \-\-categories\f[R] tests certain lists of cipher
 suites / cipher categories by strength.
@@ -756,6 +758,34 @@ In the end the server banner is being looked at.
 .PP
 \f[CR]\-\-rc4, \-\-appelbaum\f[R] Checks which RC4 stream ciphers are
 being offered.
+.SS OMITTING INDIVIDUAL CHECKS
+\f[CR]\-\-no\-<check>\f[R] Turn one check off and omit it from the run,
+e.g.\ \f[CR]\-\-no\-robot\f[R] or \f[CR]\-\-no\-client\-simulation\f[R].
+Valid \f[CR]<check>\f[R] are the checks listed in the sections above:
+.IP \(bu 2
+non\-vulnerability checks: cipher_per_proto, protocols, cipherlists,
+server_defaults, server_preference, header, client_simulation, fs,
+grease, rating
+.IP \(bu 2
+individual vulnerability checks: heartbleed, ccs_injection, ticketbleed,
+opossum, robot, renegotiation, crime, breach, poodle, tls_fallback_scsv,
+sweet32, freak, drown, logjam, beast, lucky13, winshock, rc4,
+starttls_injection
+.IP \(bu 2
+\f[CR]vulnerabilities\f[R] (also \f[CR]vulns\f[R]) as an umbrella switch
+for all vulnerability checks
+.PP
+Dashes and underscores are interchangeable,
+i.e.\ \f[CR]\-\-no\-client\-simulation\f[R] is the same as
+\f[CR]\-\-no\-client_simulation\f[R].
+The switch can be repeated.
+An unknown \f[CR]<check>\f[R] is rejected with an error message and a
+non\-zero exit status.
+.PP
+Checks are interdependent, specifically for the rating: it automatically
+gets disabled, when not all required functions are executed (e.g when
+checking for a single vulnerabilities).
+\f[CR]\-\-disable\-rating\f[R] is deprecated but continues to work.
 .SS OUTPUT OPTIONS
 \f[CR]\-q, \-\-quiet\f[R] Normally testssl.sh displays a banner on
 stdout with several version information, usage rights and a warning.
@@ -837,11 +867,6 @@ display bytes sent via sockets
 display bytes received via sockets
 .IP "6." 3
 whole 9 yards
-.PP
-\f[CR]\-\-disable\-rating\f[R] disables rating.
-Rating automatically gets disabled, to not give a wrong or misleading
-grade, when not all required functions are executed (e.g when checking
-for a single vulnerabilities).
 .SS FILE OUTPUT OPTIONS
 \f[CR]\-\-log, \-\-logging\f[R] Logs stdout also to
 \f[CR]${NODE}\-p${port}${YYYYMMDD\-HHMM}.log\f[R] in current working
@@ -1431,6 +1456,13 @@ Displayed is everything where possible in wide format.
 As opposed to the first example it also tests the IPv6 part \(en
 supposed you have an IPv6 network and your openssl supports IPv6 (see
 above).
+.IP
+.EX
+  testssl.sh \-\-full \-\-no\-robot \-\-no\-client\-simulation https://testssl.sh
+.EE
+.PP
+Runs all checks but the ROBOT and client simulation ones.
+Rating is dropped because not all checks needed for it were performed.
 .IP
 .EX
   testssl.sh \-t smtp smtp.gmail.com:25

@@ -12,6 +12,7 @@
 * Check for Opossum vulnerability
 * Add NSC cookie detection and vServer "decryption" (hello Caesar and XOR)
 * `--phone-out` checks the HSTS preload list on https://hstspreload.org/
+* Generic `--no-<check>` switch to omit individual checks, e.g.  `--no-robot` or `--no-headers`
 * Enable IPv6 automagically, i.e. if target via IPv6 is reachable just (also) scan it
 * Detect and show DNS HTTPS RR (RFC 9460)
 * Provide an FAQ
