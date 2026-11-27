@@ -29,7 +29,7 @@ more -- as well as some cryptographic flaws.
 * Machine readable output (CSV, two JSON formats), also HTML output.
 * No need to install or to configure something.  No gems, CPAN, pip or the like.
 * Works out of the box: Linux, MacOS, FreeBSD, NetBSD, WSL2, MSYS2/Cygwin, OpenBSD needs bash.
-* A Dockerfile is provided, there's also an official container build @ dockerhub and GHCR.
+* A Dockerfile is provided, there's also an official container build @ dockerhub (to be retired @ 31st Dec 2026) and GHCR.
 * Flexibility: You can test any SSL/TLS enabled and STARTTLS service, not only web servers at port 443.
 * Toolbox: Several command line options help you to run *your* test and configure *your* output.
 * Reliability: features are tested thoroughly.
@@ -87,20 +87,9 @@ You can download testssl.sh branch 3.3dev just by cloning this git repository:
 Testssl.sh has minimal requirements. As stated you don't have to install or build anything. You can just run it from the pulled/cloned directory. Still if you don't want to pull the GitHub repo to your directory of choice you can pull
 a container from GHCR (GitHub Container Registry) and run it:
 
-<!--
-
-#FIXME: we likely might drop support for dockerhub. 3.3dev was not supported at all
-
-```
-docker run --rm -ti  drwetter/testssl.sh <your_cmd_line>
-```
-
--->
-
 ```
 docker run --rm -it ghcr.io/testssl/testssl.sh <your_cmd_line>
 ```
-
 
 Or if you have cloned this repo you also can just ``cd`` to the INSTALLDIR and run
 
@@ -111,6 +100,7 @@ docker build . -t imagefoo && docker run --rm -t imagefoo testssl.net
 GHCR supports multiple architectures like linux/amd64, linux/386, linux/arm64, linux/arm/v7, linux/arm/v6, linux/ppc64le.
 For more please consult [Dockerfile.md](https://github.com/testssl/testssl.sh/blob/3.3dev/Dockerfile.md).
 
+Dockerhub's builds won't work after 31st of December 2026.
 
 
 

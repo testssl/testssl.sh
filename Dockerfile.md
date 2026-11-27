@@ -26,8 +26,8 @@ docker run --rm -it -v /tmp:/data --workdir /data ghcr.io/testssl/testssl.sh:3.3
 ### Available at DockerHub and GHCR
 
 You can pull the image from either of these registries:
-- DockerHub: [`drwetter/testssl.sh`][image-registry::dockerhub]
 - GHCR: [`ghcr.io/testssl/testssl.sh`][image-registry::ghcr]
+- DockerHub: [`drwetter/testssl.sh`][image-registry::dockerhub]: To be retired after 31st Dec 2026
 
 Supported tags:
 - `3.3dev` / `latest`
