@@ -26074,7 +26074,7 @@ parse_cmd_line() {
                     ;;
                --no[-_]*|--disable[-_]*)
                     # Generic switch which turns a check off. We use SKIP_TESTS() / set_skip_tests(). It is applied *after* the
-                    # defaults were set, i.e. "--no-*" wins over "-U"/"-9". We allow --disable for compatibilty reasons (rating).
+                    # defaults were set, i.e. "--no-*" wins over "-U"/"-9". We allow --disable for compatibility reasons (rating).
                     local check="$(normalize_check_name "$1")"
                     if ! disable_check "$check"; then
                          fatal_cmd_line "$1: unknown check \"$check\". Checks which can be turned off are: $(skippable_checks)" $ERR_CMDLINE
