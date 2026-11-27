@@ -24,7 +24,7 @@ more -- as well as some cryptographic flaws.
 * Machine readable output (CSV, two JSON formats), also HTML output.
 * No need to install or to configure something.  No gems, CPAN, pip or the like.
 * Works out of the box: Linux, MacOS, FreeBSD, NetBSD, WSL2, MSYS2/Cygwin, OpenBSD needs bash.
-* A Dockerfile is provided, there's also an official container build @ dockerhub and GHCR.
+* A Dockerfile is provided, there's also an official container build @ dockerhub (to be retired @ 31st Dec 2026) and GHCR.
 * Flexibility: You can test any SSL/TLS enabled and STARTTLS service, not only web servers at port 443.
 * Toolbox: Several command line options help you to run *your* test and configure *your* output.
 * Reliability: features are tested thoroughly.
@@ -45,7 +45,8 @@ to get bugfixes, other feedback and more contributions.
 
 ### Status / Development cycle
 
-This is the 3.2 branch, the so-called old-stable branch. It gets bug fixes only. Release cycles are always longer than planned;
+This is the 3.2 branch, the so-called old-stable branch. It gets bug fixes only. Release cycles for minor numbers
+are bigger leaps. But they ofteni take longer than planned:
 3.2.0 was released in April 2025. If you're looking for absolute stability this is your branch. If you want more recent
 [features you rather should look](https://github.com/testssl/testssl.sh/blob/3.3dev/CHANGELOG.md) @ 3.3dev.
 It's almost as stable as 3.2 but output and more are subject to change. A more conservative approach would be picking always the latest
@@ -78,16 +79,19 @@ You can download testssl.sh branch 3.2 just by cloning this git repository:
 
 #### Docker
 
-Testssl.sh has minimal requirements. As stated you don't have to install or build anything. You can just run it from the pulled/cloned directory. Still if you don't want to pull the GitHub repo to your directory of choice you can pull a container from dockerhub and run it:
-
-```
-docker run --rm -ti  drwetter/testssl.sh <your_cmd_line>
-```
-
-or from GHCR (GitHub Container Registry which supports more platforms: linux/amd64, linux/386, linux/arm64, linux/arm/v7, linux/arm/v6, linux/ppc64le):
+Testssl.sh has minimal requirements. As stated you don't have to install or build anything. You can just run it from the pulled/cloned directory. Still if
+you don't want to pull the GitHub repo to your directory of choice you can pull a container from the GitHub container registry (GHCR) and run it:
 
 ```
 docker run --rm -it ghcr.io/testssl/testssl.sh <your_cmd_line>
+```
+
+GHCR supports a lot of platforms: linux/amd64, linux/386, linux/arm64, linux/arm/v7, linux/arm/v6, linux/ppc64le).
+
+Attention: Docker hub service has been canceled by this project. Until December 31st 2026 you can still run:
+
+```
+docker run --rm -ti  drwetter/testssl.sh <your_cmd_line>
 ```
 
 Or if you have cloned this repo you also can just ``cd`` to the INSTALLDIR and run
@@ -119,6 +123,7 @@ It is recommended to read [CONTRIBUTING.md](https://github.com/testssl/testssl.s
 
 In general there's also some maintenance burden, like maintaining handshakes and CA stores etc. If you believe you can contribute and be responsible for one of those maintenance tasks, please speak up. That would free resources that we could use for development.
 
+Dockerhub's builds won't work after 31st of December 2026.
 
 ### Bug reports
 
